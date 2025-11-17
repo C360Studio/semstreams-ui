@@ -1,0 +1,109 @@
+# E2E Test Environment for SemStreams UI
+#
+# This compose file starts a complete test environment:
+#   - NATS server (message broker)
+#   - SemStreams backend (or semmem, configurable)
+#   - SemStreams UI
+#   - Caddy (reverse proxy)
+#
+# The Playwright tests run from the host and connect to http://localhost:3000
+#
+# Usage (via Playwright - automatic):
+#   npm run test:e2e
+#
+# Manual usage (debugging):
+#   docker compose -f docker-compose.e2e.yml up
+#   # Services available at http://localhost:3000
+#   docker compose -f docker-compose.e2e.yml down
+
+services:
+  # NATS Server with JetStream
+  nats:
+    image: nats:2.10-alpine
+    container_name: semstreams-ui-e2e-nats
+    command: ["-js", "-sd", "/data", "-m", "8222", "--name", "ui-e2e-nats"]
+    volumes:
+      - nats-e2e-data:/data
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Backend (configurable via BACKEND_CONTEXT environment variable)
+  # REQUIRED: Set BACKEND_CONTEXT to your backend's directory
+  # Example: BACKEND_CONTEXT=/path/to/your-backend task test:e2e
+  backend:
+    build:
+      context: ${BACKEND_CONTEXT:?BACKEND_CONTEXT must be set - path to your SemStreams-based backend}
+      dockerfile: ${BACKEND_DOCKERFILE:-Dockerfile}
+      target: production
+    container_name: semstreams-ui-e2e-backend
+    depends_on:
+      nats:
+        condition: service_healthy
+    environment:
+      - STREAMKIT_CONFIG=/app/configs/${BACKEND_CONFIG:-protocol-flow.json}
+      - STREAMKIT_NATS_URLS=nats://nats:4222
+      - STREAMKIT_LOG_LEVEL=debug
+    volumes:
+      - ${BACKEND_CONTEXT}/configs:/app/configs:ro
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # SemStreams UI
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: semstreams-ui-e2e-ui
+    environment:
+      - NODE_ENV=development
+      - BACKEND_HOST=backend:8080
+    volumes:
+      - ./src:/app/src
+      - ./static:/app/static
+      - ui-e2e-node-modules:/app/node_modules
+    networks:
+      - e2e-net
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Caddy Reverse Proxy
+  caddy:
+    image: caddy:2-alpine
+    container_name: semstreams-ui-e2e-caddy
+    depends_on:
+      - backend
+      - ui
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      - BACKEND_HOST=backend:8080
+    ports:
+      - "3000:3000"
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  e2e-net:
+    driver: bridge
+
+volumes:
+  nats-e2e-data:
+    driver: local
+  ui-e2e-node-modules:
+    driver: local

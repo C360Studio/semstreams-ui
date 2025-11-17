@@ -1,0 +1,152 @@
+import { expect, test } from '@playwright/test';
+import { FlowCanvasPage } from './pages/FlowCanvasPage';
+import { ComponentPalettePage } from './pages/ComponentPalettePage';
+import { FlowListPage } from './pages/FlowListPage';
+
+/**
+ * Navigation E2E Tests
+ * Tests scenarios 19-20 from spec.md
+ *
+ * Tests SvelteKit SSR and client-side routing
+ */
+
+test.describe('Navigation and State Persistence', () => {
+	test('Scenario 19: Click back button → Return to flow list', async ({ page }) => {
+		// Navigate to flow list
+		const flowList = new FlowListPage(page);
+		await flowList.goto();
+		await page.waitForLoadState('networkidle');
+
+		// Verify we're on the flow list page
+		await expect(flowList.flowList).toBeVisible();
+
+		// Create new flow
+		await flowList.clickCreateNewFlow();
+		await page.waitForURL(/\/flows\/.+/);
+
+		// Verify we're on the canvas page
+		const canvas = new FlowCanvasPage(page);
+		await canvas.expectCanvasLoaded();
+
+		// Add a component (to verify state is not accidentally saved)
+		const palette = new ComponentPalettePage(page);
+		await palette.dragComponentToCanvas('UDP Input', 200, 200);
+		await page.waitForTimeout(500);
+
+		// DON'T save the flow
+
+		// Click back button
+		await canvas.clickBackButton();
+
+		// Wait for navigation back to flow list
+		await page.waitForURL('/');
+
+		// Verify we're back on flow list page
+		await expect(flowList.flowList).toBeVisible();
+		await expect(flowList.createButton).toBeVisible();
+
+		// Verify URL is correct
+		expect(page.url()).toMatch(/\/$|\/$/);
+	});
+
+	test('Scenario 20: Reload page → Flow state preserved', async ({ page }) => {
+		// Navigate to flow list
+		const flowList = new FlowListPage(page);
+		await flowList.goto();
+		await page.waitForLoadState('networkidle');
+
+		// Create new flow
+		await flowList.clickCreateNewFlow();
+		await page.waitForURL(/\/flows\/.+/);
+
+		// Wait for canvas to load
+		const canvas = new FlowCanvasPage(page);
+		await canvas.expectCanvasLoaded();
+
+		// Add multiple components
+		const palette = new ComponentPalettePage(page);
+		await palette.dragComponentToCanvas('UDP Input', 150, 150);
+		await page.waitForTimeout(300);
+		await palette.dragComponentToCanvas('Robotics Processor', 350, 150);
+		await page.waitForTimeout(300);
+		await palette.dragComponentToCanvas('Graph Processor', 550, 150);
+		await page.waitForTimeout(300);
+
+		// Save the flow
+		await canvas.clickSaveButton();
+		await page.waitForTimeout(1000);
+		await canvas.expectSaveStatus('clean');
+
+		// Capture current URL
+		const flowUrl = page.url();
+		const flowId = flowUrl.match(/\/flows\/([^/]+)/)?.[1];
+		expect(flowId).toBeTruthy();
+
+		// Reload the page
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+
+		// Verify we're still on the same flow
+		expect(page.url()).toBe(flowUrl);
+
+		// Verify canvas loads
+		await canvas.expectCanvasLoaded();
+
+		// Verify all 3 components are still present
+		await expect(canvas.nodes).toHaveCount(3);
+
+		// Verify component types are preserved
+		const udpNode = canvas.getNodeByType('udp');
+		await expect(udpNode).toBeVisible();
+
+		const roboticsNode = canvas.getNodeByType('robotics');
+		await expect(roboticsNode).toBeVisible();
+
+		const graphNode = canvas.getNodeByType('graph-processor');
+		await expect(graphNode).toBeVisible();
+
+		// Verify save status is clean (no unsaved changes)
+		await canvas.expectSaveStatus('clean');
+	});
+
+	test('Scenario 20 (variant): Direct URL navigation → Flow loads correctly', async ({ page }) => {
+		// First create a flow to get a valid ID
+		const flowList = new FlowListPage(page);
+		await flowList.goto();
+		await page.waitForLoadState('networkidle');
+
+		await flowList.clickCreateNewFlow();
+		await page.waitForURL(/\/flows\/.+/);
+
+		const canvas = new FlowCanvasPage(page);
+		await canvas.expectCanvasLoaded();
+
+		// Add a component and save
+		const palette = new ComponentPalettePage(page);
+		await palette.dragComponentToCanvas('WebSocket Output', 300, 200);
+		await page.waitForTimeout(500);
+
+		await canvas.clickSaveButton();
+		await page.waitForTimeout(1000);
+
+		// Capture the flow ID
+		const flowUrl = page.url();
+		const flowId = flowUrl.match(/\/flows\/([^/]+)/)?.[1];
+		expect(flowId).toBeTruthy();
+
+		// Navigate away
+		await canvas.clickBackButton();
+		await page.waitForURL('/');
+
+		// Navigate directly to the flow using URL
+		await page.goto(`/flows/${flowId}`);
+		await page.waitForLoadState('networkidle');
+
+		// Verify canvas loads with the saved component
+		await canvas.expectCanvasLoaded();
+		await expect(canvas.nodes).toHaveCount(1);
+
+		const wsNode = canvas.getNodeByType('websocket');
+		await expect(wsNode).toBeVisible();
+	});
+});

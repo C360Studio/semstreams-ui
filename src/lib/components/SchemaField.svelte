@@ -1,0 +1,108 @@
+<script lang="ts">
+	import type { PropertySchema } from '$lib/types/schema';
+	import StringField from './StringField.svelte';
+	import NumberField from './NumberField.svelte';
+	import BooleanField from './BooleanField.svelte';
+	import EnumField from './EnumField.svelte';
+	import PortConfigEditor from './PortConfigEditor.svelte';
+
+	/**
+	 * SchemaField - Router component that renders the appropriate field type.
+	 * T084: Routes to type-specific components based on PropertySchema.type.
+	 */
+	interface SchemaFieldProps {
+		/** Field name */
+		name: string;
+		/** PropertySchema definition */
+		schema: PropertySchema;
+		/** Current value (type varies by field type) */
+		value?: any;
+		/** Validation error message */
+		error?: string;
+		/** Whether field is required */
+		isRequired?: boolean;
+		/** Callback when value changes */
+		onChange?: (value: any) => void;
+	}
+
+	let { name, schema, value = $bindable(undefined), error, isRequired = false, onChange }: SchemaFieldProps = $props();
+</script>
+
+{#if schema.type === 'string'}
+	<StringField {name} {schema} bind:value {error} {isRequired} {onChange} />
+{:else if schema.type === 'int' || schema.type === 'float'}
+	<NumberField {name} {schema} bind:value {error} {isRequired} {onChange} />
+{:else if schema.type === 'bool'}
+	<BooleanField {name} {schema} bind:value {error} {isRequired} {onChange} />
+{:else if schema.type === 'enum'}
+	<EnumField {name} {schema} bind:value {error} {isRequired} {onChange} />
+{:else if schema.type === 'ports'}
+	<PortConfigEditor {name} {schema} bind:value {error} {isRequired} {onChange} />
+{:else if schema.type === 'object' || schema.type === 'array'}
+	<div class="field complex-field-fallback">
+		<label for={name}>
+			{name}
+			{#if isRequired}
+				<span class="required">*</span>
+			{/if}
+		</label>
+		<div class="fallback-message">
+			<p>⚠️ This field requires complex configuration. Use JSON editor.</p>
+			{#if schema.description}
+				<p class="description">{schema.description}</p>
+			{/if}
+		</div>
+		{#if error}
+			<span class="error" role="alert">{error}</span>
+		{/if}
+	</div>
+{:else}
+	<div class="field unknown-field-type">
+		<label for={name}>{name}</label>
+		<div class="fallback-message">
+			<p>⚠️ Unknown field type: {schema.type}</p>
+		</div>
+	</div>
+{/if}
+
+<style>
+	.field {
+		margin-bottom: 1rem;
+	}
+
+	label {
+		display: block;
+		margin-bottom: 0.25rem;
+		font-weight: 500;
+	}
+
+	.required {
+		color: var(--pico-del-color, #d32f2f);
+		margin-left: 0.25rem;
+	}
+
+	.fallback-message {
+		padding: 1rem;
+		background-color: var(--pico-card-background-color, #f8f9fa);
+		border: 1px solid var(--pico-muted-border-color, #dee2e6);
+		border-radius: 0.25rem;
+		margin-top: 0.5rem;
+	}
+
+	.fallback-message p {
+		margin: 0;
+		font-size: 0.875rem;
+	}
+
+	.fallback-message .description {
+		margin-top: 0.5rem;
+		color: var(--pico-muted-color, #6c757d);
+	}
+
+	.error {
+		display: block;
+		font-size: 0.875rem;
+		color: var(--pico-del-color, #d32f2f);
+		margin-top: 0.25rem;
+	}
+</style>

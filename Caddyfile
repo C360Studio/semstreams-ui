@@ -1,0 +1,45 @@
+# Caddyfile for SemStreams UI
+#
+# Routes:
+#   /flowbuilder/* -> Backend API
+#   /components/*  -> Backend API
+#   /health        -> Backend API
+#   /*             -> SvelteKit UI
+
+:3000 {
+	# Enable request logging
+	log {
+		output stdout
+		format console
+	}
+
+	# Backend API routes (proxied to backend service)
+	reverse_proxy /flowbuilder/* {$BACKEND_HOST} {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	reverse_proxy /components/* {$BACKEND_HOST} {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	reverse_proxy /health {$BACKEND_HOST} {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# UI (SvelteKit dev server)
+	reverse_proxy * ui:5173 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
