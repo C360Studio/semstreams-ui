@@ -12,10 +12,20 @@ COPY package*.json ./
 # Install dependencies (including devDependencies for build)
 RUN npm ci
 
+# Install adapter-node for Docker deployment
+RUN npm install --save-dev @sveltejs/adapter-node
+
 # Copy source code
 COPY . .
 
-# Build SvelteKit app
+# Create a production svelte.config.js that uses adapter-node
+RUN echo "import adapter from '@sveltejs/adapter-node';" > svelte.config.js.production && \
+    echo "import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';" >> svelte.config.js.production && \
+    echo "const config = { preprocess: vitePreprocess(), kit: { adapter: adapter() } };" >> svelte.config.js.production && \
+    echo "export default config;" >> svelte.config.js.production && \
+    mv svelte.config.js.production svelte.config.js
+
+# Build SvelteKit app with node adapter
 RUN npm run build
 
 # Prune dev dependencies
