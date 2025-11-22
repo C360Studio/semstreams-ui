@@ -1,45 +1,53 @@
-# Caddyfile for SemStreams UI
-#
-# Routes:
-#   /flowbuilder/* -> Backend API
-#   /components/*  -> Backend API
-#   /health        -> Backend API
-#   /*             -> SvelteKit UI
+# Caddyfile for SemStreams UI Static SPA
+# Serves static files and proxies API requests to Go backend
+
+{
+	# Global options
+	auto_https off
+	admin off
+}
 
 :3000 {
-	# Enable request logging
+	# Root directory for static files
+	root * /usr/share/caddy
+
+	# Enable file server
+	file_server
+
+	# SPA fallback - all unmatched routes serve index.html
+	# This allows client-side routing to work
+	try_files {path} /index.html
+
+	# Reverse proxy API requests to Go backend
+	# These paths should be forwarded to your backend service
+	@api {
+		path /flowbuilder/* /components/* /health /api/*
+	}
+	reverse_proxy @api {$BACKEND_URL:http://backend:8080}
+
+	# Security headers
+	header {
+		# Enable HSTS
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Prevent clickjacking
+		X-Frame-Options "SAMEORIGIN"
+		# Prevent MIME sniffing
+		X-Content-Type-Options "nosniff"
+		# Enable XSS protection
+		X-XSS-Protection "1; mode=block"
+		# Control referrer information
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Enable gzip compression
+	encode gzip
+
+	# Logging - stdout is Docker best practice (12-factor app)
+	# Docker captures stdout/stderr and routes to logging systems
+	# For production, use LOG_LEVEL env var to control verbosity
 	log {
 		output stdout
-		format console
-	}
-
-	# Backend API routes (proxied to backend service)
-	reverse_proxy /flowbuilder/* {$BACKEND_HOST} {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-	}
-
-	reverse_proxy /components/* {$BACKEND_HOST} {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-	}
-
-	reverse_proxy /health {$BACKEND_HOST} {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-	}
-
-	# UI (SvelteKit dev server)
-	reverse_proxy * ui:5173 {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
+		format json  # JSON for log aggregators (CloudWatch, Datadog, etc.)
+		level {$LOG_LEVEL:INFO}  # Configurable: DEBUG, INFO, WARN, ERROR
 	}
 }

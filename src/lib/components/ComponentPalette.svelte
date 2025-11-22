@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import type { ComponentType } from '$lib/types/component';
 	import { getDomainColor } from '$lib/utils/domain-colors';
+	import { isConnectivityError } from '$lib/services/healthCheck';
 
 	interface ComponentPaletteProps {
 		onAddComponent?: (componentType: ComponentType) => void;
@@ -43,14 +44,16 @@
 			// Backend returns flat array, not wrapped object
 			components = Array.isArray(data) ? data : [];
 		} catch (err) {
-			if (err instanceof Error) {
+			if (isConnectivityError(err)) {
+				error = 'Cannot connect to backend. Please ensure the backend service is running.';
+			} else if (err instanceof Error) {
 				if (err.name === 'AbortError') {
-					error = 'Request timed out after 10 seconds';
+					error = 'Request timed out. The backend may be slow or unavailable.';
 				} else {
 					error = err.message;
 				}
 			} else {
-				error = 'Error loading components';
+				error = 'Unexpected error loading components';
 			}
 			console.error('ComponentPalette fetch error:', err);
 		} finally {

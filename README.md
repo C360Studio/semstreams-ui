@@ -232,41 +232,49 @@ Your SemStreams-based application must expose:
    docker compose up
    ```
 
-### Distribution Options
+## Production Deployment
 
-**Option 1: Docker Image** (Recommended)
-```dockerfile
-# Your application's docker-compose.yml
-services:
-  your-backend:
-    build: .
-    ports:
-      - "8080:8080"
+For production deployment, see the orchestration configuration in the main backend projects:
 
-  semstreams-ui:
-    image: semstreams/ui:latest
-    environment:
-      - BACKEND_HOST=your-backend:8080
-    depends_on:
-      - your-backend
+- **[semdocs](https://github.com/c360/semdocs)** - Documentation and examples project
+- **[semstreams](https://github.com/c360/semstreams)** - Core stream processing framework
 
-  caddy:
-    image: caddy:2-alpine
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-    ports:
-      - "3000:3000"
-    depends_on:
-      - your-backend
-      - semstreams-ui
+These projects include complete `docker-compose` files that orchestrate the full stack (backend services, NATS, and UI).
+
+### Building the UI Image
+
+This repository provides the UI Docker image for production use:
+
+```bash
+# Build the static UI image
+docker build -t semstreams-ui:latest .
+
+# Push to registry (if needed)
+docker tag semstreams-ui:latest your-registry/semstreams-ui:latest
+docker push your-registry/semstreams-ui:latest
 ```
 
-**Option 2: Embedded** (Copy semstreams-ui into your repo)
-```bash
-cp -r semstreams-ui your-app/ui
-cd your-app/ui
-OPENAPI_SPEC_PATH=../specs/openapi.v3.yaml task generate-types
-npm run build
+The production image:
+- Builds the static SPA using `adapter-static`
+- Serves files via Caddy web server (~15MB total)
+- Proxies API requests to backend via `BACKEND_URL` environment variable
+- Includes health checks and security headers
+
+### Environment Variables
+
+The UI container accepts:
+
+- `BACKEND_URL` - Backend service URL (default: `http://backend:8080`)
+
+Example from backend project's docker-compose:
+```yaml
+services:
+  ui:
+    image: semstreams-ui:latest
+    environment:
+      - BACKEND_URL=http://backend:8080
+    ports:
+      - "3000:3000"
 ```
 
 ## Architecture

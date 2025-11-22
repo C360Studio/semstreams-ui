@@ -1,7 +1,7 @@
 # Production Dockerfile for SemStreams UI
-# Multi-stage build for optimal image size
+# Multi-stage build: Build static SPA with Node.js, serve with Caddy
 
-# Stage 1: Build
+# Stage 1: Build static SPA
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -15,43 +15,28 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build SvelteKit app
+# Build static SPA with adapter-static
 RUN npm run build
 
-# Prune dev dependencies
-RUN npm prune --production
+# Stage 2: Serve with Caddy
+FROM caddy:2-alpine
 
-# Stage 2: Production
-FROM node:22-alpine AS production
+# Copy static files from builder
+COPY --from=builder /app/build /usr/share/caddy
 
-WORKDIR /app
-
-# Copy built app and production dependencies from builder
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S svelte -u 1001
-
-# Set ownership
-RUN chown -R svelte:nodejs /app
-
-# Switch to non-root user
-USER svelte
+# Copy Caddyfile
+COPY Caddyfile /etc/caddy/Caddyfile
 
 # Expose port
 EXPOSE 3000
 
 # Environment variables (can be overridden at runtime)
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV ORIGIN=http://localhost:3000
+ENV BACKEND_URL=http://backend:8080
 
-# Health check
+# Health check - check if Caddy is serving files
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Start production server
-CMD ["node", "build"]
+# Caddy runs as non-root by default
+# Start Caddy server with Caddyfile
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

@@ -1,10 +1,22 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import FlowList from '$lib/components/FlowList.svelte';
 	import { flowApi } from '$lib/services/flowApi';
+	import { checkBackendHealth, getUserFriendlyErrorMessage } from '$lib/services/healthCheck';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	let backendHealthy = $state<boolean | null>(null);
+	let backendHealthMessage = $state<string>('');
+
+	onMount(async () => {
+		// Check backend health on page load
+		const health = await checkBackendHealth();
+		backendHealthy = health.healthy;
+		backendHealthMessage = health.message;
+	});
 
 	async function handleCreateFlow() {
 		try {
@@ -18,7 +30,8 @@
 			await goto(`/flows/${newFlow.id}`);
 		} catch (error) {
 			console.error('Failed to create flow:', error);
-			alert('Failed to create flow: ' + (error instanceof Error ? error.message : 'Unknown error'));
+			const message = getUserFriendlyErrorMessage(error);
+			alert(`Failed to create flow: ${message}`);
 		}
 	}
 
@@ -40,7 +53,17 @@
 		<p>Create and manage semantic stream processing flows</p>
 	</div>
 
-	{#if data.error}
+	{#if backendHealthy === false}
+		<div class="connectivity-banner">
+			<strong>⚠️ Backend Not Available</strong>
+			<p>{backendHealthMessage}</p>
+			<p class="help-text">
+				Please ensure your backend service is running. Check the README for setup instructions.
+			</p>
+		</div>
+	{/if}
+
+	{#if data.error && backendHealthy !== false}
 		<div class="error-banner">
 			<strong>Error:</strong>
 			{data.error}
@@ -71,6 +94,31 @@
 		margin: 0;
 		color: var(--text-muted, #6c757d);
 		font-size: 1.125rem;
+	}
+
+	.connectivity-banner {
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+		background: var(--warning-bg, #fff3cd);
+		color: var(--warning-text, #856404);
+		border: 2px solid var(--warning-border, #ffc107);
+		border-radius: 6px;
+	}
+
+	.connectivity-banner strong {
+		display: block;
+		font-size: 1.125rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.connectivity-banner p {
+		margin: 0.5rem 0;
+	}
+
+	.connectivity-banner .help-text {
+		font-size: 0.875rem;
+		color: var(--warning-text-muted, #6c5a1a);
+		margin-top: 1rem;
 	}
 
 	.error-banner {
