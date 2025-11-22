@@ -15,7 +15,7 @@ import type { PropertySchema, ValidationError } from '$lib/types/schema';
  */
 export function validateField(
 	fieldName: string,
-	value: any,
+	value: unknown,
 	schema: PropertySchema,
 	isRequired: boolean
 ): ValidationError | null {
@@ -35,7 +35,7 @@ export function validateField(
 
 	// T078: Min/max validation for numeric types
 	if (schema.type === 'int' || schema.type === 'float') {
-		const numValue = typeof value === 'string' ? parseFloat(value) : value;
+		const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
 
 		if (isNaN(numValue)) {
 			return {
@@ -97,7 +97,7 @@ export function validateField(
  * @returns Array of ValidationErrors (empty if valid)
  */
 export function validateConfig(
-	config: Record<string, any>,
+	config: Record<string, unknown>,
 	schema: { properties: Record<string, PropertySchema>; required: string[] }
 ): ValidationError[] {
 	const errors: ValidationError[] = [];

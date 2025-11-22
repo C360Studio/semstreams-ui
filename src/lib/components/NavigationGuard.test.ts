@@ -1,15 +1,40 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/svelte';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render } from '@testing-library/svelte';
 import NavigationGuard from './NavigationGuard.svelte';
+import type { Navigation } from '@sveltejs/kit';
+import { beforeNavigate, goto } from '$app/navigation';
 
-// Mock SvelteKit navigation
+// ========================================================================
+// Mock Setup
+// ========================================================================
+
+// Capture the beforeNavigate callback
+let navigationCallback: ((navigation: Navigation) => void) | null = null;
+let mockCancel: ReturnType<typeof vi.fn>;
+
 vi.mock('$app/navigation', () => ({
-	beforeNavigate: vi.fn()
+	beforeNavigate: vi.fn((callback) => {
+		navigationCallback = callback;
+	}),
+	goto: vi.fn()
 }));
 
-describe('NavigationGuard (Prop-Based Architecture)', () => {
+vi.mock('$app/environment', () => ({
+	browser: true
+}));
+
+describe('NavigationGuard', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		navigationCallback = null;
+		mockCancel = vi.fn();
+		// Clear window.onbeforeunload
+		window.onbeforeunload = null;
+	});
+
+	afterEach(() => {
+		// Cleanup
+		window.onbeforeunload = null;
 	});
 
 	// ========================================================================
@@ -17,26 +42,44 @@ describe('NavigationGuard (Prop-Based Architecture)', () => {
 	// ========================================================================
 
 	describe('Prop Acceptance', () => {
-		it('should accept saveState prop with dirty status', () => {
-			render(NavigationGuard, {
-				props: {
-					saveState: { status: 'dirty', lastSaved: null, error: null }
-				}
-			});
+		it('should accept saveState prop with all status values', () => {
+			const statuses = ['clean', 'dirty', 'draft', 'saving', 'error'] as const;
 
-			// Component should render without errors
-			expect(document.body).toBeTruthy();
+			statuses.forEach((status) => {
+				expect(() => {
+					render(NavigationGuard, {
+						props: {
+							saveState: { status, lastSaved: null, error: null }
+						}
+					});
+				}).not.toThrow();
+			});
 		});
 
-		it('should accept saveState prop with clean status', () => {
-			render(NavigationGuard, {
+		it('should accept optional showDialog prop', () => {
+			const { component } = render(NavigationGuard, {
 				props: {
-					saveState: { status: 'clean', lastSaved: null, error: null }
+					saveState: { status: 'clean', lastSaved: null, error: null },
+					showDialog: true
 				}
 			});
 
-			// Component should render without errors
-			expect(document.body).toBeTruthy();
+			expect(component).toBeTruthy();
+		});
+
+		it('should accept optional callback props', () => {
+			const onShowDialog = vi.fn();
+			const onNavigationAllowed = vi.fn();
+
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'clean', lastSaved: null, error: null },
+					onShowDialog,
+					onNavigationAllowed
+				}
+			});
+
+			expect(component).toBeTruthy();
 		});
 	});
 
@@ -45,109 +88,478 @@ describe('NavigationGuard (Prop-Based Architecture)', () => {
 	// ========================================================================
 
 	describe('beforeNavigate Hook', () => {
-		it('should check dirty state before navigation', () => {
-			const { container } = render(NavigationGuard, {
-				props: {
-					saveState: { status: 'dirty', lastSaved: null, error: null }
-				}
-			});
-
-			// The component should set up beforeNavigate hook
-			// (Implementation will be validated by E2E tests)
-			expect(container).toBeTruthy();
-		});
-
-		it('should not block navigation when dirty=false', () => {
-			const { container } = render(NavigationGuard, {
-			props: {
-				saveState: { status: 'clean', lastSaved: null, error: null }
-			}
-		});
-
-			// Should not show warning dialog for clean state
-			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-		});
-	});
-
-	// ========================================================================
-	// Warning Dialog Tests
-	// ========================================================================
-
-	describe('Warning Dialog', () => {
-		it('should show warning dialog when dirty and navigating', async () => {
-			const { container } = render(NavigationGuard, {
-				props: {
-					saveState: { status: 'dirty', lastSaved: null, error: null }
-				}
-			});
-
-			// Simulate navigation attempt (will be handled by beforeNavigate hook)
-			// For component test, we just verify the dialog can render
-			// E2E tests will validate actual navigation blocking
-
-			// This test validates the component structure
-			expect(container).toBeTruthy();
-		});
-
-		it('should not show warning when dirty=false', () => {
+		it('should register beforeNavigate callback on mount', () => {
 			render(NavigationGuard, {
-			props: {
-				saveState: { status: 'clean', lastSaved: null, error: null }
-			}
+				props: {
+					saveState: { status: 'clean', lastSaved: null, error: null }
+				}
+			});
+
+			expect(beforeNavigate).toHaveBeenCalled();
+			expect(navigationCallback).not.toBeNull();
 		});
 
-			// No dialog should be visible
-			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-		});
-
-		it('should display correct warning message', async () => {
-			// This will be validated by E2E tests
-			// Component test validates structure only
-			const { container } = render(NavigationGuard, {
+		it('should cancel navigation when status is dirty', () => {
+			render(NavigationGuard, {
 				props: {
 					saveState: { status: 'dirty', lastSaved: null, error: null }
 				}
 			});
-			expect(container).toBeTruthy();
+
+			// Simulate navigation attempt
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			expect(mockCancel).toHaveBeenCalled();
+		});
+
+		it('should not cancel navigation when status is clean', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'clean', lastSaved: null, error: null }
+				}
+			});
+
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			expect(mockCancel).not.toHaveBeenCalled();
+		});
+
+		it('should not cancel navigation when status is draft', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'draft', lastSaved: null, error: null }
+				}
+			});
+
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			expect(mockCancel).not.toHaveBeenCalled();
+		});
+
+		it('should not cancel navigation when status is saving', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'saving', lastSaved: null, error: null }
+				}
+			});
+
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			expect(mockCancel).not.toHaveBeenCalled();
+		});
+
+		it('should not cancel navigation when to is null (browser back/forward)', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			const mockNavigation = {
+				to: null,
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			expect(mockCancel).not.toHaveBeenCalled();
+		});
+
+		it('should allow navigation when isNavigating flag is set', () => {
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			// First navigation - should cancel
+			const mockNavigation1 = {
+				to: { url: { pathname: '/page1' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation1);
+			expect(mockCancel).toHaveBeenCalledTimes(1);
+
+			// Allow navigation
+			component.allowNavigation();
+
+			// Second navigation - should NOT cancel (isNavigating flag is set)
+			mockCancel.mockClear();
+			const mockNavigation2 = {
+				to: { url: { pathname: '/page1' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation2);
+			expect(mockCancel).not.toHaveBeenCalled();
 		});
 	});
 
 	// ========================================================================
-	// Dialog Action Tests
+	// showDialog Prop Tests
 	// ========================================================================
 
-	describe('Dialog Actions', () => {
-		it('should provide "Save" option', async () => {
-			// The save option behavior will be validated by E2E tests
-			// Component test validates the option exists in the component
-			const { container } = render(NavigationGuard, {
+	describe('showDialog Bindable Prop', () => {
+		it('should update showDialog to true when navigation is blocked', () => {
+			let showDialog = false;
+			const onShowDialog = vi.fn((value: boolean) => {
+				showDialog = value;
+			});
+
+			render(NavigationGuard, {
 				props: {
-					saveState: { status: 'dirty', lastSaved: null, error: null }
+					saveState: { status: 'dirty', lastSaved: null, error: null },
+					showDialog,
+					onShowDialog
 				}
 			});
-			expect(container).toBeTruthy();
+
+			// Simulate navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			expect(onShowDialog).toHaveBeenCalledWith(true);
 		});
 
-		it('should provide "Discard" option', async () => {
-			// Discard option allows navigation to proceed
-			// E2E tests will validate this behavior
-			const { container } = render(NavigationGuard, {
+		it('should not invoke onShowDialog when navigation is not blocked', () => {
+			const onShowDialog = vi.fn();
+
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'clean', lastSaved: null, error: null },
+					onShowDialog
+				}
+			});
+
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			expect(onShowDialog).not.toHaveBeenCalled();
+		});
+	});
+
+	// ========================================================================
+	// Exported Function Tests
+	// ========================================================================
+
+	describe('allowNavigation()', () => {
+		it('should navigate to pending destination when called', () => {
+			const { component } = render(NavigationGuard, {
 				props: {
 					saveState: { status: 'dirty', lastSaved: null, error: null }
 				}
 			});
-			expect(container).toBeTruthy();
+
+			// Trigger navigation to store pending destination
+			const mockNavigation = {
+				to: { url: { pathname: '/target-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// Allow navigation
+			component.allowNavigation();
+
+			expect(goto).toHaveBeenCalledWith('/target-page');
 		});
 
-		it('should provide "Cancel" option', async () => {
-			// Cancel prevents navigation and keeps user on page
-			// E2E tests will validate this behavior
-			const { container } = render(NavigationGuard, {
+		it('should set showDialog to false when called', () => {
+			const onShowDialog = vi.fn();
+
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null },
+					onShowDialog
+				}
+			});
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/target-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// onShowDialog should have been called with true
+			expect(onShowDialog).toHaveBeenCalledWith(true);
+
+			// Allow navigation
+			onShowDialog.mockClear();
+			component.allowNavigation();
+
+			expect(onShowDialog).toHaveBeenCalledWith(false);
+		});
+
+		it('should invoke onNavigationAllowed callback when called', () => {
+			const onNavigationAllowed = vi.fn();
+
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null },
+					onNavigationAllowed
+				}
+			});
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/target-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// Allow navigation
+			component.allowNavigation();
+
+			expect(onNavigationAllowed).toHaveBeenCalled();
+		});
+
+		it('should do nothing when called without pending navigation', () => {
+			const { component } = render(NavigationGuard, {
 				props: {
 					saveState: { status: 'dirty', lastSaved: null, error: null }
 				}
 			});
-			expect(container).toBeTruthy();
+
+			// Call without triggering navigation first
+			component.allowNavigation();
+
+			expect(goto).not.toHaveBeenCalled();
+		});
+
+		it('should clear pending navigation after allowing navigation', () => {
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/target-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// Allow navigation
+			component.allowNavigation();
+			expect(goto).toHaveBeenCalledTimes(1);
+
+			// Call again - should not navigate
+			vi.mocked(goto).mockClear();
+			component.allowNavigation();
+			expect(goto).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('cancelNavigation()', () => {
+		it('should clear pending navigation when called', () => {
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/target-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// Cancel navigation
+			component.cancelNavigation();
+
+			// Trying to allow navigation now should do nothing
+			component.allowNavigation();
+			expect(goto).not.toHaveBeenCalled();
+		});
+
+		it('should set showDialog to false when called', () => {
+			const onShowDialog = vi.fn();
+
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null },
+					onShowDialog
+				}
+			});
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/target-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+			expect(onShowDialog).toHaveBeenCalledWith(true);
+
+			// Cancel navigation
+			onShowDialog.mockClear();
+			component.cancelNavigation();
+
+			expect(onShowDialog).toHaveBeenCalledWith(false);
+		});
+
+		it('should not invoke onNavigationAllowed callback when called', () => {
+			const onNavigationAllowed = vi.fn();
+
+			const { component } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null },
+					onNavigationAllowed
+				}
+			});
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/target-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// Cancel navigation
+			component.cancelNavigation();
+
+			expect(onNavigationAllowed).not.toHaveBeenCalled();
+		});
+	});
+
+	// ========================================================================
+	// beforeunload Handler Tests
+	// ========================================================================
+
+	describe('beforeunload Handler', () => {
+		it('should set beforeunload handler when status is dirty', async () => {
+			const { rerender } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'clean', lastSaved: null, error: null }
+				}
+			});
+
+			expect(window.onbeforeunload).toBeNull();
+
+			await rerender({
+				saveState: { status: 'dirty', lastSaved: null, error: null }
+			});
+
+			expect(window.onbeforeunload).toBeTruthy();
+		});
+
+		it('should clear beforeunload handler when status becomes clean', async () => {
+			const { rerender } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			expect(window.onbeforeunload).toBeTruthy();
+
+			await rerender({
+				saveState: { status: 'clean', lastSaved: null, error: null }
+			});
+
+			expect(window.onbeforeunload).toBeNull();
+		});
+
+		it('should not set beforeunload handler for draft status', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'draft', lastSaved: null, error: null }
+				}
+			});
+
+			expect(window.onbeforeunload).toBeNull();
+		});
+
+		it('should not set beforeunload handler for saving status', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'saving', lastSaved: null, error: null }
+				}
+			});
+
+			expect(window.onbeforeunload).toBeNull();
+		});
+
+		it('should not set beforeunload handler for error status', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'error', lastSaved: null, error: 'Error message' }
+				}
+			});
+
+			expect(window.onbeforeunload).toBeNull();
+		});
+
+		it('should clear beforeunload handler on unmount', () => {
+			const { unmount } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			expect(window.onbeforeunload).toBeTruthy();
+
+			unmount();
+
+			expect(window.onbeforeunload).toBeNull();
+		});
+
+		it('should prevent default and return empty string on beforeunload event', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			expect(window.onbeforeunload).toBeTruthy();
+
+			// Simulate beforeunload event
+			const event = {
+				preventDefault: vi.fn(),
+				returnValue: ''
+			} as unknown as BeforeUnloadEvent;
+
+			const result = window.onbeforeunload?.(event);
+
+			expect(event.preventDefault).toHaveBeenCalled();
+			expect(event.returnValue).toBe('');
+			expect(result).toBe('');
 		});
 	});
 
@@ -156,44 +568,84 @@ describe('NavigationGuard (Prop-Based Architecture)', () => {
 	// ========================================================================
 
 	describe('State Reactivity', () => {
-		it('should react to dirty prop changes', async () => {
+		it('should react to status prop changes from clean to dirty', async () => {
 			const { rerender } = render(NavigationGuard, {
-			props: {
-				saveState: { status: 'clean', lastSaved: null, error: null }
-			}
-		});
+				props: {
+					saveState: { status: 'clean', lastSaved: null, error: null }
+				}
+			});
 
-			// No dialog for clean state
-			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+			expect(window.onbeforeunload).toBeNull();
 
-			// Change to dirty
 			await rerender({
-			props: {
 				saveState: { status: 'dirty', lastSaved: null, error: null }
-			}
+			});
+
+			expect(window.onbeforeunload).toBeTruthy();
+
+			// Navigation should now be blocked
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+			expect(mockCancel).toHaveBeenCalled();
 		});
 
-			// Component should now be in guarding state
-			// (Dialog only appears on navigation attempt)
-			expect(document.body).toBeTruthy();
-		});
-
-		it('should stop guarding when dirty becomes false', async () => {
+		it('should stop guarding when dirty becomes clean', async () => {
 			const { rerender } = render(NavigationGuard, {
-			props: {
-				saveState: { status: 'dirty', lastSaved: null, error: null }
-			}
-		});
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
 
-			// Change to clean
 			await rerender({
-			props: {
 				saveState: { status: 'clean', lastSaved: null, error: null }
-			}
+			});
+
+			expect(window.onbeforeunload).toBeNull();
+
+			// Navigation should not be blocked
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+			expect(mockCancel).not.toHaveBeenCalled();
 		});
 
-			// Should no longer block navigation
-			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+		it('should handle rapid status changes', async () => {
+			const { rerender } = render(NavigationGuard, {
+				props: {
+					saveState: { status: 'clean', lastSaved: null, error: null }
+				}
+			});
+
+			await rerender({
+				saveState: { status: 'dirty', lastSaved: null, error: null }
+			});
+			expect(window.onbeforeunload).toBeTruthy();
+
+			await rerender({
+				saveState: { status: 'clean', lastSaved: null, error: null }
+			});
+			expect(window.onbeforeunload).toBeNull();
+
+			await rerender({
+				saveState: { status: 'dirty', lastSaved: null, error: null }
+			});
+			expect(window.onbeforeunload).toBeTruthy();
+
+			// Final state should be guarding
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+			expect(mockCancel).toHaveBeenCalled();
 		});
 	});
 
@@ -202,81 +654,109 @@ describe('NavigationGuard (Prop-Based Architecture)', () => {
 	// ========================================================================
 
 	describe('Edge Cases', () => {
-		it('should handle rapid dirty state changes', async () => {
-			const { rerender } = render(NavigationGuard, {
-			props: {
-				saveState: { status: 'clean', lastSaved: null, error: null }
-			}
-		});
+		it('should handle multiple navigation attempts while dirty', () => {
+			render(NavigationGuard, {
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
 
-			// Rapid changes
-			await rerender({
-			props: {
-				saveState: { status: 'dirty', lastSaved: null, error: null }
-			}
-		});
-			await rerender({
-			props: {
-				saveState: { status: 'clean', lastSaved: null, error: null }
-			}
-		});
-			await rerender({
-			props: {
-				saveState: { status: 'dirty', lastSaved: null, error: null }
-			}
-		});
+			// First navigation
+			const mockNavigation1 = {
+				to: { url: { pathname: '/page1' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
 
-			// Should work correctly after rapid changes
-			expect(document.body).toBeTruthy();
+			navigationCallback?.(mockNavigation1);
+			expect(mockCancel).toHaveBeenCalledTimes(1);
+
+			// Second navigation (without resolving first)
+			mockCancel.mockClear();
+			const mockNavigation2 = {
+				to: { url: { pathname: '/page2' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation2);
+			expect(mockCancel).toHaveBeenCalledTimes(1);
 		});
 
 		it('should handle component unmount during navigation', () => {
 			const { unmount } = render(NavigationGuard, {
-			props: {
-				saveState: { status: 'dirty', lastSaved: null, error: null }
-			}
-		});
+				props: {
+					saveState: { status: 'dirty', lastSaved: null, error: null }
+				}
+			});
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
 
 			// Unmount should clean up hooks without errors
 			expect(() => unmount()).not.toThrow();
+			expect(window.onbeforeunload).toBeNull();
 		});
-	});
 
-	// ========================================================================
-	// Accessibility Tests
-	// ========================================================================
-
-	describe('Accessibility', () => {
-		it('should have proper dialog role when showing warning', async () => {
-			// Dialog accessibility will be validated by E2E tests
-			// This component test validates structure
-			const { container } = render(NavigationGuard, {
+		it('should handle navigation to same pathname', () => {
+			render(NavigationGuard, {
 				props: {
 					saveState: { status: 'dirty', lastSaved: null, error: null }
 				}
 			});
-			expect(container).toBeTruthy();
+
+			const mockNavigation = {
+				to: { url: { pathname: '/current-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			// Should still block navigation to same page
+			navigationCallback?.(mockNavigation);
+			expect(mockCancel).toHaveBeenCalled();
 		});
 
-		it('should have proper ARIA labels for dialog buttons', async () => {
-			// Button labels will be validated by E2E tests
-			// This validates component structure
-			const { container } = render(NavigationGuard, {
+		it('should handle allowNavigation with no callbacks defined', () => {
+			const { component } = render(NavigationGuard, {
 				props: {
 					saveState: { status: 'dirty', lastSaved: null, error: null }
+					// No callbacks provided
 				}
 			});
-			expect(container).toBeTruthy();
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// Should not throw when calling allowNavigation without callbacks
+			expect(() => component.allowNavigation()).not.toThrow();
+			expect(goto).toHaveBeenCalled();
 		});
 
-		it('should trap focus in dialog when open', async () => {
-			// Focus trapping will be validated by E2E tests
-			const { container } = render(NavigationGuard, {
+		it('should handle cancelNavigation with no callbacks defined', () => {
+			const { component } = render(NavigationGuard, {
 				props: {
 					saveState: { status: 'dirty', lastSaved: null, error: null }
+					// No callbacks provided
 				}
 			});
-			expect(container).toBeTruthy();
+
+			// Trigger navigation
+			const mockNavigation = {
+				to: { url: { pathname: '/other-page' } },
+				cancel: mockCancel
+			} as unknown as Navigation;
+
+			navigationCallback?.(mockNavigation);
+
+			// Should not throw when calling cancelNavigation without callbacks
+			expect(() => component.cancelNavigation()).not.toThrow();
 		});
 	});
 
@@ -285,16 +765,14 @@ describe('NavigationGuard (Prop-Based Architecture)', () => {
 	// ========================================================================
 
 	/**
-	 * NOTE: This component uses SvelteKit's beforeNavigate hook which is difficult
-	 * to fully test in isolation. The following behaviors are validated by E2E tests:
+	 * NOTE: Full navigation blocking behavior is validated by E2E tests:
 	 *
-	 * 1. Actual navigation blocking (browser back button, link clicks)
-	 * 2. Dialog appearance on navigation attempt
-	 * 3. "Save" action triggering parent save handler
-	 * 4. "Discard" action allowing navigation
-	 * 5. "Cancel" action preventing navigation
-	 * 6. Browser confirmation dialog fallback
+	 * 1. Actual browser navigation events (back button, link clicks)
+	 * 2. Integration with parent components showing confirmation dialogs
+	 * 3. Save/Discard/Cancel workflows
+	 * 4. Cross-browser beforeunload dialog behavior
 	 *
-	 * See: frontend/e2e/flow-navigation.spec.ts
+	 * These unit tests verify the NavigationGuard component's internal logic,
+	 * state management, and callback behavior in isolation.
 	 */
 });

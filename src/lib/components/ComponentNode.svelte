@@ -3,7 +3,7 @@
 
 	interface ComponentNodeProps {
 		component: ComponentInstance;
-		onClick?: (componentId: string) => void;
+		onClick?: (_componentId: string) => void;
 		compact?: boolean;
 		selected?: boolean;
 	}
@@ -12,6 +12,13 @@
 
 	function handleClick() {
 		onClick?.(component.id);
+	}
+
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			handleClick();
+		}
 	}
 
 	const displayName = $derived(component.type || component.id);
@@ -23,6 +30,7 @@
 	class:compact
 	class:selected
 	onclick={handleClick}
+	onkeydown={handleKeyDown}
 	role="button"
 	tabindex="0"
 >

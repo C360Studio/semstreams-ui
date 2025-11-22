@@ -8,13 +8,11 @@ describe('UI State Types', () => {
 			const state: SaveState = {
 				status: 'clean',
 				lastSaved: new Date(),
-				lastDraft: null,
 				error: null
 			};
 
 			expect(state.status).toBe('clean');
 			expect(state.lastSaved).toBeInstanceOf(Date);
-			expect(state.lastDraft).toBeNull();
 			expect(state.error).toBeNull();
 		});
 
@@ -22,19 +20,17 @@ describe('UI State Types', () => {
 			const state: SaveState = {
 				status: 'dirty',
 				lastSaved: new Date(),
-				lastDraft: new Date(),
 				error: null
 			};
 
 			expect(state.status).toBe('dirty');
-			expect(state.lastDraft).toBeInstanceOf(Date);
+			expect(state.lastSaved).toBeInstanceOf(Date);
 		});
 
 		it('should have correct structure for saving state', () => {
 			const state: SaveState = {
 				status: 'saving',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -45,7 +41,6 @@ describe('UI State Types', () => {
 			const state: SaveState = {
 				status: 'error',
 				lastSaved: null,
-				lastDraft: null,
 				error: 'Network error'
 			};
 

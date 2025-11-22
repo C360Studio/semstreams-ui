@@ -7,15 +7,17 @@ import LogsTab from './LogsTab.svelte';
  * Tests for Phase 2: Real-time log streaming with filtering
  */
 
-// Type augmentation for global in tests
-declare global {
-	var EventSource: any;
+interface MockEventSource {
+	addEventListener: (event: string, handler: (e: Event) => void) => void;
+	close: () => void;
+	readyState: number;
 }
 
 describe('LogsTab', () => {
 	// Mock EventSource
-	let mockEventSource: any;
-	let eventListeners: Record<string, Function[]> = {};
+	let mockEventSource: MockEventSource;
+	let eventListeners: Record<string, ((e: Event) => void)[]> = {};
+	let mockEventSourceConstructor: ReturnType<typeof vi.fn>;
 
 	beforeEach(() => {
 		// Reset event listeners
@@ -23,7 +25,7 @@ describe('LogsTab', () => {
 
 		// Mock EventSource
 		mockEventSource = {
-			addEventListener: vi.fn((event: string, handler: Function) => {
+			addEventListener: vi.fn((event: string, handler: (e: Event) => void) => {
 				if (!eventListeners[event]) {
 					eventListeners[event] = [];
 				}
@@ -33,21 +35,24 @@ describe('LogsTab', () => {
 			readyState: 0
 		};
 
-		// @ts-ignore - Mock global EventSource
-		global.EventSource = vi.fn(() => mockEventSource) as any;
+		// Create mock EventSource constructor
+		mockEventSourceConstructor = vi.fn(() => mockEventSource);
+
+		// @ts-expect-error - Assigning mock to global EventSource
+		globalThis.EventSource = mockEventSourceConstructor;
 	});
 
 	describe('Connection Lifecycle', () => {
 		it('should not connect when isActive is false', () => {
 			render(LogsTab, { flowId: 'test-flow', isActive: false });
 
-			expect(global.EventSource).not.toHaveBeenCalled();
+			expect(mockEventSourceConstructor).not.toHaveBeenCalled();
 		});
 
 		it('should connect to SSE endpoint when isActive is true', () => {
 			render(LogsTab, { flowId: 'test-flow-123', isActive: true });
 
-			expect(global.EventSource).toHaveBeenCalledWith('/flowbuilder/flows/test-flow-123/runtime/logs');
+			expect(mockEventSourceConstructor).toHaveBeenCalledWith('/flowbuilder/flows/test-flow-123/runtime/logs');
 		});
 
 		it('should show connecting status initially', () => {

@@ -76,14 +76,9 @@ export interface NavigationGuardState {
  * User preferences for flow editor
  * Currently placeholder for future theme support
  */
-export interface UserPreferences {
-	// TODO: Add when implementing light/dark mode
-	// theme: 'light' | 'dark' | 'auto'
-}
+export type UserPreferences = Record<string, never>;
 
 /**
  * Default user preferences
  */
-export const DEFAULT_PREFERENCES: UserPreferences = {
-	// Empty for now - will add theme preference later
-};
+export const DEFAULT_PREFERENCES: UserPreferences = {};

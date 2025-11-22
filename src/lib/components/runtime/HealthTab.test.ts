@@ -109,9 +109,12 @@ const mockErrorResponse = {
 };
 
 describe('HealthTab', () => {
-	let fetchSpy: ReturnType<typeof vi.spyOn>;
-	let setIntervalSpy: ReturnType<typeof vi.spyOn>;
-	let clearIntervalSpy: ReturnType<typeof vi.spyOn>;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let fetchSpy: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let setIntervalSpy: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let clearIntervalSpy: any;
 
 	beforeEach(() => {
 		vi.useFakeTimers();
@@ -150,7 +153,8 @@ describe('HealthTab', () => {
 
 			// Should start polling at 5 second intervals
 			await waitFor(() => {
-				const healthPolling = setIntervalSpy.mock.calls.find((call) => call[1] === 5000);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const healthPolling = setIntervalSpy.mock.calls.find((call: any) => call[1] === 5000);
 				expect(healthPolling).toBeDefined();
 			});
 		});
@@ -238,7 +242,8 @@ describe('HealthTab', () => {
 
 			// Should have a 1-second interval for uptime updates
 			await waitFor(() => {
-				const uptimeInterval = setIntervalSpy.mock.calls.find((call) => call[1] === 1000);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const uptimeInterval = setIntervalSpy.mock.calls.find((call: any) => call[1] === 1000);
 				expect(uptimeInterval).toBeDefined();
 			});
 		});

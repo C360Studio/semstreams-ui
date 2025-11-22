@@ -88,9 +88,7 @@ test.describe('Deploy Blocking', () => {
 		const palette = new ComponentPalettePage(page);
 
 		// Mock validation endpoint to return errors
-		let validationCallCount = 0;
 		await page.route('**/flowbuilder/flows/*/validate', (route) => {
-			validationCallCount++;
 			route.fulfill({
 				status: 200,
 				body: JSON.stringify({

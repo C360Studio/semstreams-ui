@@ -8,7 +8,7 @@
 
 import type { Node, Edge } from '@xyflow/svelte';
 import type { FlowNode, FlowConnection, ConnectionSource, ConnectionVisualState } from '$lib/types/flow';
-import type { ValidationState, ValidationResult } from '$lib/types/port';
+import type { ValidationState, ValidationResult, ValidatedPort } from '$lib/types/port';
 import { CONNECTION_PATTERNS, SEMANTIC_COLORS } from '$lib/theme/colors';
 
 /**
@@ -22,6 +22,10 @@ export interface XYFlowNodeData extends Record<string, unknown> {
 	node: FlowNode;
 	/** Callback when node is clicked */
 	onNodeClick?: (nodeId: string) => void;
+	/** Input ports from validation (updated dynamically) */
+	input_ports?: ValidatedPort[];
+	/** Output ports from validation (updated dynamically) */
+	output_ports?: ValidatedPort[];
 }
 
 /**
@@ -133,6 +137,11 @@ export function convertToXYFlowEdge(connection: FlowConnection): XYFlowEdge {
 	// CRITICAL DEBUG: Remove edge type entirely to see if XYFlow renders defaults
 	// const edgeType = connection.source === 'auto' ? 'auto' : connection.source === 'manual' ? 'manual' : 'default';
 
+	// Convert style object to CSS string for XYFlow
+	const styleString = Object.keys(style).length > 0
+		? Object.entries(style).map(([key, value]) => `${key}: ${value}`).join('; ')
+		: undefined;
+
 	return {
 		id: connection.id,
 		source: connection.source_node_id,
@@ -148,7 +157,7 @@ export function convertToXYFlowEdge(connection: FlowConnection): XYFlowEdge {
 			targetNodeId: connection.target_node_id,
 			targetPort: connection.target_port
 		},
-		style: Object.keys(style).length > 0 ? style : undefined
+		style: styleString
 	};
 }
 

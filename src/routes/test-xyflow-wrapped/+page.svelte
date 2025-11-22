@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import TestCanvas from '../test-xyflow/TestCanvas.svelte';
 
@@ -28,7 +29,7 @@
 		}
 	]);
 
-	let edges = $state([]);
+	let edges = $state<Edge[]>([]);
 
 	console.log('[WRAPPED TEST] Initial setup - nodes:', nodes.length, 'edges:', edges.length);
 

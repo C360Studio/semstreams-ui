@@ -95,34 +95,34 @@ describe('FlowCanvas (Prop-Based Architecture)', () => {
 		expect(onNodeClick).toBeDefined();
 	});
 
-	it('should accept onNodesChange callback prop', () => {
+	it('should accept onConnectionCreate callback prop', () => {
 		const flow = createMockFlow();
 		const nodes = convertFlowNodesToXYFlow(flow.nodes);
 		const edges = convertFlowConnectionsToXYFlow(flow.connections);
-		const onNodesChange = vi.fn();
+		const onConnectionCreate = vi.fn();
 
-		render(FlowCanvas, { props: { nodes, edges, onNodesChange } });
+		render(FlowCanvas, { props: { nodes, edges, onConnectionCreate } });
 
 		// Callback prop should be accepted without errors
-		expect(onNodesChange).toBeDefined();
+		expect(onConnectionCreate).toBeDefined();
 	});
 
 	// ========================================================================
 	// Event Emission Tests - Component should emit events via callbacks
 	// ========================================================================
 
-	it('should emit node changes via onNodesChange callback', () => {
+	it('should emit connection creation via onConnectionCreate callback', () => {
 		const flow = createMockFlow();
 		const nodes = convertFlowNodesToXYFlow(flow.nodes);
 		const edges = convertFlowConnectionsToXYFlow(flow.connections);
-		const onNodesChange = vi.fn();
+		const onConnectionCreate = vi.fn();
 
-		render(FlowCanvas, { props: { nodes, edges, onNodesChange } });
+		render(FlowCanvas, { props: { nodes, edges, onConnectionCreate } });
 
 		// With mocked @xyflow, we can't simulate actual changes
 		// This validates the callback pattern is implemented
 		// E2E tests will validate actual behavior
-		expect(onNodesChange).toBeDefined();
+		expect(onConnectionCreate).toBeDefined();
 	});
 
 	// ========================================================================

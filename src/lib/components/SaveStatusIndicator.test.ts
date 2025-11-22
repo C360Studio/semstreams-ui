@@ -17,7 +17,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'clean',
 				lastSaved: new Date(),
-				lastDraft: null,
 				error: null
 			};
 
@@ -31,7 +30,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'clean',
 				lastSaved: now,
-				lastDraft: null,
 				error: null
 			};
 
@@ -45,7 +43,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'clean',
 				lastSaved: new Date(),
-				lastDraft: null,
 				error: null
 			};
 
@@ -60,7 +57,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'clean',
 				lastSaved: new Date(),
-				lastDraft: null,
 				error: null
 			};
 
@@ -81,7 +77,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: new Date(Date.now() - 5 * 60 * 1000),
-				lastDraft: new Date(Date.now() - 30 * 1000), // 30 seconds ago
 				error: null
 			};
 
@@ -94,13 +89,12 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: new Date(),
-				lastDraft: new Date(),
 				error: null
 			};
 
 			render(SaveStatusIndicator, { props: { saveState } });
 
-			// Timestamp only shown when status is 'clean'
+			// Timestamp only shown when status is 'clean' or 'draft'
 			expect(screen.queryByText(/at \d+:\d+:\d+/i)).not.toBeInTheDocument();
 		});
 
@@ -108,7 +102,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: null,
-				lastDraft: new Date(),
 				error: null
 			};
 
@@ -122,7 +115,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: null,
-				lastDraft: new Date(),
 				error: null
 			};
 
@@ -143,7 +135,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'saving',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -156,7 +147,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'saving',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -170,7 +160,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'saving',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -191,7 +180,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'error',
 				lastSaved: null,
-				lastDraft: null,
 				error: 'Network connection failed'
 			};
 
@@ -205,7 +193,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'error',
 				lastSaved: null,
-				lastDraft: null,
 				error: 'Test error'
 			};
 
@@ -219,7 +206,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'error',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -234,7 +220,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'error',
 				lastSaved: null,
-				lastDraft: null,
 				error: 'Test error'
 			};
 
@@ -255,13 +240,12 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'clean',
 				lastSaved: new Date(),
-				lastDraft: null,
 				error: null
 			};
 
 			// Spec 015: Pass validationResult to test validation status display
 			const validationResult = {
-				valid: true,
+				validation_status: 'valid' as const,
 				errors: [],
 				warnings: [],
 				nodes: [],
@@ -280,7 +264,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'error',
 				lastSaved: null,
-				lastDraft: null,
 				error: 'Test error'
 			};
 
@@ -295,7 +278,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -316,7 +298,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'clean',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -330,11 +311,10 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			expect(screen.queryByText(/at \d+:\d+:\d+/i)).not.toBeInTheDocument();
 		});
 
-		it('should handle null lastDraft in dirty state', () => {
+		it('should handle null lastSaved in dirty state', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -349,7 +329,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'clean',
 				lastSaved: now,
-				lastDraft: null,
 				error: null
 			};
 
@@ -363,7 +342,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 
@@ -376,7 +354,6 @@ describe('SaveStatusIndicator (Prop-Based Architecture)', () => {
 			const saveState: SaveState = {
 				status: 'dirty',
 				lastSaved: null,
-				lastDraft: null,
 				error: null
 			};
 

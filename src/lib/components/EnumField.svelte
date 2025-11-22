@@ -51,7 +51,7 @@
 		{#if options.length > 0 && !value && !isRequired}
 			<option value=""></option>
 		{/if}
-		{#each options as option}
+		{#each options as option (option)}
 			<option value={option}>{option}</option>
 		{/each}
 	</select>

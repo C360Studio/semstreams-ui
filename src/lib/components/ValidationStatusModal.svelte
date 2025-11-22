@@ -90,6 +90,16 @@
 		}
 	}
 
+	// Handle backdrop keyboard events for accessibility
+	function handleBackdropKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			if (event.target === event.currentTarget) {
+				event.preventDefault();
+				onClose();
+			}
+		}
+	}
+
 	// Set up keyboard listener and focus management when modal is open
 	$effect(() => {
 		if (isOpen) {
@@ -128,6 +138,7 @@
 		class="modal-backdrop"
 		data-testid="modal-backdrop"
 		onclick={handleBackdropClick}
+		onkeydown={handleBackdropKeyDown}
 		role="presentation"
 	>
 		<div
@@ -137,6 +148,7 @@
 			aria-label="Validation Details"
 			tabindex="0"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
 			<div class="modal-header">
 				<h2>Validation Issues</h2>
@@ -158,7 +170,7 @@
 							Errors ({validationResult.errors.length})
 						</h3>
 						<ul class="issues-list">
-							{#each validationResult.errors as error}
+							{#each validationResult.errors as error, index (error.component_name + '|' + (error.port_name ?? '') + '|' + error.message + '|' + index)}
 								<li class="issue-item error-item">
 									<div class="issue-header">
 										<strong class="component-name">
@@ -188,7 +200,7 @@
 							Warnings ({validationResult.warnings.length})
 						</h3>
 						<ul class="issues-list">
-							{#each validationResult.warnings as warning}
+							{#each validationResult.warnings as warning, index (warning.component_name + '|' + (warning.port_name ?? '') + '|' + warning.message + '|' + index)}
 								<li class="issue-item warning-item">
 									<div class="issue-header">
 										<strong class="component-name">
@@ -228,6 +240,7 @@
 		class="modal-backdrop"
 		data-testid="modal-backdrop"
 		onclick={handleBackdropClick}
+		onkeydown={handleBackdropKeyDown}
 		role="presentation"
 	>
 		<div
@@ -237,6 +250,7 @@
 			aria-label="Validation Details"
 			tabindex="0"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
 			<div class="modal-header">
 				<h2>Validation Details</h2>

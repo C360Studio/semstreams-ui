@@ -100,14 +100,6 @@
 		convertFlowConnectionsToXYFlow(backendFlow.connections)
 	);
 
-	// DEBUG: Use $inspect to track edge changes (only logs when edges actually change)
-	$inspect('Edges:', xyflowEdges.length, xyflowEdges.map(e => ({
-		id: e.id.substring(0, 20) + '...',  // Truncate long IDs
-		type: e.id.startsWith('auto_') ? 'auto' : e.id.startsWith('conn_') ? 'manual' : 'other',
-		from: e.source,
-		to: e.target
-	})));
-
 	// Track dirty state when nodes/edges change via bindings
 	let initialNodeCount = xyflowNodes.length;
 	let initialEdgeCount = xyflowEdges.length;
@@ -339,7 +331,7 @@
 				const edge = xyflowEdges[i];
 				const hasError = result.errors.some(
 					(err) =>
-						err.componentName === edge.source || err.componentName === edge.target
+						err.component_name === edge.source || err.component_name === edge.target
 				);
 				if (hasError && edge.data) {
 					xyflowEdges[i] = {
@@ -677,7 +669,8 @@
 	<main class="canvas-area">
 		<header class="editor-header">
 			<div class="header-content">
-				<a href="/" class="back-button" aria-label="Back to flows">← Flows</a>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+				<a href="/" data-sveltekit-reload class="back-button" aria-label="Back to flows">← Flows</a>
 				<div class="header-text">
 					<h1>{backendFlow?.name || 'Loading...'}</h1>
 					{#if backendFlow?.description}
@@ -688,8 +681,6 @@
 					{saveState}
 					onSave={handleSave}
 					{validationResult}
-					nodeCount={xyflowNodes.length}
-					edgeCount={xyflowEdges.length}
 					onValidationClick={handleValidationStatusClick}
 				/>
 			</div>

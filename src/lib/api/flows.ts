@@ -21,11 +21,36 @@ export interface FlowUpdateData {
 }
 
 /**
+ * Validation result from backend schema validation
+ */
+export interface ValidationResult {
+	valid: boolean;
+	errors?: Array<{
+		field: string;
+		message: string;
+		code: string;
+	}>;
+}
+
+/**
  * Standard error response from backend
  */
 export interface APIError {
 	error: string;
-	validation_result?: any;
+	validation_result?: ValidationResult;
+}
+
+/**
+ * Custom error class for validation errors
+ */
+export class ValidationError extends Error {
+	constructor(
+		message: string,
+		public validationResult: ValidationResult
+	) {
+		super(message);
+		this.name = 'ValidationError';
+	}
 }
 
 /**
@@ -71,8 +96,10 @@ export async function deployFlow(flowId: string): Promise<Flow> {
 		// Check if this is a validation error with structured details
 		if (error.validation_result) {
 			// Create structured error that can be caught and displayed
-			const validationError = new Error(error.error || 'Flow validation failed');
-			(validationError as any).validationResult = error.validation_result;
+			const validationError = new ValidationError(
+				error.error || 'Flow validation failed',
+				error.validation_result
+			);
 			throw validationError;
 		}
 
@@ -126,8 +153,8 @@ export async function stopFlow(flowId: string): Promise<Flow> {
  * Type guard for validation errors
  *
  * @param error - Any error object
- * @returns True if error has validationResult property
+ * @returns True if error is a ValidationError instance
  */
-export function isValidationError(error: any): error is Error & { validationResult: any } {
-	return error instanceof Error && 'validationResult' in error;
+export function isValidationError(error: unknown): error is ValidationError {
+	return error instanceof ValidationError;
 }

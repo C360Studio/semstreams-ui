@@ -229,10 +229,10 @@
 			<p class="empty-state">No input ports configured</p>
 		{:else}
 			<div class="port-list">
-				{#each portConfig.inputs as port, index}
+				{#each portConfig.inputs as port, index (port.id)}
 					<div class="port-item">
 						<div class="port-fields">
-							{#each allFieldNames as fieldName}
+							{#each allFieldNames as fieldName (fieldName)}
 								<div class="port-field">
 									{#if isFieldEditable(fieldName)}
 										<label class="field-label" for="{name}-input-{index}-{fieldName}">{fieldName}</label>
@@ -268,10 +268,10 @@
 			<p class="empty-state">No output ports configured</p>
 		{:else}
 			<div class="port-list">
-				{#each portConfig.outputs as port, index}
+				{#each portConfig.outputs as port, index (port.id)}
 					<div class="port-item">
 						<div class="port-fields">
-							{#each allFieldNames as fieldName}
+							{#each allFieldNames as fieldName (fieldName)}
 								<div class="port-field">
 									{#if isFieldEditable(fieldName)}
 										<label class="field-label" for="{name}-output-{index}-{fieldName}">{fieldName}</label>

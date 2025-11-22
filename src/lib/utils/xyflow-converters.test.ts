@@ -29,7 +29,7 @@ describe('xyflow-converters', () => {
 			expect(edge.data?.source).toBe('manual');
 
 			// Manual connections should have solid line (no stroke-dasharray)
-			expect(edge.style?.strokeDasharray).toBeUndefined();
+			expect(edge.style).toBeUndefined();
 		});
 
 		it('should convert auto connection to XYFlow edge with dashed line', () => {
@@ -47,7 +47,7 @@ describe('xyflow-converters', () => {
 			expect(edge.data?.source).toBe('auto');
 
 			// Auto connections should have dashed line
-			expect(edge.style?.strokeDasharray).toBe('5, 5');
+			expect(edge.style).toContain('strokeDasharray: 5, 5');
 		});
 
 		it('should preserve validation state in edge data', () => {
@@ -80,7 +80,7 @@ describe('xyflow-converters', () => {
 			const edge = convertToXYFlowEdge(connection);
 
 			// Error connections should have red stroke
-			expect(edge.style?.stroke).toBe('#dc3545');
+			expect(edge.style).toContain('stroke: #dc3545');
 		});
 
 		it('should apply warning styling when validation state is warning', () => {
@@ -97,7 +97,7 @@ describe('xyflow-converters', () => {
 			const edge = convertToXYFlowEdge(connection);
 
 			// Warning connections should have yellow stroke
-			expect(edge.style?.stroke).toBe('#ffc107');
+			expect(edge.style).toContain('stroke: #ffc107');
 		});
 
 		it('should apply valid styling when validation state is valid', () => {
@@ -114,7 +114,7 @@ describe('xyflow-converters', () => {
 			const edge = convertToXYFlowEdge(connection);
 
 			// Valid connections should have blue stroke
-			expect(edge.style?.stroke).toBe('#0066cc');
+			expect(edge.style).toContain('stroke: #0066cc');
 		});
 
 		it('should handle undefined validation state gracefully', () => {
@@ -196,7 +196,7 @@ describe('xyflow-converters', () => {
 					{
 						type: 'port_conflict',
 						severity: 'error',
-						componentName: 'node-1',
+						component_name: 'node-1',
 						message: 'Type mismatch',
 						suggestions: []
 					}

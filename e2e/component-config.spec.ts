@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 import { FlowCanvasPage } from './pages/FlowCanvasPage';
 import { ComponentPalettePage } from './pages/ComponentPalettePage';
 import { ConfigPanelPage } from './pages/ConfigPanelPage';

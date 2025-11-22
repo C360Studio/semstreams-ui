@@ -40,7 +40,7 @@ test.describe('Schema-Driven Configuration', () => {
 	});
 
 	// Schema form rendering (general test)
-	test('should display schema-driven form for UDP component', async ({ page }) => {
+	test('should display schema-driven form for UDP component', async ({ _page }) => {
 		// Add UDP component to flow
 		await palette.dragComponentToCanvas('UDP Input', 100, 100);
 
@@ -62,7 +62,7 @@ test.describe('Schema-Driven Configuration', () => {
 	});
 
 	// Basic Configuration section rendering
-	test('should render Basic Configuration section', async ({ page }) => {
+	test('should render Basic Configuration section', async ({ _page }) => {
 		// Add UDP component
 		await palette.dragComponentToCanvas('UDP Input', 100, 100);
 		await canvas.expectNodeCount(1);
@@ -84,12 +84,12 @@ test.describe('Schema-Driven Configuration', () => {
 
 	// General schema feature tests (independent of specific component schemas)
 
-	test('should render enum field as dropdown', async ({ page }) => {
+	test('should render enum field as dropdown', async ({ _page }) => {
 		// Note: Skipped until we have a component with enum fields
 		test.skip(true, 'No components with enum fields available yet');
 	});
 
-	test('should show JSON editor fallback for component without schema', async ({ page }) => {
+	test('should show JSON editor fallback for component without schema', async ({ _page }) => {
 		// Note: Skipped since all current components have schemas
 		test.skip(true, 'All components currently have schemas');
 	});

@@ -29,6 +29,16 @@
 			onCancel?.();
 		}
 	}
+
+	// Handle background keyboard events for accessibility
+	function handleBackgroundKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			if (event.target === event.currentTarget) {
+				event.preventDefault();
+				onCancel?.();
+			}
+		}
+	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -37,9 +47,11 @@
 	<div
 		class="dialog-overlay"
 		onclick={handleBackgroundClick}
+		onkeydown={handleBackgroundKeydown}
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="navigation-dialog-title"
+		tabindex="-1"
 	>
 		<div class="dialog-content">
 			<h2 id="navigation-dialog-title">You have unsaved changes</h2>
@@ -50,7 +62,6 @@
 					type="button"
 					class="button-save"
 					onclick={onSave}
-					autofocus
 				>
 					Save Changes
 				</button>

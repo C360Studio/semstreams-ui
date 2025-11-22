@@ -347,3 +347,31 @@ export interface ValidatedPortWithVisuals extends ValidatedPort {
 	/** Port group membership (if component has 10+ ports) */
 	groupId?: string;
 }
+
+/**
+ * Port compatibility feedback for connection creation
+ *
+ * Provides real-time visual feedback during drag-and-drop connection creation.
+ * Validates direction compatibility (output to input only) and type matching.
+ *
+ * @see specs/014-flow-ux-port/data-model.md
+ */
+export interface CompatibilityFeedback {
+	/** Source port identifier */
+	sourcePortId: string;
+
+	/** Target port identifier */
+	targetPortId: string;
+
+	/** Compatibility status */
+	compatibility: 'compatible' | 'incompatible';
+
+	/** Visual indicator class (green-highlight or red-indicator) */
+	indicator: string;
+
+	/** Reason for incompatibility if applicable */
+	incompatibilityReason?: string;
+
+	/** CSS classes for feedback styling */
+	feedbackClasses: string[];
+}

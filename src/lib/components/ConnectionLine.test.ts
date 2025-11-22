@@ -1,5 +1,6 @@
 import { render } from '@testing-library/svelte';
 import { describe, it, expect } from 'vitest';
+import { Position } from '@xyflow/svelte';
 import ConnectionLine from './ConnectionLine.svelte';
 import type { ConnectionSource } from '$lib/types/flow';
 import type { ValidationState } from '$lib/types/port';
@@ -14,8 +15,9 @@ describe('ConnectionLine', () => {
 		sourceY: 100,
 		targetX: 300,
 		targetY: 300,
-		sourcePosition: 'right' as const,
-		targetPosition: 'left' as const,
+		sourcePosition: Position.Right,
+		targetPosition: Position.Left,
+		type: 'default',
 		data: {
 			source,
 			validationState,

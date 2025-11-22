@@ -77,6 +77,7 @@
 
 			// Set flag to bypass guard on next navigation
 			isNavigating = true;
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			goto(destination);
 		}
 	}

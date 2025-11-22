@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap } from "svelte/reactivity";
 	import { onMount } from 'svelte';
 	import type { ComponentType } from '$lib/types/component';
 	import { getDomainColor } from '$lib/utils/domain-colors';
@@ -15,7 +16,7 @@
 
 	// Group components by category
 	const componentsByCategory = $derived.by(() => {
-		const groups = new Map<string, ComponentType[]>();
+		const groups = new SvelteMap<string, ComponentType[]>();
 		components.forEach((component) => {
 			const category = component.category || 'other';
 			if (!groups.has(category)) {
@@ -92,7 +93,7 @@
 				<p class="empty-hint">Component types will be loaded from the registry</p>
 			</div>
 		{:else}
-			{#each [...componentsByCategory] as [category, categoryComponents]}
+			{#each [...componentsByCategory] as [category, categoryComponents] (category)}
 				<div class="category">
 					<div class="category-header">{category}</div>
 					<div class="component-list">

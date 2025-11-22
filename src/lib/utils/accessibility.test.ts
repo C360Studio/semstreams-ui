@@ -129,15 +129,15 @@ describe('accessibility', () => {
 					{
 						type: 'orphaned_port',
 						severity: 'error',
-						componentName: 'Component1',
-						portName: 'port1',
+						component_name: 'Component1',
+						port_name: 'port1',
 						message: 'Error 1',
 						suggestions: []
 					},
 					{
 						type: 'disconnected_node',
 						severity: 'error',
-						componentName: 'Component2',
+						component_name: 'Component2',
 						message: 'Error 2',
 						suggestions: []
 					}
@@ -161,8 +161,8 @@ describe('accessibility', () => {
 					{
 						type: 'orphaned_port',
 						severity: 'warning',
-						componentName: 'Component1',
-						portName: 'port1',
+						component_name: 'Component1',
+						port_name: 'port1',
 						message: 'Warning 1',
 						suggestions: []
 					}
@@ -212,7 +212,7 @@ describe('accessibility', () => {
 					{
 						type: 'orphaned_port',
 						severity: 'error',
-						componentName: 'Component1',
+						component_name: 'Component1',
 						message: 'Error 1',
 						suggestions: []
 					}

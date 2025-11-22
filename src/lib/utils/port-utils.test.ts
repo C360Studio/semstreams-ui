@@ -5,7 +5,7 @@ import {
 	extractTooltipContent,
 	checkPortCompatibility
 } from './port-utils';
-import type { PortVisualization, ValidatedPort } from '$lib/types/port';
+import type { ValidatedPort } from '$lib/types/port';
 
 describe('port-utils', () => {
 	describe('groupPorts', () => {

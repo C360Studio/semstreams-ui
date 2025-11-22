@@ -21,7 +21,7 @@
 	$effect(() => {
 		try {
 			jsonString = JSON.stringify(config, null, 2);
-		} catch (e) {
+		} catch {
 			// Keep existing jsonString if config is invalid
 		}
 	});
@@ -56,7 +56,7 @@
 		rows="15"
 		aria-invalid={parseError ? 'true' : undefined}
 		aria-describedby={parseError ? 'json-error' : undefined}
-	/>
+	></textarea>
 
 	{#if parseError}
 		<span class="error" id="json-error" role="alert">{parseError}</span>

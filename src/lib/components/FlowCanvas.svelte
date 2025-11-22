@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { SvelteFlow, Controls, Background, type Node, type Edge, type Connection } from '@xyflow/svelte';
+	import { SvelteFlow, Controls, Background, type Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import CustomFlowNode from './CustomFlowNode.svelte';
-	import SimpleFlowNode from './SimpleFlowNode.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
 	import type { XYFlowNode, XYFlowEdge } from '$lib/utils/xyflow-converters';
 	import { convertToXYFlowNode, convertToXYFlowEdge } from '$lib/utils/xyflow-converters';

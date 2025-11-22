@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { PortGroup } from '$lib/types/port';
-	import PortHandle from './PortHandle.svelte';
 
 	interface PortGroupProps {
 		group: PortGroup;

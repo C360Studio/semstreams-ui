@@ -14,7 +14,7 @@ interface MessageLogEntry {
 	component: string;
 	direction: 'published' | 'received' | 'processed';
 	summary: string;
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 interface MessagesResponse {
@@ -62,7 +62,8 @@ const mockResponse: MessagesResponse = {
 };
 
 // Setup fetch mock
-global.fetch = vi.fn();
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch;
 
 describe('MessagesTab - Rendering', () => {
 	beforeEach(() => {
@@ -70,7 +71,7 @@ describe('MessagesTab - Rendering', () => {
 	});
 
 	it('renders empty state when no messages', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({ timestamp: new Date().toISOString(), messages: [], total: 0, limit: 100 })
 		});
@@ -83,7 +84,7 @@ describe('MessagesTab - Rendering', () => {
 	});
 
 	it('renders messages list with all fields', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -99,7 +100,7 @@ describe('MessagesTab - Rendering', () => {
 	});
 
 	it('shows direction indicators with correct symbols', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -113,7 +114,7 @@ describe('MessagesTab - Rendering', () => {
 	});
 
 	it('displays NATS subjects in monospace font', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -130,7 +131,7 @@ describe('MessagesTab - Rendering', () => {
 	});
 
 	it('formats timestamps with millisecond precision', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -153,7 +154,7 @@ describe('MessagesTab - Filtering', () => {
 	});
 
 	it('filters messages by component', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -175,7 +176,7 @@ describe('MessagesTab - Filtering', () => {
 	});
 
 	it('filters messages by direction', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -197,7 +198,7 @@ describe('MessagesTab - Filtering', () => {
 	});
 
 	it('combines component and direction filters', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -221,7 +222,7 @@ describe('MessagesTab - Filtering', () => {
 	});
 
 	it('shows "All" options in filters', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -236,12 +237,12 @@ describe('MessagesTab - Filtering', () => {
 	});
 
 	it('updates filtered message count display', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
 
-		const { container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		const { container: _container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
 
 		await waitFor(() => {
 			expect(screen.getAllByTestId('message-entry').length).toBe(3);
@@ -267,7 +268,7 @@ describe('MessagesTab - Polling', () => {
 	});
 
 	it('polls at configured interval', async () => {
-		(global.fetch as any).mockResolvedValue({
+		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -276,19 +277,19 @@ describe('MessagesTab - Polling', () => {
 
 		// Initial fetch
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledTimes(1);
+			expect(mockFetch).toHaveBeenCalledTimes(1);
 		});
 
 		// Advance timer by 2 seconds (default poll interval)
 		vi.advanceTimersByTime(2000);
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledTimes(2);
+			expect(mockFetch).toHaveBeenCalledTimes(2);
 		});
 	});
 
 	it('manual refresh works', async () => {
-		(global.fetch as any).mockResolvedValue({
+		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -296,7 +297,7 @@ describe('MessagesTab - Polling', () => {
 		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledTimes(1);
+			expect(mockFetch).toHaveBeenCalledTimes(1);
 		});
 
 		// Change to manual mode
@@ -308,12 +309,12 @@ describe('MessagesTab - Polling', () => {
 		await fireEvent.click(refreshButton);
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledTimes(2);
+			expect(mockFetch).toHaveBeenCalledTimes(2);
 		});
 	});
 
 	it('stops polling when inactive', async () => {
-		(global.fetch as any).mockResolvedValue({
+		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -321,7 +322,7 @@ describe('MessagesTab - Polling', () => {
 		const { unmount } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledTimes(1);
+			expect(mockFetch).toHaveBeenCalledTimes(1);
 		});
 
 		// Unmount and remount with isActive false
@@ -331,11 +332,11 @@ describe('MessagesTab - Polling', () => {
 		vi.advanceTimersByTime(10000);
 
 		// Should not poll again (still just 1 call from first mount)
-		expect(global.fetch).toHaveBeenCalledTimes(1);
+		expect(mockFetch).toHaveBeenCalledTimes(1);
 	});
 
 	it('resumes polling when active', async () => {
-		(global.fetch as any).mockResolvedValue({
+		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -343,14 +344,14 @@ describe('MessagesTab - Polling', () => {
 		const { unmount } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: false } });
 
 		vi.advanceTimersByTime(5000);
-		expect(global.fetch).not.toHaveBeenCalled();
+		expect(mockFetch).not.toHaveBeenCalled();
 
 		// Unmount and remount with isActive true
 		unmount();
 		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledTimes(1);
+			expect(mockFetch).toHaveBeenCalledTimes(1);
 		});
 	});
 });
@@ -361,7 +362,7 @@ describe('MessagesTab - Controls', () => {
 	});
 
 	it('auto-scroll toggles correctly', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -380,7 +381,7 @@ describe('MessagesTab - Controls', () => {
 	});
 
 	it('clear messages works', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -400,7 +401,7 @@ describe('MessagesTab - Controls', () => {
 	});
 
 	it('poll rate selector works', async () => {
-		(global.fetch as any).mockResolvedValue({
+		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -419,7 +420,7 @@ describe('MessagesTab - Controls', () => {
 	});
 
 	it('metadata expands and collapses', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -456,7 +457,7 @@ describe('MessagesTab - Controls', () => {
 	});
 
 	it('multiple metadata sections independent', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -498,7 +499,7 @@ describe('MessagesTab - API Integration', () => {
 	});
 
 	it('fetches messages from correct endpoint', async () => {
-		(global.fetch as any).mockResolvedValueOnce({
+		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockResponse
 		});
@@ -506,14 +507,14 @@ describe('MessagesTab - API Integration', () => {
 		render(MessagesTab, { props: { flowId: 'test-flow-456', isActive: true } });
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledWith(
+			expect(mockFetch).toHaveBeenCalledWith(
 				'/flowbuilder/flows/test-flow-456/runtime/messages'
 			);
 		});
 	});
 
 	it('handles fetch errors gracefully', async () => {
-		(global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+		mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
 		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
 
@@ -523,12 +524,12 @@ describe('MessagesTab - API Integration', () => {
 	});
 
 	it('shows loading state during fetch', async () => {
-		let resolvePromise: (value: any) => void;
-		const promise = new Promise((resolve) => {
+		let resolvePromise: (value: Response) => void;
+		const promise = new Promise<Response>((resolve) => {
 			resolvePromise = resolve;
 		});
 
-		(global.fetch as any).mockReturnValueOnce(promise);
+		mockFetch.mockReturnValueOnce(promise);
 
 		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
 
@@ -539,7 +540,7 @@ describe('MessagesTab - API Integration', () => {
 		resolvePromise!({
 			ok: true,
 			json: async () => mockResponse
-		});
+		} as Response);
 
 		await waitFor(() => {
 			expect(screen.getAllByTestId('message-entry').length).toBe(3);

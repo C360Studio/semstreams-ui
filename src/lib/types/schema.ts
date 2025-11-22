@@ -5,6 +5,18 @@
  * PropertySchema defines the configuration schema for a single property/field.
  * Matches backend: pkg/component/discovery.go PropertySchema
  */
+/**
+ * Valid default values for PropertySchema fields based on type
+ */
+export type PropertyDefaultValue =
+	| string
+	| number
+	| boolean
+	| string[]
+	| Record<string, unknown>
+	| null
+	| undefined;
+
 export interface PropertySchema {
 	/** Field data type */
 	type: 'string' | 'int' | 'bool' | 'float' | 'enum' | 'object' | 'array' | 'ports' | 'cache';
@@ -13,7 +25,7 @@ export interface PropertySchema {
 	description: string;
 
 	/** Default value for the field */
-	default?: any;
+	default?: PropertyDefaultValue;
 
 	/** Valid enum values (for type: 'enum') */
 	enum?: string[];

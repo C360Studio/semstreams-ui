@@ -17,7 +17,7 @@ export const handle: Handle = async ({ event, resolve }) => {
  * When running E2E tests, SSR is disabled via +layout.ts,
  * so client-side fetches use the Vite proxy instead.
  */
-export async function handleFetch({ request, fetch, event }) {
+export async function handleFetch({ request, fetch }) {
 	const url = new URL(request.url);
 	const startTime = Date.now();
 

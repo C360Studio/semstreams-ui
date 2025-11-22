@@ -244,7 +244,7 @@ test.describe('Runtime Panel - Metrics Tab', () => {
 			// Get initial throughput value from first row
 			const firstRow = metricsRows.first();
 			const metricValue = firstRow.locator('.metric-value').first();
-			const initialValue = await metricValue.textContent();
+			// const initialValue = await metricValue.textContent();
 
 			// Wait for next polling interval (default 2s)
 			await page.waitForTimeout(2500);
@@ -289,7 +289,7 @@ test.describe('Runtime Panel - Metrics Tab', () => {
 			expect(text).toMatch(/\d{2}:\d{2}:\d{2}/);
 
 			// Wait for next poll and verify timestamp updates
-			const initialText = text;
+			// const initialText = text;
 			await page.waitForTimeout(2500);
 
 			const updatedText = await lastUpdated.textContent();

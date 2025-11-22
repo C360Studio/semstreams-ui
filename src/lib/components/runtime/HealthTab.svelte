@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from "svelte/reactivity";
 	/**
 	 * HealthTab Component - Component health monitoring with diagnostics
 	 * Phase 4 of Runtime Visualization Panel
@@ -49,7 +50,7 @@
 	// Reactive state
 	let health = $state<HealthResponse | null>(null);
 	let currentTime = $state(new Date());
-	let expandedComponents = $state<Set<string>>(new Set());
+	let expandedComponents = new SvelteSet<string>();
 	let errorMessage = $state<string | null>(null);
 
 	// Sorted components (alphabetically by name)
@@ -169,13 +170,11 @@
 	 * Toggle component details expansion
 	 */
 	function toggleDetails(componentName: string) {
-		const newExpanded = new Set(expandedComponents);
-		if (newExpanded.has(componentName)) {
-			newExpanded.delete(componentName);
+		if (expandedComponents.has(componentName)) {
+			expandedComponents.delete(componentName);
 		} else {
-			newExpanded.add(componentName);
+			expandedComponents.add(componentName);
 		}
-		expandedComponents = newExpanded;
 	}
 
 	/**

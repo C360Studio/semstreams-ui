@@ -26,14 +26,35 @@ export class FlowApiError extends Error {
 }
 
 /**
+ * Backend flow response structure (may have null/undefined arrays)
+ */
+interface BackendFlowResponse {
+  id: string;
+  name: string;
+  description?: string;
+  version: number;
+  runtime_state: string;
+  nodes?: unknown[] | null;
+  connections?: unknown[] | null;
+  deployed_at?: string;
+  started_at?: string;
+  stopped_at?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  last_modified: string;
+}
+
+/**
  * Normalize flow data from backend
  * Ensures nodes and connections are always arrays (never null/undefined)
  */
-function normalizeFlow(flow: any): Flow {
+function normalizeFlow(flow: BackendFlowResponse): Flow {
   return {
     ...flow,
-    nodes: flow.nodes || [],
-    connections: flow.connections || []
+    nodes: (flow.nodes || []) as Flow['nodes'],
+    connections: (flow.connections || []) as Flow['connections'],
+    runtime_state: flow.runtime_state as Flow['runtime_state']
   };
 }
 

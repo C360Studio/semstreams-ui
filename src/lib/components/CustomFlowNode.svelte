@@ -1,32 +1,38 @@
 <script lang="ts">
-	import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/svelte';
+	import { Handle, Position, useUpdateNodeInternals, type NodeProps, type Node } from '@xyflow/svelte';
 	import type { XYFlowNodeData } from '$lib/utils/xyflow-converters';
 	import type { ValidatedPort } from '$lib/types/port';
 	import { computePortVisualStyle } from '$lib/utils/port-utils';
 	import { getDomainColor } from '$lib/utils/domain-colors';
 
-	// Use XYFlow's NodeProps type with our custom data
+	// Define our custom data type
 	type CustomNodeData = XYFlowNodeData & {
 		input_ports?: ValidatedPort[];
 		output_ports?: ValidatedPort[];
 	};
 
-	// Accept ALL props that XYFlow passes (using NodeProps)
-	let props: NodeProps<CustomNodeData> = $props();
+	// Define the full Node type with our custom data
+	type CustomNode = Node<CustomNodeData>;
 
-	// Extract ID (constant) but access data reactively via props.data
-	const { id } = props;
+	// Accept ALL props that XYFlow passes (using NodeProps with full Node type)
+	let props: NodeProps<CustomNode> = $props();
+
+	// Extract ID (constant) and ensure it's typed as string
+	const id: string = props.id;
+
+	// Access data through properly typed props
+	const data = $derived(props.data as CustomNodeData);
 
 	// Get the update function to notify XYFlow of handle changes
 	const updateNodeInternals = useUpdateNodeInternals();
 
-	// Compute domain color for accent border
-	const domainColor = $derived(getDomainColor(props.data.node.category || 'network'));
+	// Compute domain color for accent border (use node type as domain)
+	const domainColor = $derived(getDomainColor(data.node.type || 'network'));
 
 	// Combine input and output ports from backend validation
 	const ports = $derived([
-		...(props.data.input_ports || []),
-		...(props.data.output_ports || [])
+		...(data.input_ports || []),
+		...(data.output_ports || [])
 	]);
 
 	// Update XYFlow internals when ports change
@@ -47,7 +53,7 @@
 <div
 	class="custom-flow-node"
 	data-node-id={id}
-	data-node-type={props.data.node.type}
+	data-node-type={data.node.type}
 	style="border-left: var(--canvas-node-domain-accent-width) solid {domainColor};"
 >
 	<!-- Fallback: XYFlow Handles for connections when no port groups -->
@@ -121,7 +127,7 @@
 	{/each}
 
 	<div class="node-content">
-		<div class="node-label">{props.data.label}</div>
+		<div class="node-label">{data.label}</div>
 		<div class="port-summary">
 			{ports.filter(p => p.direction === 'input').length} inputs, {ports.filter(p => p.direction === 'output').length} outputs
 		</div>

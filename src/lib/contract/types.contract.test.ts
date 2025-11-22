@@ -31,8 +31,9 @@ This generates TypeScript types from your OpenAPI specification.
 
 	try {
 		return readFileSync(GENERATED_TYPES_PATH, 'utf8');
-	} catch (err: any) {
-		throw new Error(`Failed to read generated types: ${err.message}`);
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		throw new Error(`Failed to read generated types: ${errorMessage}`);
 	}
 }
 
@@ -52,42 +53,63 @@ describe.skipIf(!existsSync(GENERATED_TYPES_PATH))('TypeScript Type Generation C
 
 	it('should export components type', () => {
 		const content = loadGeneratedTypes();
-		expect(content).toContain('components');
-		expect(content).toContain('schemas');
+		expect(content).not.toBeNull();
+		if (content) {
+			expect(content).toContain('components');
+			expect(content).toContain('schemas');
+		}
 	});
 
 	it('should export ComponentType schema', () => {
 		const content = loadGeneratedTypes();
-		expect(content).toContain('ComponentType');
+		expect(content).not.toBeNull();
+		if (content) {
+			expect(content).toContain('ComponentType');
+		}
 	});
 
 	it('should have path definitions', () => {
 		const content = loadGeneratedTypes();
-		expect(content).toContain('paths');
+		expect(content).not.toBeNull();
+		if (content) {
+			expect(content).toContain('paths');
+		}
 	});
 
 	it('should export operations for component management', () => {
 		const content = loadGeneratedTypes();
-		// Check for component-related paths
-		expect(content).toContain('/components/types');
+		expect(content).not.toBeNull();
+		if (content) {
+			// Check for component-related paths
+			expect(content).toContain('/components/types');
+		}
 	});
 });
 
 describe.skipIf(!existsSync(GENERATED_TYPES_PATH))('Type Contract Compatibility', () => {
 	it('should have generated file header comment', () => {
 		const content = loadGeneratedTypes();
-		// Generated files typically have a header comment
-		expect(content).toMatch(/\/\*\*|\/\//);
+		expect(content).not.toBeNull();
+		if (content) {
+			// Generated files typically have a header comment
+			expect(content).toMatch(/\/\*\*|\/\//);
+		}
 	});
 
 	it('should be non-empty', () => {
 		const content = loadGeneratedTypes();
-		expect(content.length).toBeGreaterThan(100);
+		expect(content).not.toBeNull();
+		if (content) {
+			expect(content.length).toBeGreaterThan(100);
+		}
 	});
 
 	it('should have TypeScript interface or type definitions', () => {
 		const content = loadGeneratedTypes();
-		const hasTypes = content.includes('interface ') || content.includes('type ') || content.includes('export ');
-		expect(hasTypes).toBe(true);
+		expect(content).not.toBeNull();
+		if (content) {
+			const hasTypes = content.includes('interface ') || content.includes('type ') || content.includes('export ');
+			expect(hasTypes).toBe(true);
+		}
 	});
 });

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { ValidationResult } from '$lib/types/port';
+	import { SvelteMap } from "svelte/reactivity";
+	import type { ValidationResult, ValidationIssue } from '$lib/types/port';
 
 	/**
 	 * DeployErrorModal Component
@@ -47,17 +48,22 @@
 
 	// Group errors by component for better readability
 	const errorsByComponent = $derived.by(() => {
-		if (!validationResult) return new Map();
+		if (!validationResult) return new SvelteMap();
 
-		const grouped = new Map<string, typeof validationResult.errors>();
+		const grouped = new SvelteMap<string, ValidationIssue[]>();
 		for (const error of validationResult.errors) {
-			const key = error.component_id;
+			const key = error.component_name;
 			if (!grouped.has(key)) {
 				grouped.set(key, []);
 			}
 			grouped.get(key)!.push(error);
 		}
 		return grouped;
+	});
+
+	// Convert to typed array for template iteration
+	const groupedErrorsArray = $derived.by(() => {
+		return Array.from(errorsByComponent.entries()) as Array<[string, ValidationIssue[]]>;
 	});
 
 	const errorCount = $derived(validationResult?.errors.length || 0);
@@ -94,11 +100,11 @@
 				<section class="errors-section">
 					<h3>Errors to Fix:</h3>
 
-					{#each [...errorsByComponent.entries()] as [componentId, errors]}
+					{#each groupedErrorsArray as [componentId, errors] (componentId)}
 						<div class="error-group">
-							<h4>{errors[0].component_id}</h4>
+							<h4>{componentId}</h4>
 							<ul>
-								{#each errors as error}
+								{#each errors as error (error.port_name ? `${componentId}-${error.port_name}` : `${componentId}-${error.message}`)}
 									<li class="error-item">
 										<div class="error-detail">
 											{#if error.port_name}
@@ -106,11 +112,13 @@
 											{/if}
 											{error.message}
 										</div>
-										{#if error.suggestion}
-											<div class="suggestion">
-												<strong>💡 Suggestion:</strong>
-												{error.suggestion}
-											</div>
+										{#if error.suggestions && error.suggestions.length > 0}
+											{#each error.suggestions as suggestion (suggestion)}
+												<div class="suggestion">
+													<strong>💡 Suggestion:</strong>
+													{suggestion}
+												</div>
+											{/each}
 										{/if}
 									</li>
 								{/each}

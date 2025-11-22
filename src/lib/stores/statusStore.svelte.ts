@@ -1,6 +1,7 @@
-// Status monitoring store using Svelte 5 runes
+// Status monitoring store using Svelte 5 stores
 // Tracks runtime state from WebSocket updates
 
+import * as store from 'svelte/store';
 import type { RuntimeState } from '$lib/types/flow';
 
 interface StatusMessage {
@@ -10,33 +11,47 @@ interface StatusMessage {
   payload: unknown;
 }
 
+interface StatusState {
+  runtimeState: RuntimeState;
+}
+
 function createStatusStore() {
-  let state = $state({
-    runtimeState: 'not_deployed' as RuntimeState
+  const { subscribe, update, set } = store.writable<StatusState>({
+    runtimeState: 'not_deployed'
   });
 
   return {
-    // Reactive getter
+    subscribe,
+
+    // Reactive getter for compatibility
     get runtimeState() {
-      return state.runtimeState;
+      return store.get({ subscribe }).runtimeState;
     },
 
     // Update from WebSocket message
     updateFromWebSocket(message: StatusMessage) {
       if (message.type === 'flow_status') {
         const payload = message.payload as { state: RuntimeState };
-        state.runtimeState = payload.state;
+        update((state) => ({
+          ...state,
+          runtimeState: payload.state
+        }));
       }
     },
 
     // Direct state update
     setRuntimeState(newState: RuntimeState) {
-      state.runtimeState = newState;
+      update((state) => ({
+        ...state,
+        runtimeState: newState
+      }));
     },
 
     // Reset to initial state
     reset() {
-      state.runtimeState = 'not_deployed';
+      set({
+        runtimeState: 'not_deployed'
+      });
     }
   };
 }

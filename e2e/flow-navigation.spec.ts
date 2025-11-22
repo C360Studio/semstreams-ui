@@ -92,7 +92,7 @@ test.describe('Navigation Warning', () => {
 		await expect(page).not.toHaveURL(`/flows/${flowId}`);
 	});
 
-	test.skip('should warn on browser back button when dirty', async ({ page }) => {
+	test.skip('should warn on browser back button when dirty', async ({ page: _page }) => {
 		// Note: This test is skipped because SvelteKit's beforeNavigate hook cannot prevent
 		// browser back/forward navigation when to is undefined/null. The cancel() method only
 		// works for link clicks and programmatic goto() calls.
@@ -172,7 +172,7 @@ test.describe('Navigation Warning', () => {
 		await expect(page).not.toHaveURL(`/flows/${flowId}`);
 	});
 
-	test('should handle tab close attempt when dirty', async ({ page, context }) => {
+	test('should handle tab close attempt when dirty', async ({ page, context: _context }) => {
 		// Make a change (dirty state)
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('UDP Input');
@@ -295,7 +295,7 @@ test.describe('Navigation Warning', () => {
 		expect(hasBeforeUnload).toBe(false);
 	});
 
-	test.skip('should handle navigation to different flow when dirty', async ({ page }) => {
+	test.skip('should handle navigation to different flow when dirty', async ({ page: _page }) => {
 		// Note: This test is skipped for the same reason as the browser back button test.
 		// Playwright's page.goto() bypasses SvelteKit's client-side navigation and does a
 		// full page load, which cannot be prevented by beforeNavigate's cancel() method.

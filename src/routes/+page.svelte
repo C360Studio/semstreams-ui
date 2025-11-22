@@ -12,7 +12,9 @@
 				name: `Flow ${new Date().toISOString()}`,
 				description: 'New flow created from UI'
 			});
-			// Navigate to the new flow's editor
+			// Navigate to the new flow's editor using dynamic route parameter
+			// We use template literal for dynamic ID - resolveRoute not needed for simple param substitution
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			await goto(`/flows/${newFlow.id}`);
 		} catch (error) {
 			console.error('Failed to create flow:', error);
@@ -21,6 +23,9 @@
 	}
 
 	function handleFlowClick(flowId: string) {
+		// Dynamic route navigation with flow ID parameter
+		// We use template literal for dynamic ID - resolveRoute not needed for simple param substitution
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto(`/flows/${flowId}`);
 	}
 </script>

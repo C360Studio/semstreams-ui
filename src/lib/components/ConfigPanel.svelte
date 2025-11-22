@@ -6,11 +6,10 @@
 
 	interface ConfigPanelProps {
 		component: ComponentInstance | null;
-		onSave?: (nodeId: string, config: any) => void;
+		onSave?: (_nodeId: string, _config: any) => void;
 		onClose?: () => void;
 	}
 
-	type ConfigComponent = ComponentInstance & { health?: ComponentInstance['health'] };
 
 	let { component, onSave, onClose }: ConfigPanelProps = $props();
 
@@ -30,7 +29,6 @@
 	// Current config being edited
 	let editingConfig = $state<Record<string, any>>({});
 
-	let configJson = $state('{}');
 	let error = $state<string | null>(null);
 
 	// JSON parse error from JsonEditor
@@ -47,7 +45,7 @@
 	$effect(() => {
 		if (component && component.id !== currentComponentId) {
 			// Save previous component's dirty state BEFORE switching
-			if (currentComponentId && previousComponentId !== currentComponentId) {
+			if (previousComponentId && previousComponentId !== currentComponentId) {
 				dirtyConfigs.set(previousComponentId, editingConfig);
 			}
 
@@ -62,7 +60,6 @@
 				editingConfig = { ...component.config };
 			}
 
-			configJson = JSON.stringify(editingConfig, null, 2);
 			error = null;
 			schemaError = null;
 			jsonParseError = null;
@@ -164,7 +161,6 @@
 		if (component) {
 			dirtyConfigs.delete(component.id);
 			editingConfig = { ...component.config };
-			configJson = JSON.stringify(component.config, null, 2);
 			error = null;
 			jsonParseError = null;
 		}

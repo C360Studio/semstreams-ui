@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap } from "svelte/reactivity";
 	import type { ValidationResult, ValidationIssue } from '$lib/types/validation';
 
 	/**
@@ -45,8 +46,8 @@
 	});
 
 	// Group issues by component for better readability
-	function groupByComponent(issues: ValidationIssue[]): Map<string, ValidationIssue[]> {
-		const grouped = new Map<string, ValidationIssue[]>();
+	function groupByComponent(issues: ValidationIssue[]): SvelteMap<string, ValidationIssue[]> {
+		const grouped = new SvelteMap<string, ValidationIssue[]>();
 		for (const issue of issues) {
 			const key = issue.component_name;
 			if (!grouped.has(key)) {
@@ -57,11 +58,11 @@
 		return grouped;
 	}
 
-	let errorsByComponent = $derived(
-		validationResult ? groupByComponent(validationResult.errors) : new Map()
+	let errorsByComponent: SvelteMap<string, ValidationIssue[]> = $derived(
+		validationResult ? groupByComponent(validationResult.errors) : new SvelteMap()
 	);
-	let warningsByComponent = $derived(
-		validationResult ? groupByComponent(validationResult.warnings) : new Map()
+	let warningsByComponent: SvelteMap<string, ValidationIssue[]> = $derived(
+		validationResult ? groupByComponent(validationResult.warnings) : new SvelteMap()
 	);
 </script>
 
@@ -90,11 +91,11 @@
 						<h3>❌ Errors ({validationResult.errors.length})</h3>
 						<p class="section-description">These issues must be fixed before deployment:</p>
 
-						{#each [...errorsByComponent.entries()] as [componentName, issues]}
+						{#each [...errorsByComponent.entries()] as [componentName, issues]: [string, ValidationIssue[]] (componentName)}
 							<div class="issue-group">
 								<h4>{componentName}</h4>
 								<ul>
-									{#each issues as issue}
+									{#each issues as issue, idx (`${issue.component_name}-${issue.port_name || 'main'}-${issue.type}-${idx}`)}
 										<li class="error-item">
 											<div class="issue-message">
 												{#if issue.port_name}
@@ -106,7 +107,7 @@
 												<div class="suggestions">
 													<strong>Suggestions:</strong>
 													<ul>
-														{#each issue.suggestions as suggestion}
+														{#each issue.suggestions as suggestion, suggIdx (`${issue.component_name}-${issue.type}-suggestion-${suggIdx}`)}
 															<li>{suggestion}</li>
 														{/each}
 													</ul>
@@ -127,11 +128,11 @@
 							These issues won't block deployment but should be reviewed:
 						</p>
 
-						{#each [...warningsByComponent.entries()] as [componentName, issues]}
+						{#each [...warningsByComponent.entries()] as [componentName, issues]: [string, ValidationIssue[]] (componentName)}
 							<div class="issue-group">
 								<h4>{componentName}</h4>
 								<ul>
-									{#each issues as issue}
+									{#each issues as issue, idx (`${issue.component_name}-${issue.port_name || 'main'}-${issue.type}-${idx}`)}
 										<li class="warning-item">
 											<div class="issue-message">
 												{#if issue.port_name}
@@ -143,7 +144,7 @@
 												<div class="suggestions">
 													<strong>Suggestions:</strong>
 													<ul>
-														{#each issue.suggestions as suggestion}
+														{#each issue.suggestions as suggestion, suggIdx (`${issue.component_name}-${issue.type}-suggestion-${suggIdx}`)}
 															<li>{suggestion}</li>
 														{/each}
 													</ul>

@@ -63,7 +63,7 @@ test.describe('Runtime Panel - Health Tab', () => {
 		if (hasHealthData) {
 			// Backend is returning health data
 			// Get initial health summary text
-			const initialText = await healthSummary.textContent();
+			// const initialText = await healthSummary.textContent();
 
 			// Wait for next poll (5 seconds)
 			await page.waitForTimeout(5500);

@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect } from 'vitest';
 import { tick } from 'svelte';
 import PortGroup from './PortGroup.svelte';

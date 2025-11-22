@@ -7,8 +7,6 @@
 		onSave?: () => void;
 		// NEW: Validation display props (Feature 015)
 		validationResult?: ValidationResult | null;
-		nodeCount?: number;
-		edgeCount?: number;
 		onValidationClick?: () => void;
 	}
 
@@ -16,8 +14,6 @@
 		saveState,
 		onSave,
 		validationResult,
-		nodeCount = 0,
-		edgeCount = 0,
 		onValidationClick
 	}: Props = $props();
 

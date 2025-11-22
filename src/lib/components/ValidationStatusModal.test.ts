@@ -44,7 +44,15 @@ describe('ValidationStatusModal', () => {
 				type: 'udp-input',
 				name: 'udp-input-1',  // User-friendly name
 				input_ports: [],
-				output_ports: [{ name: 'output', pattern: 'stream', direction: 'output' }]
+				output_ports: [{
+					name: 'output',
+					pattern: 'stream',
+					direction: 'output',
+					type: 'message.Storable',
+					required: true,
+					connection_id: 'nats.output',
+					description: 'Output port'
+				}]
 			},
 			{
 				id: 'node_456_def',
@@ -58,7 +66,15 @@ describe('ValidationStatusModal', () => {
 				type: 'optional-output',
 				name: 'optional-output-1',  // User-friendly name
 				input_ports: [],
-				output_ports: [{ name: 'metadata', pattern: 'stream', direction: 'output' }]
+				output_ports: [{
+					name: 'metadata',
+					pattern: 'stream',
+					direction: 'output',
+					type: 'message.Storable',
+					required: false,
+					connection_id: 'nats.metadata',
+					description: 'Metadata output port'
+				}]
 			}
 		],
 		discovered_connections: []
@@ -258,8 +274,6 @@ describe('ValidationStatusModal', () => {
 				onClose: vi.fn()
 			}
 		});
-
-		const dialog = screen.getByRole('dialog');
 
 		// Component names should be visually distinct (e.g., in headers or bold)
 		const componentNames = screen.getAllByText(/udp-input-1|processor-1/);

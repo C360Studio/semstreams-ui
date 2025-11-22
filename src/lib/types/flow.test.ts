@@ -9,10 +9,9 @@ import type {
   ComponentHealth,
   HealthStatus,
   Connection,
-  InteractionPattern,
-  ValidationState,
-  ConnectionMetrics
+  InteractionPattern
 } from './flow';
+import type { ValidationState } from './port';
 
 describe('Flow Type Definitions', () => {
   describe('Flow interface', () => {
@@ -182,7 +181,7 @@ describe('Flow Type Definitions', () => {
         target_node_id: 'comp-2',
         target_port: 'input',
         pattern: 'stream',
-        validationState: 'invalid',
+        validationState: 'error',
         validationError: 'Incompatible port types'
       };
 
@@ -232,7 +231,7 @@ describe('Flow Type Definitions', () => {
 
   describe('ValidationState enum', () => {
     it('should have correct enum values', () => {
-      const states: ValidationState[] = ['valid', 'invalid', 'warning'];
+      const states: ValidationState[] = ['valid', 'error', 'warning', 'unknown'];
 
       states.forEach(state => {
         const connection: Connection = {

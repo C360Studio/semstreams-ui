@@ -1,11 +1,13 @@
+/// <reference lib="es2015" />
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import StatusBar from './StatusBar.svelte';
 import type { RuntimeStateInfo } from '$lib/types/ui-state';
 
 describe('StatusBar', () => {
 	const defaultProps = {
-		runtimeState: { state: 'not_deployed', message: null } as RuntimeStateInfo,
+		runtimeState: { state: 'not_deployed', message: null, lastTransition: null } as RuntimeStateInfo,
 		isFlowValid: true,
 		onDeploy: vi.fn(),
 		onStart: vi.fn(),
@@ -27,7 +29,7 @@ describe('StatusBar', () => {
 
 		it('should display deployed_stopped state', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null, lastTransition: null } }
 			});
 
 			expect(screen.getByText('deployed_stopped')).toBeInTheDocument();
@@ -35,7 +37,7 @@ describe('StatusBar', () => {
 
 		it('should display running state', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'running', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'running', message: null, lastTransition: null } }
 			});
 
 			expect(screen.getByText('running')).toBeInTheDocument();
@@ -43,7 +45,7 @@ describe('StatusBar', () => {
 
 		it('should display error state', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'error', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'error', message: null, lastTransition: null } }
 			});
 
 			expect(screen.getByText('error')).toBeInTheDocument();
@@ -53,7 +55,7 @@ describe('StatusBar', () => {
 			render(StatusBar, {
 				props: {
 					...defaultProps,
-					runtimeState: { state: 'error', message: 'Component failed to start' }
+					runtimeState: { state: 'error', message: 'Component failed to start', lastTransition: null }
 				}
 			});
 
@@ -88,7 +90,7 @@ describe('StatusBar', () => {
 
 		it('should show Start button when deployed but stopped', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null, lastTransition: null } }
 			});
 
 			expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument();
@@ -99,7 +101,7 @@ describe('StatusBar', () => {
 			render(StatusBar, {
 				props: {
 					...defaultProps,
-					runtimeState: { state: 'deployed_stopped', message: null },
+					runtimeState: { state: 'deployed_stopped', message: null, lastTransition: null },
 					onStart
 				}
 			});
@@ -112,7 +114,7 @@ describe('StatusBar', () => {
 
 		it('should show Stop button when running', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'running', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'running', message: null, lastTransition: null } }
 			});
 
 			expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
@@ -121,7 +123,7 @@ describe('StatusBar', () => {
 		it('should call onStop when Stop clicked', async () => {
 			const onStop = vi.fn();
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'running', message: null }, onStop }
+				props: { ...defaultProps, runtimeState: { state: 'running', message: null, lastTransition: null }, onStop }
 			});
 
 			const stopButton = screen.getByRole('button', { name: /stop/i });
@@ -134,7 +136,7 @@ describe('StatusBar', () => {
 	describe('Button State Logic', () => {
 		it('should not show Deploy button when already running', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'running', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'running', message: null, lastTransition: null } }
 			});
 
 			expect(screen.queryByRole('button', { name: /^deploy$/i })).not.toBeInTheDocument();
@@ -154,7 +156,7 @@ describe('StatusBar', () => {
 
 		it('should not show Stop button when deployed but stopped', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null, lastTransition: null } }
 			});
 
 			expect(screen.queryByRole('button', { name: /^stop$/i })).not.toBeInTheDocument();
@@ -163,7 +165,7 @@ describe('StatusBar', () => {
 
 	describe('Runtime Status Only (Feature 015)', () => {
 		it('does NOT show validation status (Draft)', () => {
-			const runtimeState = { state: 'not_deployed' as const, message: null };
+			const runtimeState = { state: 'not_deployed' as const, message: null, lastTransition: null };
 
 			render(StatusBar, {
 				props: { ...defaultProps, runtimeState, isFlowValid: false }
@@ -175,7 +177,7 @@ describe('StatusBar', () => {
 		});
 
 		it('does NOT show validation errors in status bar', () => {
-			const runtimeState = { state: 'not_deployed' as const, message: null };
+			const runtimeState = { state: 'not_deployed' as const, message: null, lastTransition: null };
 
 			render(StatusBar, {
 				props: { ...defaultProps, runtimeState, isFlowValid: false }
@@ -188,7 +190,8 @@ describe('StatusBar', () => {
 		it('shows runtime error message when state is error', () => {
 			const runtimeState = {
 				state: 'error' as const,
-				message: 'Component crashed: udp-input-1'
+				message: 'Component crashed: udp-input-1',
+				lastTransition: null
 			};
 
 			render(StatusBar, {
@@ -200,7 +203,7 @@ describe('StatusBar', () => {
 		});
 
 		it('shows runtime status with distinct visual styling', () => {
-			const runtimeState = { state: 'running' as const, message: null };
+			const runtimeState = { state: 'running' as const, message: null, lastTransition: null };
 
 			render(StatusBar, {
 				props: { ...defaultProps, runtimeState, onStop: vi.fn() }
@@ -219,7 +222,7 @@ describe('StatusBar', () => {
 	describe('Debug Button (Runtime Panel Toggle)', () => {
 		it('should not show Debug button when not running', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'not_deployed', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'not_deployed', message: null, lastTransition: null } }
 			});
 
 			expect(screen.queryByTestId('debug-toggle-button')).not.toBeInTheDocument();
@@ -227,7 +230,7 @@ describe('StatusBar', () => {
 
 		it('should not show Debug button when deployed but stopped', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'deployed_stopped', message: null, lastTransition: null } }
 			});
 
 			expect(screen.queryByTestId('debug-toggle-button')).not.toBeInTheDocument();
@@ -235,7 +238,7 @@ describe('StatusBar', () => {
 
 		it('should show Debug button when running', () => {
 			render(StatusBar, {
-				props: { ...defaultProps, runtimeState: { state: 'running', message: null } }
+				props: { ...defaultProps, runtimeState: { state: 'running', message: null, lastTransition: null } }
 			});
 
 			expect(screen.getByTestId('debug-toggle-button')).toBeInTheDocument();

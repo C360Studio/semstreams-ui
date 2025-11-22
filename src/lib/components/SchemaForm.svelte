@@ -134,7 +134,7 @@
 	{#if basicFields.length > 0}
 		<section class="basic-config">
 			<h3>Basic Configuration</h3>
-			{#each basicFields as [fieldName, propSchema]}
+			{#each basicFields as [fieldName, propSchema] (fieldName)}
 				<SchemaField
 					name={fieldName}
 					schema={propSchema}
@@ -151,7 +151,7 @@
 	{#if advancedFields.length > 0}
 		<details class="advanced-config">
 			<summary>Advanced Configuration</summary>
-			{#each advancedFields as [fieldName, propSchema]}
+			{#each advancedFields as [fieldName, propSchema] (fieldName)}
 				<SchemaField
 					name={fieldName}
 					schema={propSchema}

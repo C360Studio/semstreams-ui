@@ -46,9 +46,12 @@ const mockMetricsResponse = {
 };
 
 describe('MetricsTab', () => {
-	let fetchSpy: ReturnType<typeof vi.spyOn>;
-	let setIntervalSpy: ReturnType<typeof vi.spyOn>;
-	let clearIntervalSpy: ReturnType<typeof vi.spyOn>;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let fetchSpy: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let setIntervalSpy: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let clearIntervalSpy: any;
 
 	beforeEach(() => {
 		vi.useFakeTimers();
@@ -364,7 +367,8 @@ describe('MetricsTab', () => {
 
 			// Initial interval should be 2000
 			await waitFor(() => {
-				const calls = setIntervalSpy.mock.calls.filter((call) => call[1] === 2000);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const calls = setIntervalSpy.mock.calls.filter((call: any) => call[1] === 2000);
 				expect(calls.length).toBeGreaterThan(0);
 			});
 
@@ -378,7 +382,8 @@ describe('MetricsTab', () => {
 			// Should create a new interval with 5000ms
 			await waitFor(() => {
 				expect(setIntervalSpy.mock.calls.length).toBeGreaterThan(initialCallCount);
-				const calls5s = setIntervalSpy.mock.calls.filter((call) => call[1] === 5000);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const calls5s = setIntervalSpy.mock.calls.filter((call: any) => call[1] === 5000);
 				expect(calls5s.length).toBeGreaterThan(0);
 			});
 		});

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import type { PropertySchema } from '$lib/types/schema';
-import type { PortDefinition } from '$lib/types/component';
 import PortConfigEditor from './PortConfigEditor.svelte';
 
 describe('PortConfigEditor', () => {
@@ -125,9 +124,6 @@ describe('PortConfigEditor', () => {
 
 		// Readonly fields should not have text inputs
 		// Name, Type, Required, Description, Interface are readonly
-		const labels = Array.from(container.querySelectorAll('label')).map(
-			(el) => el.textContent?.toLowerCase() || ''
-		);
 
 		// Should have labels for readonly fields (displayed as read-only)
 		expect(container.textContent?.toLowerCase()).toContain('name');

@@ -2,7 +2,9 @@
 	import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/svelte';
 	import type { XYFlowEdgeData } from '$lib/utils/xyflow-converters';
 
-	type Props = EdgeProps<XYFlowEdgeData>;
+	interface Props extends Omit<EdgeProps, 'data'> {
+		data?: XYFlowEdgeData;
+	}
 
 	let {
 		id,
@@ -34,7 +36,7 @@
 	});
 
 	// Calculate the SVG path for the edge
-	const [edgePath, labelX, labelY] = $derived(
+	const [edgePath, _labelX, _labelY] = $derived(
 		getBezierPath({
 			sourceX,
 			sourceY,

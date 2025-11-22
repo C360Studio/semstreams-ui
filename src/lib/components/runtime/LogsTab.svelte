@@ -222,7 +222,7 @@
 				<span class="filter-label">Component:</span>
 				<select id="component-filter" bind:value={selectedComponent} data-testid="component-filter">
 					<option value="all">All Components</option>
-					{#each uniqueComponents as component}
+					{#each uniqueComponents as component (component)}
 						<option value={component}>{component}</option>
 					{/each}
 				</select>

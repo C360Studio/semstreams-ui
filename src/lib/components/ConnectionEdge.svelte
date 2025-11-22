@@ -8,14 +8,12 @@
 		sourceY: number;
 		targetX: number;
 		targetY: number;
-		sourcePosition: string;
-		targetPosition: string;
 		data?: {
 			connection: Connection;
 		};
 	}
 
-	let { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: ConnectionEdgeProps = $props();
+	let { id, sourceX, sourceY, targetX, targetY, data }: ConnectionEdgeProps = $props();
 
 	const edgePath = $derived(
 		getStraightPath({
@@ -40,7 +38,7 @@
 				targetY) /
 				2}px)"
 		>
-			{#if connection.validationState === 'invalid' || connection.validationState === 'warning'}
+			{#if connection.validationState === 'error' || connection.validationState === 'warning'}
 				<span class="validation-icon" title={connection.validationError || 'Validation issue'}>
 					⚠️
 				</span>

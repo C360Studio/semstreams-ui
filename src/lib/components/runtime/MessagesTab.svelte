@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from "svelte/reactivity";
 	/**
 	 * MessagesTab Component - NATS message flow visualization
 	 * Phase 4 of Runtime Visualization Panel
@@ -47,7 +48,7 @@
 	let directionFilter = $state<'all' | 'published' | 'received' | 'processed'>('all');
 	let autoScroll = $state<boolean>(true);
 	let pollRate = $state<PollRate>(2000);
-	let expandedMessageIds = $state<Set<string>>(new Set());
+	let expandedMessageIds = new SvelteSet<string>();
 	let errorMessage = $state<string | null>(null);
 
 	// Refs for DOM elements
@@ -114,13 +115,11 @@
 	 * Toggle metadata visibility for a message
 	 */
 	function toggleMetadata(messageId: string) {
-		const newSet = new Set(expandedMessageIds);
-		if (newSet.has(messageId)) {
-			newSet.delete(messageId);
+		if (expandedMessageIds.has(messageId)) {
+			expandedMessageIds.delete(messageId);
 		} else {
-			newSet.add(messageId);
+			expandedMessageIds.add(messageId);
 		}
-		expandedMessageIds = newSet;
 	}
 
 	/**
@@ -130,7 +129,7 @@
 		messages = [];
 		componentFilter = 'all';
 		directionFilter = 'all';
-		expandedMessageIds = new Set();
+		expandedMessageIds.clear();
 	}
 
 	/**
@@ -219,7 +218,7 @@
 					aria-label="Filter by component"
 				>
 					<option value="all">All Components</option>
-					{#each uniqueComponents as component}
+					{#each uniqueComponents as component (component)}
 						<option value={component}>{component}</option>
 					{/each}
 				</select>

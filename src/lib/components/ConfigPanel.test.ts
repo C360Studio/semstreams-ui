@@ -5,8 +5,8 @@ import ConfigPanel from './ConfigPanel.svelte';
 import type { ComponentInstance } from '$lib/types/flow';
 
 // Mock fetch globally
-const mockFetch = vi.fn();
-global.fetch = mockFetch as any;
+const mockFetch = vi.fn<typeof fetch>();
+globalThis.fetch = mockFetch;
 
 describe('ConfigPanel (Prop-Based Architecture)', () => {
 	const mockComponent: ComponentInstance = {
@@ -422,7 +422,7 @@ describe('ConfigPanel (Prop-Based Architecture)', () => {
 				expect(mockFetch).toHaveBeenCalledWith('/components/types/udp-input');
 			});
 
-			const initialFetchCount = mockFetch.mock.calls.length;
+			// const initialFetchCount = mockFetch.mock.calls.length;
 
 			// Switch to different component type
 			const otherComponent: ComponentInstance = {
@@ -440,9 +440,10 @@ describe('ConfigPanel (Prop-Based Architecture)', () => {
 			// Wait for websocket-output schema fetch
 			await waitFor(
 				() => {
-					const websocketCalls = mockFetch.mock.calls.filter((call) =>
-						call[0].includes('websocket-output')
-					);
+					const websocketCalls = mockFetch.mock.calls.filter((call) => {
+						const url = typeof call[0] === 'string' ? call[0] : call[0] instanceof URL ? call[0].toString() : '';
+						return url.includes('websocket-output');
+					});
 					expect(websocketCalls.length).toBeGreaterThan(0);
 				},
 				{ timeout: 1000 }
@@ -456,9 +457,10 @@ describe('ConfigPanel (Prop-Based Architecture)', () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			// Should only have fetched udp-input once (cached on second render)
-			const udpInputCalls = mockFetch.mock.calls.filter((call) =>
-				call[0].includes('udp-input')
-			);
+			const udpInputCalls = mockFetch.mock.calls.filter((call) => {
+				const url = typeof call[0] === 'string' ? call[0] : call[0] instanceof URL ? call[0].toString() : '';
+				return url.includes('udp-input');
+			});
 			expect(udpInputCalls.length).toBe(1);
 		});
 	});

@@ -5,17 +5,54 @@ import { Page } from '@playwright/test';
  * Used by E2E tests to create flows via backend API
  */
 
+/**
+ * Flow node structure for E2E test setup
+ */
+export interface TestFlowNode {
+	id: string;
+	type: string;
+	name: string;
+	config: Record<string, unknown>;
+}
+
+/**
+ * Flow connection structure for E2E test setup
+ */
+export interface TestFlowConnection {
+	id: string;
+	source_node_id: string;
+	source_port: string;
+	target_node_id: string;
+	target_port: string;
+}
+
+/**
+ * Backend flow response structure
+ */
+export interface FlowResponse {
+	id: string;
+	name: string;
+	description?: string;
+	version: number;
+	runtime_state: string;
+	nodes: TestFlowNode[];
+	connections: TestFlowConnection[];
+	created_at: string;
+	updated_at: string;
+	last_modified: string;
+}
+
 export interface FlowSetupOptions {
 	name?: string;
 	description?: string;
-	nodes?: any[];
-	connections?: any[];
+	nodes?: TestFlowNode[];
+	connections?: TestFlowConnection[];
 }
 
 export interface TestFlowResult {
 	id: string;
 	url: string;
-	flow: any;
+	flow: FlowResponse;
 }
 
 /**

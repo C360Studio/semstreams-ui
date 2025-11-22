@@ -57,7 +57,7 @@ test.describe('Connection Creation', () => {
 				try {
 					const data = await response.json();
 					console.log('[TEST] Validation result:', JSON.stringify(data, null, 2));
-				} catch (e) {
+				} catch {
 					console.log('[TEST] Could not parse validation response');
 				}
 			}

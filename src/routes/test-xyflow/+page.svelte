@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SvelteFlow } from '@xyflow/svelte';
+	import { SvelteFlow, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import TestNode from './TestNode.svelte';
 
@@ -35,7 +35,7 @@
 	]);
 
 	// START WITH NO EDGES (like our real app after loading a flow)
-	let edges = $state.raw([]);
+	let edges = $state.raw<Edge[]>([]);
 
 	console.log('[TEST PAGE] Initial nodes:', nodes.length);
 	console.log('[TEST PAGE] Initial edges:', edges.length);

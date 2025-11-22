@@ -2,20 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import RuntimePanel from './RuntimePanel.svelte';
 
-// Type augmentation for global in tests
-declare global {
-	var EventSource: any;
-}
-
 describe('RuntimePanel', () => {
 	// Mock EventSource for LogsTab
-	let mockEventSource: any;
-	let eventListeners: Record<string, Function[]> = {};
+	interface MockEventSource {
+		addEventListener: (event: string, handler: () => void) => void;
+		close: () => void;
+		readyState: number;
+	}
+
+	let mockEventSource: MockEventSource;
+	let eventListeners: Record<string, Array<() => void>> = {};
 
 	beforeEach(() => {
 		eventListeners = {};
 		mockEventSource = {
-			addEventListener: vi.fn((event: string, handler: Function) => {
+			addEventListener: vi.fn((event: string, handler: () => void) => {
 				if (!eventListeners[event]) {
 					eventListeners[event] = [];
 				}
@@ -24,8 +25,7 @@ describe('RuntimePanel', () => {
 			close: vi.fn(),
 			readyState: 0
 		};
-		// @ts-ignore - Mock global EventSource
-		global.EventSource = vi.fn(() => mockEventSource) as any;
+		globalThis.EventSource = vi.fn(() => mockEventSource) as unknown as typeof EventSource;
 	});
 
 	describe('Panel Visibility', () => {

@@ -292,7 +292,7 @@ test.describe('Runtime Panel - Logs Tab', () => {
 
 		// Should attempt reconnection
 		const stillHasError = await errorStatus.isVisible().catch(() => false);
-		const stillConnecting = await connectingStatus.isVisible().catch(() => false);
+		// const stillConnecting = await connectingStatus.isVisible().catch(() => false);
 
 		// Either we reconnected successfully or got same error state
 		if (stillHasError) {
