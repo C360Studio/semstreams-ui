@@ -36,13 +36,18 @@ function FlowList($$renderer, $$props) {
 function _page($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     let { data } = $$props;
+    let backendHealthy = null;
     head($$renderer2, ($$renderer3) => {
       $$renderer3.title(($$renderer4) => {
         $$renderer4.push(`<title>SemStreams - Flow Builder</title>`);
       });
     });
     $$renderer2.push(`<main class="svelte-1uha8ag"><div class="page-header svelte-1uha8ag"><h1 class="svelte-1uha8ag">Visual Flow Builder</h1> <p class="svelte-1uha8ag">Create and manage semantic stream processing flows</p></div> `);
-    if (data.error) {
+    {
+      $$renderer2.push("<!--[!-->");
+    }
+    $$renderer2.push(`<!--]--> `);
+    if (data.error && backendHealthy !== false) {
       $$renderer2.push("<!--[-->");
       $$renderer2.push(`<div class="error-banner svelte-1uha8ag"><strong class="svelte-1uha8ag">Error:</strong> ${escape_html(data.error)}</div>`);
     } else {
