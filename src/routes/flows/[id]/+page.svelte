@@ -1,7 +1,8 @@
 <script lang="ts">
 	import FlowCanvas from '$lib/components/FlowCanvas.svelte';
-	import ComponentPalette from '$lib/components/ComponentPalette.svelte';
-	import ConfigPanel from '$lib/components/ConfigPanel.svelte';
+	import ComponentList from '$lib/components/ComponentList.svelte';
+	import AddComponentModal from '$lib/components/AddComponentModal.svelte';
+	import EditComponentModal from '$lib/components/EditComponentModal.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
 	import RuntimePanel from '$lib/components/RuntimePanel.svelte';
 	import SaveStatusIndicator from '$lib/components/SaveStatusIndicator.svelte';
@@ -10,21 +11,17 @@
 	import ValidationErrorDialog from '$lib/components/ValidationErrorDialog.svelte';
 	import DeployErrorModal from '$lib/components/DeployErrorModal.svelte';
 	import ValidationStatusModal from '$lib/components/ValidationStatusModal.svelte';
+	import AIPromptInput from '$lib/components/AIPromptInput.svelte';
+	import AIFlowPreview from '$lib/components/AIFlowPreview.svelte';
 	import type { PageData } from './$types';
-	import type { ComponentInstance, FlowNode, FlowConnection } from '$lib/types/flow';
+	import type { ComponentInstance, FlowNode, FlowConnection, Flow } from '$lib/types/flow';
 	import type { SaveState, RuntimeStateInfo } from '$lib/types/ui-state';
-	import type { ValidationResult } from '$lib/types/port';
-	import {
-		convertFlowNodesToXYFlow,
-		convertXYFlowNodesToFlow,
-		convertFlowConnectionsToXYFlow,
-		convertXYFlowEdgesToFlow,
-		convertToXYFlowNode,
-		convertToXYFlowEdge,
-		type XYFlowNode,
-		type XYFlowEdge
-	} from '$lib/utils/xyflow-converters';
+	import type { ValidationResult as PortValidationResult, ValidatedPort } from '$lib/types/port';
+	import type { ValidationResult as SimpleValidationResult } from '$lib/types/validation';
+	import type { ComponentType } from '$lib/types/component';
 	import { saveFlow, deployFlow, startFlow, stopFlow, isValidationError } from '$lib/api/flows';
+	import { flowHistory } from '$lib/stores/flowHistory.svelte';
+	import { onMount } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -34,6 +31,15 @@
 	// UI state
 	let dirty = $state(false);
 	let selectedComponent = $state<ComponentInstance | null>(null);
+
+	// Component types for add modal (fetched from backend)
+	let componentTypes = $state<ComponentType[]>([]);
+
+	// Modal state
+	let showAddModal = $state(false);
+	let showEditModal = $state(false);
+	let editingNode = $state<FlowNode | null>(null);
+	let editingComponentType = $state<ComponentType | undefined>(undefined);
 
 	// Navigation dialog state
 	let showNavigationDialog = $state(false);
@@ -50,8 +56,16 @@
 	// Validation status modal state (Feature 015 - T014)
 	let showValidationStatusModal = $state(false);
 
+	// AI flow generation state
+	let showAIPreview = $state(false);
+	let aiLoading = $state(false);
+	let aiGeneratedFlow = $state<Partial<Flow> | null>(null);
+	let aiValidationResult = $state<SimpleValidationResult | null>(null);
+	let aiError = $state<string | null>(null);
+	let lastAIPrompt = $state<string>('');
+
 	// Real-time validation state (for port visualization)
-	let validationResult = $state<ValidationResult | null>(null);
+	let validationResult = $state<PortValidationResult | null>(null);
 
 	// Compute if flow is valid for deployment
 	const isFlowValid = $derived(validationResult?.validation_status !== 'errors');
@@ -77,12 +91,37 @@
 	let showRuntimePanel = $state(false);
 	let runtimePanelHeight = $state(300);
 
+	// Flow state - work directly with domain model
+	let flowNodes = $state<FlowNode[]>(backendFlow.nodes);
+	let flowConnections = $state<FlowConnection[]>(backendFlow.connections);
+
+	// Port information from validation results
+	type PortsMap = Record<string, { input_ports: ValidatedPort[]; output_ports: ValidatedPort[] }>;
+	let portsMap = $state<PortsMap>({});
+
+	// Track dirty state when nodes/connections change
+	let initialNodeCount = flowNodes.length;
+	let initialConnectionCount = flowConnections.length;
+	let initialLoadComplete = false;
+
+	// Fetch component types on mount
+	onMount(async () => {
+		try {
+			const response = await fetch('/components/types');
+			if (response.ok) {
+				componentTypes = await response.json();
+			}
+		} catch (error) {
+			console.error('Failed to fetch component types:', error);
+		}
+	});
+
 	// Canvas event handlers
 	function handleNodeClick(nodeId: string) {
-		const xyflowNode = xyflowNodes.find((n) => n.id === nodeId);
-		if (xyflowNode) {
+		const flowNode = flowNodes.find((n) => n.id === nodeId);
+		if (flowNode) {
 			selectedComponent = {
-				...xyflowNode.data.node,
+				...flowNode,
 				health: {
 					status: 'not_running',
 					lastUpdated: new Date().toISOString()
@@ -91,45 +130,31 @@
 		}
 	}
 
-	// XYFlow state (view model) - using regular $state() to enable port data reactivity
-	// Note: Switched from $state.raw() to enable CustomFlowNode to react to port data changes
-	let xyflowNodes = $state<XYFlowNode[]>(
-		convertFlowNodesToXYFlow(backendFlow.nodes, handleNodeClick)
-	);
-	let xyflowEdges = $state<XYFlowEdge[]>(
-		convertFlowConnectionsToXYFlow(backendFlow.connections)
-	);
-
-	// Track dirty state when nodes/edges change via bindings
-	let initialNodeCount = xyflowNodes.length;
-	let initialEdgeCount = xyflowEdges.length;
-	let initialLoadComplete = false;
-
 	$effect(() => {
-		// Watch for changes to xyflowNodes or xyflowEdges
-		const nodeCount = xyflowNodes.length;
-		const edgeCount = xyflowEdges.length;
+		// Watch for changes to flowNodes or flowConnections
+		const nodeCount = flowNodes.length;
+		const connectionCount = flowConnections.length;
 
 		// Skip initial load
-		if (nodeCount === initialNodeCount && edgeCount === initialEdgeCount) {
+		if (nodeCount === initialNodeCount && connectionCount === initialConnectionCount) {
 			return;
 		}
 
 		// Skip marking dirty until initial load completes and first validation runs
 		if (!initialLoadComplete) {
 			initialNodeCount = nodeCount;
-			initialEdgeCount = edgeCount;
+			initialConnectionCount = connectionCount;
 			initialLoadComplete = true;
 			return;
 		}
 
-		// Mark dirty when nodes or edges change
+		// Mark dirty when nodes or connections change
 		dirty = true;
 		saveState = { ...saveState, status: 'dirty' };
 
 		// Update baseline
 		initialNodeCount = nodeCount;
-		initialEdgeCount = edgeCount;
+		initialConnectionCount = connectionCount;
 	});
 
 	// Debounced validation on canvas changes (500ms delay)
@@ -139,13 +164,13 @@
 	$effect(() => {
 		// Create signature from things that represent USER changes only
 		// Ignore auto connections (they're generated by validation)
-		const nodeIds = xyflowNodes.map(n => n.id).sort().join(',');
-		const manualEdgeIds = xyflowEdges
-			.filter(e => e.id.startsWith('conn_'))  // Only manual connections
-			.map(e => e.id)
+		const nodeIds = flowNodes.map(n => n.id).sort().join(',');
+		const manualConnectionIds = flowConnections
+			.filter(c => c.id.startsWith('conn_'))  // Only manual connections
+			.map(c => c.id)
 			.sort()
 			.join(',');
-		const signature = `${nodeIds}|${manualEdgeIds}`;
+		const signature = `${nodeIds}|${manualConnectionIds}`;
 
 		// Skip if nothing changed since last validation
 		// This prevents validation from triggering itself when it adds/removes auto connections
@@ -164,19 +189,19 @@
 			validationResult = result;
 
 			if (result) {
-				// Apply validation (mutates edges/nodes to add auto connections and port info)
+				// Apply validation (populates portsMap and updates auto connections)
 				applyValidationToNodes(result);
 				updateAutoConnections(result);
 
 				// Update signature to match current state after validation
 				// When effect re-runs, it will see signature matches and skip
-				const nodeIds = xyflowNodes.map(n => n.id).sort().join(',');
-				const manualEdgeIds = xyflowEdges
-					.filter(e => e.id.startsWith('conn_'))
-					.map(e => e.id)
+				const nodeIds = flowNodes.map(n => n.id).sort().join(',');
+				const manualConnectionIds = flowConnections
+					.filter(c => c.id.startsWith('conn_'))
+					.map(c => c.id)
 					.sort()
 					.join(',');
-				lastValidatedSignature = `${nodeIds}|${manualEdgeIds}`;
+				lastValidatedSignature = `${nodeIds}|${manualConnectionIds}`;
 
 				// Update save state based on validation
 				if (result.validation_status === 'errors' && !dirty && saveState.status === 'clean') {
@@ -210,18 +235,16 @@
 	/**
 	 * Run flow validation via backend API
 	 * Calls the real validation endpoint that returns port information
-	 * Sends current XYFlow state (may be unsaved) for real-time validation
+	 * Sends current flow state (may be unsaved) for real-time validation
 	 */
-	async function runFlowValidation(flowId: string): Promise<ValidationResult | null> {
+	async function runFlowValidation(flowId: string): Promise<PortValidationResult | null> {
 		try {
-			// Convert current XYFlow state to backend format
-			const flowNodes = convertXYFlowNodesToFlow(xyflowNodes);
 			const flowDefinition = {
 				id: flowId,
 				name: backendFlow.name,
 				runtime_state: backendFlow.runtime_state,
 				nodes: flowNodes,
-				connections: convertXYFlowEdgesToFlow(xyflowEdges)
+				connections: flowConnections
 			};
 
 			console.log('[runFlowValidation] Sending node IDs to validation:', flowNodes.map(n => n.id));
@@ -250,11 +273,10 @@
 	/**
 	 * Update auto-discovered connections from validation results
 	 * Removes old auto connections and creates new ones from FlowGraph pattern matching
-	 * Uses array mutation (splice/push) to work with XYFlow's binding
 	 */
-	function updateAutoConnections(result: ValidationResult) {
+	function updateAutoConnections(result: PortValidationResult) {
 		// Step 1: Remove old auto-discovered connections by filtering
-		xyflowEdges = xyflowEdges.filter(edge => !edge.id.startsWith('auto_'));
+		flowConnections = flowConnections.filter(conn => !conn.id.startsWith('auto_'));
 
 		// Step 2: Create new auto-discovered connections from validation result
 		// Safety check: discovered_connections might be undefined or null
@@ -262,7 +284,7 @@
 			return;
 		}
 
-		const newAutoEdges = result.discovered_connections.map((conn) => {
+		const newAutoConnections = result.discovered_connections.map((conn) => {
 			const connectionId = `auto_${conn.source_node_id}_${conn.source_port}_${conn.target_node_id}_${conn.target_port}`;
 
 			const flowConnection: FlowConnection = {
@@ -275,125 +297,237 @@
 				validationState: 'valid'
 			};
 
-			const xyflowEdge = convertToXYFlowEdge(flowConnection);
-			console.log('[updateAutoConnections] Created edge:', JSON.stringify(xyflowEdge, null, 2));
-			return xyflowEdge;
+			console.log('[updateAutoConnections] Created connection:', JSON.stringify(flowConnection, null, 2));
+			return flowConnection;
 		});
 
 		// Step 3: Add new auto-discovered connections
-		// Try reassignment instead of mutation to trigger XYFlow reactivity
-		console.log('[updateAutoConnections] Adding', newAutoEdges.length, 'auto edges to array');
-		console.log('[updateAutoConnections] Current node IDs:', xyflowNodes.map(n => n.id));
-		console.log('[updateAutoConnections] Node ports:', JSON.stringify(xyflowNodes.map(n => ({
-			id: n.id.substring(0, 20),
-			input_ports: n.data.input_ports?.length || 0,
-			output_ports: n.data.output_ports?.length || 0
-		}))));
-		xyflowEdges = [...xyflowEdges, ...newAutoEdges];
-		console.log('[updateAutoConnections] Total edges after reassignment:', xyflowEdges.length);
+		console.log('[updateAutoConnections] Adding', newAutoConnections.length, 'auto connections');
+		flowConnections = [...flowConnections, ...newAutoConnections];
+		console.log('[updateAutoConnections] Total connections after update:', flowConnections.length);
 	}
 
 	/**
-	 * Apply validation results to node ports
-	 * Updates port validation states and merges port information from backend
-	 * Uses array mutation to work with XYFlow's binding
+	 * Apply validation results to populate portsMap
+	 * Updates port information from backend validation for visualization
 	 */
-	function applyValidationToNodes(result: ValidationResult) {
-		// Merge port information from validation result into nodes
+	function applyValidationToNodes(result: PortValidationResult) {
+		// Build portsMap from validation result
 		if (result.nodes && result.nodes.length > 0) {
-			// Create new array with merged port data
-			// Reassignment triggers reactivity for dynamic port rendering
-			const updatedNodes = xyflowNodes.map(node => {
-				const validatedNode = result.nodes.find((vn) => vn.id === node.id);
+			const newPortsMap: PortsMap = {};
 
-				if (validatedNode) {
-					return {
-						...node,
-						data: {
-							...node.data,
-							input_ports: validatedNode.input_ports,
-							output_ports: validatedNode.output_ports
-						}
-					};
-				}
+			for (const validatedNode of result.nodes) {
+				newPortsMap[validatedNode.id] = {
+					input_ports: validatedNode.input_ports,
+					output_ports: validatedNode.output_ports
+				};
+			}
 
-				return node;
-			});
-
-			// Reassign array to trigger reactivity
-			xyflowNodes = updatedNodes;
+			portsMap = newPortsMap;
 		}
 
 		// Mark connections with errors
-		// IMPORTANT: Mutate array elements in-place, don't replace array
 		if (result.errors.length > 0) {
-			for (let i = 0; i < xyflowEdges.length; i++) {
-				const edge = xyflowEdges[i];
+			flowConnections = flowConnections.map(conn => {
 				const hasError = result.errors.some(
 					(err) =>
-						err.component_name === edge.source || err.component_name === edge.target
+						err.component_name === conn.source_node_id ||
+						err.component_name === conn.target_node_id
 				);
-				if (hasError && edge.data) {
-					xyflowEdges[i] = {
-						...edge,
-						data: {
-							...edge.data,
-							validationState: 'error' as const
-						}
+
+				if (hasError) {
+					return {
+						...conn,
+						validationState: 'error' as const
 					};
 				}
+
+				return conn;
+			});
+		}
+	}
+
+	// ComponentList handlers
+	function handleSelectNode(nodeId: string) {
+		handleNodeClick(nodeId);
+	}
+
+	function handleEditNode(nodeId: string) {
+		const node = flowNodes.find((n) => n.id === nodeId);
+		if (node) {
+			editingNode = node;
+			editingComponentType = componentTypes.find((ct) => ct.id === node.type);
+			showEditModal = true;
+		}
+	}
+
+	function handleDeleteNode(nodeId: string) {
+		flowNodes = flowNodes.filter((n) => n.id !== nodeId);
+		// Also remove connections involving this node
+		flowConnections = flowConnections.filter(
+			(c) => c.source_node_id !== nodeId && c.target_node_id !== nodeId
+		);
+		// Clear selection if deleted node was selected
+		if (selectedComponent?.id === nodeId) {
+			selectedComponent = null;
+		}
+		dirty = true;
+		saveState = { ...saveState, status: 'dirty' };
+	}
+
+	function handleOpenAddModal() {
+		showAddModal = true;
+	}
+
+	// AddComponentModal handlers
+	function handleAddComponentFromModal(
+		componentType: ComponentType,
+		name: string,
+		config: Record<string, unknown>
+	) {
+		const nodeId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+		const flowNode: FlowNode = {
+			id: nodeId,
+			type: componentType.id,
+			name: name,
+			position: {
+				x: 400 + (flowNodes.length % 3) * 200,
+				y: 300 + Math.floor(flowNodes.length / 3) * 150
+			},
+			config: config
+		};
+
+		flowNodes = [...flowNodes, flowNode];
+		showAddModal = false;
+		dirty = true;
+		saveState = { ...saveState, status: 'dirty' };
+	}
+
+	function handleCloseAddModal() {
+		showAddModal = false;
+	}
+
+	// EditComponentModal handlers
+	function handleSaveEdit(nodeId: string, name: string, config: Record<string, unknown>) {
+		flowNodes = flowNodes.map((node) =>
+			node.id === nodeId ? { ...node, name, config } : node
+		);
+		showEditModal = false;
+		editingNode = null;
+		dirty = true;
+		saveState = { ...saveState, status: 'dirty' };
+
+		// Update selected component if it was being edited
+		if (selectedComponent?.id === nodeId) {
+			const updated = flowNodes.find((n) => n.id === nodeId);
+			if (updated) {
+				selectedComponent = {
+					...updated,
+					health: selectedComponent.health
+				};
 			}
 		}
 	}
 
-	function handleAddComponent(componentType: { id: string; name: string }) {
-		// Generate unique node ID
-		const nodeId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
-		// Calculate position with offset to avoid overlapping nodes
-		// Start at center and offset by number of existing nodes
-		const baseX = 400;
-		const baseY = 300;
-		const offsetX = (xyflowNodes.length % 3) * 200; // 3 columns
-		const offsetY = Math.floor(xyflowNodes.length / 3) * 150; // Rows of 150px
-
-		// Create FlowNode first (domain model)
-		const flowNode: FlowNode = {
-			id: nodeId,
-			type: componentType.id,
-			name: componentType.name,
-			position: { x: baseX + offsetX, y: baseY + offsetY },
-			config: {}
-		};
-
-		// Convert to XYFlow node and add to state
-		const xyflowNode = convertToXYFlowNode(flowNode, handleNodeClick);
-		xyflowNodes = [...xyflowNodes, xyflowNode];
-		dirty = true;
-		saveState = { ...saveState, status: 'dirty' };
+	function handleDeleteFromEditModal(nodeId: string) {
+		handleDeleteNode(nodeId);
+		showEditModal = false;
+		editingNode = null;
 	}
 
-	function handleCloseConfigPanel() {
-		selectedComponent = null;
+	function handleCloseEditModal() {
+		showEditModal = false;
+		editingNode = null;
 	}
 
-	function handleConfigSave(nodeId: string, config: any) {
-		xyflowNodes = xyflowNodes.map((node) =>
-			node.id === nodeId
-				? {
-						...node,
-						data: {
-							...node.data,
-							node: {
-								...node.data.node,
-								config
-							}
-						}
-					}
-				: node
-		);
+	// AI Flow Generation handlers
+	async function handleAISubmit(prompt: string) {
+		aiLoading = true;
+		aiError = null;
+		lastAIPrompt = prompt;
+
+		try {
+			// Prepare existing flow context for modification
+			const existingFlow = flowNodes.length > 0 ? {
+				id: backendFlow.id,
+				nodes: flowNodes,
+				connections: flowConnections
+			} : undefined;
+
+			const response = await fetch('/api/ai/generate-flow', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ prompt, existingFlow })
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to generate flow');
+			}
+
+			const data = await response.json();
+			aiGeneratedFlow = data.flow;
+			aiValidationResult = data.validationResult;
+			showAIPreview = true;
+		} catch (err) {
+			aiError = err instanceof Error ? err.message : 'Failed to generate flow';
+			aiGeneratedFlow = null;
+			aiValidationResult = null;
+			showAIPreview = true; // Show preview with error
+		} finally {
+			aiLoading = false;
+		}
+	}
+
+	function handleAIApply() {
+		if (!aiGeneratedFlow) return;
+
+		// Save current state to history for undo
+		flowHistory.push({
+			...backendFlow,
+			nodes: flowNodes,
+			connections: flowConnections
+		});
+
+		// Apply AI-generated flow to canvas
+		if (aiGeneratedFlow.nodes) {
+			flowNodes = [...aiGeneratedFlow.nodes];
+		}
+		if (aiGeneratedFlow.connections) {
+			flowConnections = [...aiGeneratedFlow.connections];
+		}
+
+		// Mark as dirty
 		dirty = true;
 		saveState = { ...saveState, status: 'dirty' };
+
+		// Close preview
+		showAIPreview = false;
+		aiGeneratedFlow = null;
+		aiValidationResult = null;
+		aiError = null;
+	}
+
+	function handleAIReject() {
+		showAIPreview = false;
+		aiGeneratedFlow = null;
+		aiValidationResult = null;
+		aiError = null;
+	}
+
+	async function handleAIRetry() {
+		showAIPreview = false;
+		if (lastAIPrompt) {
+			await handleAISubmit(lastAIPrompt);
+		}
+	}
+
+	function handleAIClose() {
+		showAIPreview = false;
+		aiGeneratedFlow = null;
+		aiValidationResult = null;
+		aiError = null;
 	}
 
 	// Track if operations are in progress to prevent concurrent mutations
@@ -419,12 +553,12 @@
 				description: backendFlow.description,
 				version: backendFlow.version,
 				runtime_state: backendFlow.runtime_state,
-				nodes: convertXYFlowNodesToFlow(xyflowNodes),
-				connections: convertXYFlowEdgesToFlow(xyflowEdges)
+				nodes: flowNodes,
+				connections: flowConnections
 			});
 
 			// Update only backend flow metadata (version, runtime_state)
-			// Don't reconvert nodes/edges - XYFlow state is already correct
+			// Don't update nodes/connections - flow state is already correct
 			backendFlow = {
 				...backendFlow,
 				version: updated.version,
@@ -612,12 +746,13 @@
 
 	// Calculate dynamic canvas height based on panel state
 	const headerHeight = 70; // Approximate header height
+	const aiPromptHeight = 180; // AI prompt section height
 	const statusBarHeight = 50; // Approximate status bar height
 
 	const canvasHeight = $derived(
 		showRuntimePanel
-			? `calc(100vh - ${headerHeight}px - ${statusBarHeight}px - ${runtimePanelHeight}px)`
-			: `calc(100vh - ${headerHeight}px - ${statusBarHeight}px)`
+			? `calc(100vh - ${headerHeight}px - ${aiPromptHeight}px - ${statusBarHeight}px - ${runtimePanelHeight}px)`
+			: `calc(100vh - ${headerHeight}px - ${aiPromptHeight}px - ${statusBarHeight}px)`
 	);
 </script>
 
@@ -661,9 +796,29 @@
 	onClose={handleValidationStatusModalClose}
 />
 
+<!-- AI Flow Preview Modal -->
+<AIFlowPreview
+	isOpen={showAIPreview}
+	flow={aiGeneratedFlow}
+	validationResult={aiValidationResult}
+	loading={aiLoading}
+	error={aiError}
+	onApply={handleAIApply}
+	onReject={handleAIReject}
+	onRetry={handleAIRetry}
+	onClose={handleAIClose}
+/>
+
 <div class="editor-layout">
 	<aside class="palette-sidebar">
-		<ComponentPalette onAddComponent={handleAddComponent} />
+		<ComponentList
+			nodes={flowNodes}
+			selectedNodeId={selectedComponent?.id || null}
+			onSelectNode={handleSelectNode}
+			onEditNode={handleEditNode}
+			onDeleteNode={handleDeleteNode}
+			onAddComponent={handleOpenAddModal}
+		/>
 	</aside>
 
 	<main class="canvas-area">
@@ -686,16 +841,22 @@
 			</div>
 		</header>
 
+		<!-- AI Prompt Input Section -->
+		<div class="ai-prompt-section">
+			<AIPromptInput
+				loading={aiLoading}
+				disabled={aiLoading}
+				onSubmit={handleAISubmit}
+			/>
+		</div>
+
 		<div class="canvas-container" style="height: {canvasHeight};">
 			<FlowCanvas
-				bind:nodes={xyflowNodes}
-				bind:edges={xyflowEdges}
+				nodes={flowNodes}
+				connections={flowConnections}
+				{portsMap}
+				selectedNodeId={selectedComponent?.id || null}
 				onNodeClick={handleNodeClick}
-				onConnectionCreate={() => {
-					dirty = true;
-					saveState = { ...saveState, status: 'dirty' };
-				}}
-				runtimeState={backendFlow.runtime_state}
 			/>
 		</div>
 
@@ -716,22 +877,30 @@
 			onClose={handleCloseRuntimePanel}
 		/>
 	</main>
-
-	{#if selectedComponent}
-		<aside class="config-sidebar">
-			<ConfigPanel
-				component={selectedComponent}
-				onSave={handleConfigSave}
-				onClose={handleCloseConfigPanel}
-			/>
-		</aside>
-	{/if}
 </div>
+
+<!-- Add Component Modal -->
+<AddComponentModal
+	isOpen={showAddModal}
+	{componentTypes}
+	onAdd={handleAddComponentFromModal}
+	onClose={handleCloseAddModal}
+/>
+
+<!-- Edit Component Modal -->
+<EditComponentModal
+	isOpen={showEditModal}
+	node={editingNode}
+	componentType={editingComponentType}
+	onSave={handleSaveEdit}
+	onDelete={handleDeleteFromEditModal}
+	onClose={handleCloseEditModal}
+/>
 
 <style>
 	.editor-layout {
 		display: grid;
-		grid-template-columns: 250px 1fr auto;
+		grid-template-columns: 280px 1fr;
 		height: 100vh;
 		overflow: hidden;
 	}
@@ -793,16 +962,15 @@
 		font-size: 0.875rem;
 	}
 
+	.ai-prompt-section {
+		padding: 1rem 1.5rem;
+		background: var(--pico-background-color, white);
+		border-bottom: 1px solid var(--border-color, #dee2e6);
+	}
+
 	.canvas-container {
 		position: relative;
 		overflow: hidden;
 		transition: height 300ms ease-out;
-	}
-
-	.config-sidebar {
-		width: 400px;
-		border-left: 1px solid var(--border-color, #dee2e6);
-		background: var(--sidebar-bg, white);
-		overflow-y: auto;
 	}
 </style>

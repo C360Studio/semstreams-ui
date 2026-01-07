@@ -1,286 +1,345 @@
 <script lang="ts">
-	import { SvelteFlow, Controls, Background, type Connection } from '@xyflow/svelte';
-	import '@xyflow/svelte/dist/style.css';
-	import CustomFlowNode from './CustomFlowNode.svelte';
-	import ConnectionLine from './ConnectionLine.svelte';
-	import type { XYFlowNode, XYFlowEdge } from '$lib/utils/xyflow-converters';
-	import { convertToXYFlowNode, convertToXYFlowEdge } from '$lib/utils/xyflow-converters';
-	import type { ComponentType } from '$lib/types/component';
-	import type { FlowConnection } from '$lib/types/flow';
+	/**
+	 * FlowCanvas - D3-based flow visualization canvas
+	 *
+	 * Renders flow nodes and edges using SVG with D3 for:
+	 * - Automatic layout calculation
+	 * - Zoom and pan controls
+	 * - Click-to-edit interaction
+	 *
+	 * This replaces the XYFlow-based FlowCanvas with a simpler,
+	 * visualization-focused implementation.
+	 */
 
-	// Register custom node type
-	const nodeTypes = {
-		custom: CustomFlowNode
-	};
+	import { onMount } from 'svelte';
+	import * as d3 from 'd3';
+	import type { FlowNode, FlowConnection } from '$lib/types/flow';
+	import type { ValidatedPort } from '$lib/types/port';
+	import {
+		layoutNodes,
+		layoutEdges,
+		calculateCanvasBounds,
+		createZoomBehavior,
+		applyZoom,
+		fitToContent
+	} from '$lib/utils/d3-layout';
 
-	// Register custom edge types (all use ConnectionLine component)
-	const edgeTypes = {
-		default: ConnectionLine,
-		manual: ConnectionLine,
-		auto: ConnectionLine
-	};
+	import FlowNodeComponent from './FlowNode.svelte';
+	import FlowEdge from './FlowEdge.svelte';
+
+	interface PortsMap {
+		[nodeId: string]: {
+			input_ports: ValidatedPort[];
+			output_ports: ValidatedPort[];
+		};
+	}
 
 	interface FlowCanvasProps {
-		nodes: XYFlowNode[];
-		edges?: XYFlowEdge[];
+		nodes: FlowNode[];
+		connections: FlowConnection[];
+		/** Port metadata per node (from validation) */
+		portsMap?: PortsMap;
+		/** Currently selected node ID */
+		selectedNodeId?: string | null;
+		/** Callback when a node is clicked */
 		onNodeClick?: (nodeId: string) => void;
-		onConnectionCreate?: () => void;
-		runtimeState?: string;
 	}
 
 	let {
-		nodes = $bindable([]),
-		edges = $bindable([]),
-		onNodeClick,
-		onConnectionCreate,
-		runtimeState
+		nodes,
+		connections,
+		portsMap = {},
+		selectedNodeId = null,
+		onNodeClick
 	}: FlowCanvasProps = $props();
 
-	let canvasElement: HTMLDivElement;
+	// SVG element references
+	let svgElement: SVGSVGElement;
+	let containerElement: HTMLDivElement;
 
-	// DEBUG: Log edges to check sourceHandle/targetHandle
+	// Zoom transform state
+	let transform = $state({ x: 0, y: 0, k: 1 });
+
+	// Computed layout
+	const layoutedNodes = $derived(layoutNodes(nodes, connections));
+	const layoutedEdges = $derived(layoutEdges(connections, layoutedNodes));
+	const bounds = $derived(calculateCanvasBounds(layoutedNodes));
+
+	// Zoom behavior
+	let zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null;
+
+	onMount(() => {
+		// Initialize zoom
+		zoomBehavior = createZoomBehavior((newTransform) => {
+			transform = {
+				x: newTransform.x,
+				y: newTransform.y,
+				k: newTransform.k
+			};
+		});
+
+		applyZoom(svgElement, zoomBehavior);
+
+		// Initial fit
+		requestAnimationFrame(() => {
+			handleFitToContent();
+		});
+
+		// Window resize handler with debouncing
+		let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+		const handleResize = () => {
+			if (resizeTimeout !== null) {
+				clearTimeout(resizeTimeout);
+			}
+			resizeTimeout = setTimeout(() => {
+				handleFitToContent();
+				resizeTimeout = null;
+			}, 200);
+		};
+
+		window.addEventListener('resize', handleResize);
+
+		// Cleanup
+		return () => {
+			// Clean up resize listener
+			window.removeEventListener('resize', handleResize);
+
+			// Clear any pending resize timeout
+			if (resizeTimeout !== null) {
+				clearTimeout(resizeTimeout);
+			}
+
+			// Clean up D3 zoom behavior event listeners
+			if (svgElement && zoomBehavior) {
+				try {
+					const selection = d3.select(svgElement);
+					if (selection && typeof selection.on === 'function') {
+						selection.on('.zoom', null);
+					}
+				} catch (error) {
+					// Silently ignore cleanup errors in test environments
+					console.debug('D3 zoom cleanup skipped:', error);
+				}
+			}
+		};
+	});
+
+	// Re-fit when nodes change significantly
 	$effect(() => {
-		if (edges.length > 0) {
-			console.log('[FlowCanvas] Edges:', edges.map(e => ({
-				id: e.id,
-				source: e.source,
-				target: e.target,
-				sourceHandle: e.sourceHandle,
-				targetHandle: e.targetHandle
-			})));
+		if (nodes.length > 0 && zoomBehavior && svgElement && containerElement) {
+			// Debounce to avoid too many re-fits
+			const timeout = setTimeout(() => {
+				handleFitToContent();
+			}, 100);
+			return () => clearTimeout(timeout);
 		}
 	});
 
-	// Handle node click
-	function handleNodeClick(event: any) {
-		// Get the actual DOM element that was clicked
-		// XYFlow provides: event.event (the PointerEvent), event.node (the node data)
-		const domEvent = event.event;
-		const target = domEvent?.target as HTMLElement;
+	function handleFitToContent() {
+		if (!svgElement || !containerElement || !zoomBehavior) return;
 
-		// DEBUG: Log what was clicked
-		console.log('[handleNodeClick] Clicked:', {
-			tagName: target?.tagName,
-			classes: target?.className,
-			isHandle: target?.classList?.contains('svelte-flow__handle')
-		});
-
-		// Check if clicked on a handle - if so, ignore (XYFlow handles connection creation)
-		if (target?.classList?.contains('svelte-flow__handle') || target?.closest?.('.svelte-flow__handle')) {
-			console.log('[handleNodeClick] Handle clicked - ignoring');
-			return;
-		}
-
-		// Get the node that was clicked
-		const node = event.node;
-		if (!node || !node.id) {
-			return;
-		}
-
-		console.log('[handleNodeClick] Opening config for node:', node.id);
-		onNodeClick?.(node.id);
+		const rect = containerElement.getBoundingClientRect();
+		fitToContent(svgElement, zoomBehavior, bounds, rect.width, rect.height);
 	}
 
-	/**
-	 * Validate if a connection is valid based on port compatibility
-	 * Returns error message if invalid, null if valid
-	 */
-	function validateConnection(connection: Connection): string | null {
-		// TODO: Implement full port type validation when port metadata is available
-		// For now, perform basic validation:
-
-		// 1. Check for duplicate connections
-		const isDuplicate = edges.some(
-			(edge) =>
-				edge.source === connection.source &&
-				edge.target === connection.target &&
-				edge.sourceHandle === connection.sourceHandle &&
-				edge.targetHandle === connection.targetHandle
-		);
-		if (isDuplicate) {
-			return 'Connection already exists between these ports';
-		}
-
-		// 2. Cannot connect node to itself
-		if (connection.source === connection.target) {
-			return 'Cannot connect a component to itself';
-		}
-
-		// Additional validation will be added when port metadata is available:
-		// - Direction validation (output -> input only)
-		// - Port type compatibility checking
-		// - Interface contract matching
-
-		return null; // Valid
+	function handleNodeClick(nodeId: string) {
+		onNodeClick?.(nodeId);
 	}
 
-	// Handle manual connection creation via drag-to-connect
-	function handleConnect(connection: Connection) {
-		console.log('[handleConnect] Creating manual connection:', connection.source, '→', connection.target);
-
-		// Block editing while flow is running
-		if (runtimeState === 'running') {
-			return;
-		}
-
-		// Validate connection has required fields
-		if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
-			return;
-		}
-
-		// Validate connection compatibility
-		const validationError = validateConnection(connection);
-		if (validationError) {
-			console.log('[handleConnect] Rejected:', validationError);
-			return;
-		}
-
-		// Generate unique connection ID
-		const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
-		// Create FlowConnection with source='manual'
-		const flowConnection: FlowConnection = {
-			id: connectionId,
-			source_node_id: connection.source,
-			source_port: connection.sourceHandle,
-			target_node_id: connection.target,
-			target_port: connection.targetHandle,
-			source: 'manual',
-			validationState: 'unknown' // Will be updated by validation
+	// Get ports for a specific node
+	function getNodePorts(nodeId: string): { input: ValidatedPort[]; output: ValidatedPort[] } {
+		const ports = portsMap[nodeId];
+		return {
+			input: ports?.input_ports || [],
+			output: ports?.output_ports || []
 		};
-
-		// Convert to XYFlow edge and add to array
-		const xyflowEdge = convertToXYFlowEdge(flowConnection);
-		edges = [...edges, xyflowEdge];
-
-		console.log('[handleConnect] ✓ Manual connection created');
-
-		// Notify parent that connection was created (will mark dirty)
-		onConnectionCreate?.();
 	}
 
-	// Handle drag over - required for drop to work
-	function handleDragOver(event: DragEvent) {
-		event.preventDefault();
-		if (event.dataTransfer) {
-			event.dataTransfer.dropEffect = 'copy';
-		}
-	}
-
-	// Handle drop - add new component to canvas
-	function handleDrop(event: DragEvent) {
-		event.preventDefault();
-
-		if (!event.dataTransfer) return;
-
-		// Block editing while flow is running
-		if (runtimeState === 'running') {
-			console.warn('Cannot add components while flow is running');
-			return;
-		}
-
-		try {
-			// Get the component type from drag data
-			const componentTypeData = event.dataTransfer.getData('application/json');
-			if (!componentTypeData) return;
-
-			const componentType = JSON.parse(componentTypeData) as ComponentType;
-
-			// Calculate drop position relative to canvas
-			const canvasRect = canvasElement.getBoundingClientRect();
-			const x = event.clientX - canvasRect.left;
-			const y = event.clientY - canvasRect.top;
-
-			// Generate unique node ID
-			const nodeId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
-			// Create FlowNode
-			const flowNode = {
-				id: nodeId,
-				type: componentType.id,
-				name: componentType.name,
-				position: { x, y },
-				config: {}
-			};
-
-			// Convert to XYFlow node and add to array
-			const xyflowNode = convertToXYFlowNode(flowNode, onNodeClick);
-			nodes = [...nodes, xyflowNode];
-		} catch (error) {
-			console.error('Failed to add component via drop:', error);
-		}
-	}
+	// Arrow marker colors
+	const arrowMarkers = [
+		{ id: 'arrow-default', color: 'var(--pico-primary)' },
+		{ id: 'arrow-error', color: 'var(--pico-del-color)' },
+		{ id: 'arrow-warning', color: 'var(--pico-mark-background-color)' },
+		{ id: 'arrow-auto', color: 'var(--pico-secondary)' }
+	];
 </script>
 
-<div
-	id="flow-canvas"
-	class="flow-canvas"
-	role="application"
-	aria-label="Flow canvas for visual flow design"
-	bind:this={canvasElement}
-	ondragover={handleDragOver}
-	ondrop={handleDrop}
->
-	<SvelteFlow
-		bind:nodes
-		bind:edges
-		{nodeTypes}
-		{edgeTypes}
-		fitView={true}
-		nodesDraggable={true}
-		nodesConnectable={true}
-		nodeClickDistance={0}
-		onnodeclick={handleNodeClick}
-		onconnect={handleConnect}
+<div class="flow-canvas-container" bind:this={containerElement}>
+	<svg
+		class="flow-canvas"
+		bind:this={svgElement}
+		role="img"
+		aria-label="Flow diagram"
 	>
-		<Controls />
-		<Background />
-	</SvelteFlow>
+		<!-- Marker definitions -->
+		<defs>
+			{#each arrowMarkers as marker (marker.id)}
+				<marker
+					id={marker.id}
+					viewBox="0 0 10 10"
+					refX="9"
+					refY="5"
+					markerWidth="6"
+					markerHeight="6"
+					orient="auto-start-reverse"
+				>
+					<path d="M 0 0 L 10 5 L 0 10 z" fill={marker.color} />
+				</marker>
+			{/each}
+		</defs>
+
+		<!-- Zoomable/pannable content -->
+		<g class="canvas-content" transform="translate({transform.x}, {transform.y}) scale({transform.k})">
+			<!-- Background grid -->
+			<defs>
+				<pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+					<path
+						d="M 20 0 L 0 0 0 20"
+						fill="none"
+						stroke="var(--pico-muted-border-color)"
+						stroke-width="0.5"
+						opacity="0.5"
+					/>
+				</pattern>
+			</defs>
+			<rect
+				x="-5000"
+				y="-5000"
+				width="10000"
+				height="10000"
+				fill="url(#grid)"
+			/>
+
+			<!-- Edges (rendered first, behind nodes) -->
+			{#each layoutedEdges as edge (edge.id)}
+				<FlowEdge {edge} markerId="arrow-default" />
+			{/each}
+
+			<!-- Nodes -->
+			{#each layoutedNodes as node (node.id)}
+				{@const ports = getNodePorts(node.id)}
+				<FlowNodeComponent
+					{node}
+					inputPorts={ports.input}
+					outputPorts={ports.output}
+					selected={selectedNodeId === node.id}
+					onclick={handleNodeClick}
+				/>
+			{/each}
+		</g>
+	</svg>
+
+	<!-- Canvas controls -->
+	<div class="canvas-controls">
+		<button
+			type="button"
+			class="control-button"
+			onclick={() => {
+				if (svgElement && zoomBehavior) {
+					d3.select(svgElement).transition().call(zoomBehavior.scaleBy, 1.2);
+				}
+			}}
+			aria-label="Zoom in"
+		>
+			+
+		</button>
+		<button
+			type="button"
+			class="control-button"
+			onclick={() => {
+				if (svgElement && zoomBehavior) {
+					d3.select(svgElement).transition().call(zoomBehavior.scaleBy, 0.8);
+				}
+			}}
+			aria-label="Zoom out"
+		>
+			−
+		</button>
+		<button
+			type="button"
+			class="control-button"
+			onclick={handleFitToContent}
+			aria-label="Fit to content"
+		>
+			⊡
+		</button>
+	</div>
+
+	<!-- Empty state -->
+	{#if nodes.length === 0}
+		<div class="empty-state">
+			<p>No components in this flow.</p>
+			<p class="hint">Add components using the sidebar or describe your flow to the AI.</p>
+		</div>
+	{/if}
 </div>
 
 <style>
-	.flow-canvas {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: var(--canvas-background, #f8f9fa);
-		border: 1px solid var(--canvas-border, #dee2e6);
-		border-radius: 4px;
-	}
-
-	:global(.svelte-flow) {
+	.flow-canvas-container {
+		position: relative;
 		width: 100%;
 		height: 100%;
-		background: var(--canvas-background, #f8f9fa);
+		min-height: 400px;
+		background: var(--pico-background-color);
+		border: 1px solid var(--pico-muted-border-color);
+		border-radius: var(--pico-border-radius);
+		overflow: hidden;
 	}
 
-	:global(.svelte-flow__node) {
-		background: white;
-		border: 2px solid var(--node-border, #0066cc);
-		border-radius: 8px;
-		padding: 1rem;
+	.flow-canvas {
+		width: 100%;
+		height: 100%;
+		cursor: grab;
+	}
+
+	.flow-canvas:active {
+		cursor: grabbing;
+	}
+
+	.canvas-controls {
+		position: absolute;
+		bottom: 1rem;
+		left: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		z-index: 10;
+	}
+
+	.control-button {
+		width: 32px;
+		height: 32px;
+		padding: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 18px;
+		font-weight: bold;
+		background: var(--pico-background-color);
+		border: 1px solid var(--pico-muted-border-color);
+		border-radius: var(--pico-border-radius);
+		cursor: pointer;
+		transition: background 0.2s;
+	}
+
+	.control-button:hover {
+		background: var(--pico-secondary-background);
+	}
+
+	.empty-state {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		text-align: center;
+		color: var(--pico-muted-color);
+	}
+
+	.empty-state p {
+		margin: 0.5rem 0;
+	}
+
+	.empty-state .hint {
 		font-size: 0.875rem;
-	}
-
-	:global(.svelte-flow__node:hover) {
-		border-color: var(--node-border-hover, #0052a3);
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-	}
-
-	:global(.svelte-flow__node.selected) {
-		border-color: var(--node-border-selected, #0052a3);
-		box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
-	}
-
-	:global(.svelte-flow__edge-path) {
-		stroke: var(--edge-stroke, #6c757d);
-		stroke-width: 2;
-	}
-
-	:global(.svelte-flow__edge.selected .svelte-flow__edge-path) {
-		stroke: var(--edge-stroke-selected, #0066cc);
-		stroke-width: 3;
 	}
 </style>
