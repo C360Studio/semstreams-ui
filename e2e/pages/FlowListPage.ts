@@ -23,6 +23,10 @@ export class FlowListPage {
 	// Actions
 	async goto(): Promise<void> {
 		await this.page.goto('/');
+		// Wait for page to be fully loaded and hydrated
+		await this.page.waitForLoadState('networkidle');
+		// Wait for the create button to be visible - ensures SvelteKit hydration is complete
+		await this.createButton.waitFor({ state: 'visible', timeout: 10000 });
 	}
 
 	getFlowByName(name: string): Locator {
@@ -30,6 +34,8 @@ export class FlowListPage {
 	}
 
 	async clickCreateNewFlow(): Promise<void> {
+		// Ensure button is visible and clickable before attempting click
+		await this.createButton.waitFor({ state: 'visible', timeout: 10000 });
 		await this.createButton.click();
 	}
 
