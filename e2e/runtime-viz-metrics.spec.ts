@@ -30,7 +30,7 @@ test.describe('Runtime Panel - Metrics Tab', () => {
 
 		// Navigate to flow page
 		await page.goto(setup.url);
-		await expect(page.locator('[data-testid="flow-canvas"]')).toBeVisible();
+		await expect(page.locator('#flow-canvas')).toBeVisible();
 		await page.waitForLoadState('networkidle');
 
 		// Open runtime panel

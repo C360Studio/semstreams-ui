@@ -28,12 +28,9 @@ export async function createRunningFlow(page: Page): Promise<RunningFlowSetup> {
 		nodes: [
 			{
 				id: 'udp-input-1',
-				type: 'udp-input',
-				name: 'UDP Input',
-				config: {
-					port: 8080,
-					maxPacketSize: 1500
-				},
+				type: 'udp',
+				name: 'udp',
+				config: {},
 				position: { x: 100, y: 100 }
 			}
 		],
@@ -55,15 +52,15 @@ export async function createRunningFlow(page: Page): Promise<RunningFlowSetup> {
 	const flow = await createResponse.json();
 	const flowId = flow.id;
 
-	// Deploy flow
-	const deployResponse = await page.request.post(`/flowbuilder/flows/${flowId}/deploy`);
+	// Deploy flow (backend uses /deployment/{id}/deploy)
+	const deployResponse = await page.request.post(`/flowbuilder/deployment/${flowId}/deploy`);
 	if (!deployResponse.ok()) {
 		const body = await deployResponse.text();
 		throw new Error(`Failed to deploy flow: ${deployResponse.status()}\n${body}`);
 	}
 
-	// Start flow
-	const startResponse = await page.request.post(`/flowbuilder/flows/${flowId}/start`);
+	// Start flow (backend uses /deployment/{id}/start)
+	const startResponse = await page.request.post(`/flowbuilder/deployment/${flowId}/start`);
 	if (!startResponse.ok()) {
 		const body = await startResponse.text();
 		throw new Error(`Failed to start flow: ${startResponse.status()}\n${body}`);
@@ -303,7 +300,7 @@ export async function mockLogsSSE(
  * expect(newHeight).toBeLessThan(initialHeight);
  */
 export async function getCanvasHeight(page: Page): Promise<number> {
-	const canvas = page.locator('[data-testid="flow-canvas"]');
+	const canvas = page.locator('#flow-canvas');
 	const box = await canvas.boundingBox();
 	return box?.height || 0;
 }

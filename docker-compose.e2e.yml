@@ -45,11 +45,11 @@ services:
       nats:
         condition: service_healthy
     environment:
-      - STREAMKIT_CONFIG=/app/configs/${BACKEND_CONFIG:-protocol-flow.json}
       - STREAMKIT_NATS_URLS=nats://nats:4222
       - STREAMKIT_LOG_LEVEL=debug
     volumes:
-      - ${BACKEND_CONTEXT}/configs:/app/configs:ro
+      - ${BACKEND_CONTEXT}/configs/${BACKEND_CONFIG:-protocol-flow.json}:/etc/semstreams/config.json:ro
+      - ${BACKEND_CONTEXT}/testdata:/data/testdata:ro
     networks:
       - e2e-net
     healthcheck:
@@ -85,11 +85,11 @@ services:
       - backend
       - ui
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.e2e:/etc/caddy/Caddyfile:ro
     environment:
       - BACKEND_HOST=backend:8080
     ports:
-      - "3000:3000"
+      - "${E2E_UI_PORT:-3000}:3000"
     networks:
       - e2e-net
     healthcheck:

@@ -39,7 +39,7 @@ test.describe('Runtime Panel - Basic Functionality', () => {
 		await page.goto(setup.url);
 
 		// Wait for canvas to be visible and stable
-		await expect(page.locator('[data-testid="flow-canvas"]')).toBeVisible();
+		await expect(page.locator('#flow-canvas')).toBeVisible();
 		await page.waitForLoadState('networkidle');
 	});
 

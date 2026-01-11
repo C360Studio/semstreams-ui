@@ -29,9 +29,9 @@ test.describe('Navigation and State Persistence', () => {
 		const canvas = new FlowCanvasPage(page);
 		await canvas.expectCanvasLoaded();
 
-		// Add a component (to verify state is not accidentally saved) - use Graph Processor
+		// Add a component (to verify state is not accidentally saved) - use json_filter
 		const palette = new ComponentPalettePage(page);
-		await palette.addComponentToCanvas('Graph Processor');
+		await palette.addComponentToCanvas('json_filter');
 		await page.waitForTimeout(500);
 
 		// DON'T save the flow
@@ -75,9 +75,9 @@ test.describe('Navigation and State Persistence', () => {
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('WebSocket Output');
 		await expect(canvas.nodes).toHaveCount(1);
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 		await expect(canvas.nodes).toHaveCount(2);
-		await palette.addComponentToCanvas('Graph Processor');
+		await palette.addComponentToCanvas('json_filter');
 		await expect(canvas.nodes).toHaveCount(3);
 
 		// Save the flow and wait for explicit "saved at" confirmation
@@ -107,15 +107,15 @@ test.describe('Navigation and State Persistence', () => {
 		// Verify all 3 components are still present
 		await expect(canvas.nodes).toHaveCount(3);
 
-		// Verify component types are preserved
+		// Verify component types are preserved (use actual type IDs, not display names)
 		const wsNode = canvas.getNodeByType('websocket');
 		await expect(wsNode).toBeVisible();
 
-		const roboticsNode = canvas.getNodeByType('robotics');
-		await expect(roboticsNode).toBeVisible();
+		const iotNode = canvas.getNodeByType('iot_sensor');
+		await expect(iotNode).toBeVisible();
 
-		const graphNode = canvas.getNodeByType('graph-processor');
-		await expect(graphNode).toBeVisible();
+		const jsonNode = canvas.getNodeByType('json_filter');
+		await expect(jsonNode).toBeVisible();
 
 		// Verify save status is draft (flow persisted, but has validation errors from orphaned ports)
 		await canvas.expectSaveStatus('draft');

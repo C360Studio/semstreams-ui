@@ -59,8 +59,9 @@ test.describe('Manual Flow Save', () => {
 		await page.reload();
 		await page.waitForLoadState('networkidle');
 
-		// Verify node is still present on canvas (not in palette)
-		await expect(page.locator('.svelte-flow__node').getByText('WebSocket Output')).toBeVisible();
+		// Verify node is still present on canvas (D3 canvas uses g.flow-node with .node-label)
+		// Node name is auto-generated like "websocket-<timestamp>" so we check for the type prefix
+		await expect(page.locator('g.flow-node .node-label').filter({ hasText: /websocket/i })).toBeVisible();
 	});
 
 	test('should display save errors when server fails', async ({ page }) => {
@@ -100,9 +101,9 @@ test.describe('Manual Flow Save', () => {
 	});
 
 	test('should show saved status after successful save', async ({ page }) => {
-		// Add a node - use Graph Processor to avoid UDP port conflicts
+		// Add a node - use json_filter to avoid UDP port conflicts
 		const palette = new ComponentPalettePage(page);
-		await palette.addComponentToCanvas('Graph Processor');
+		await palette.addComponentToCanvas('json_filter');
 
 		// Wait for component to be added
 		await page.waitForTimeout(500);
@@ -119,9 +120,9 @@ test.describe('Manual Flow Save', () => {
 	});
 
 	test('should handle rapid save attempts', async ({ page }) => {
-		// Add a node - use Robotics Processor to avoid UDP port conflicts
+		// Add a node - use iot_sensor to avoid UDP port conflicts
 		const palette = new ComponentPalettePage(page);
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 
 		// Wait for component to be added
 		await page.waitForTimeout(500);
@@ -139,7 +140,7 @@ test.describe('Manual Flow Save', () => {
 	});
 
 	test('should disable save button when saving', async ({ page }) => {
-		// Add a node - use WebSocket Output to avoid UDP port conflicts
+		// Add a node - use websocket to avoid UDP port conflicts
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('WebSocket Output');
 
@@ -156,8 +157,8 @@ test.describe('Manual Flow Save', () => {
 		// Button should be disabled after save (nothing left to save)
 		await expect(saveButton).toBeDisabled();
 
-		// Make another change - button should re-enable (use Graph Processor to avoid conflicts)
-		await palette.addComponentToCanvas('Graph Processor');
+		// Make another change - button should re-enable (use json_filter to avoid conflicts)
+		await palette.addComponentToCanvas('json_filter');
 		await page.waitForTimeout(500);
 		await expect(page.getByText(/unsaved changes/i)).toBeVisible();
 		await expect(saveButton).not.toBeDisabled();
@@ -166,7 +167,7 @@ test.describe('Manual Flow Save', () => {
 	test('should preserve node positions after save and reload', async ({ page }) => {
 		// Add a node - double-click adds to canvas center (use Robotics to avoid UDP conflicts)
 		const palette = new ComponentPalettePage(page);
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 
 		// Wait for component to be added
 		await page.waitForTimeout(500);
@@ -176,8 +177,8 @@ test.describe('Manual Flow Save', () => {
 		await saveButton.click();
 		await expect(page.getByText(/saved at/i)).toBeVisible({ timeout: 5000 });
 
-		// Get node position before reload
-		const nodeBefore = page.locator('.svelte-flow__node').first();
+		// Get node position before reload (D3 canvas uses g.flow-node)
+		const nodeBefore = page.locator('g.flow-node').first();
 		const boxBefore = await nodeBefore.boundingBox();
 
 		// Reload page
@@ -185,7 +186,7 @@ test.describe('Manual Flow Save', () => {
 		await page.waitForLoadState('networkidle');
 
 		// Get node position after reload
-		const nodeAfter = page.locator('.svelte-flow__node').first();
+		const nodeAfter = page.locator('g.flow-node').first();
 		const boxAfter = await nodeAfter.boundingBox();
 
 		// Positions should match (within 10px tolerance for layout shifts)
