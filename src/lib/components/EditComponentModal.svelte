@@ -330,7 +330,7 @@
 	}
 
 	.dialog-content {
-		background: var(--pico-background-color);
+		background: var(--ui-surface-primary);
 		border-radius: 8px;
 		max-width: 600px;
 		width: 90%;
@@ -345,13 +345,13 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1.5rem;
-		border-bottom: 1px solid var(--pico-muted-border-color);
+		border-bottom: 1px solid var(--ui-border-subtle);
 	}
 
 	.dialog-header h2 {
 		margin: 0;
 		font-size: 1.5rem;
-		color: var(--pico-color);
+		color: var(--ui-text-primary);
 	}
 
 	.close-button {
@@ -359,7 +359,7 @@
 		border: none;
 		font-size: 2rem;
 		cursor: pointer;
-		color: var(--pico-muted-color);
+		color: var(--ui-text-secondary);
 		padding: 0;
 		width: 2rem;
 		height: 2rem;
@@ -367,7 +367,7 @@
 	}
 
 	.close-button:hover {
-		color: var(--pico-color);
+		color: var(--ui-text-primary);
 	}
 
 	.dialog-body {
@@ -394,8 +394,8 @@
 		border: 1px solid var(--ui-border-default);
 		border-radius: 4px;
 		font-size: 1rem;
-		background: var(--pico-background-color);
-		color: var(--pico-color);
+		background: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
 	}
 
 	.form-group input[type='checkbox'] {
@@ -405,7 +405,7 @@
 	.form-group input:focus {
 		outline: 2px solid var(--ui-focus-ring);
 		outline-offset: 1px;
-		border-color: var(--pico-primary);
+		border-color: var(--ui-interactive-primary);
 	}
 
 	.form-group input[aria-invalid='true'] {
@@ -451,7 +451,7 @@
 
 	.dialog-footer {
 		padding: 1.5rem;
-		border-top: 1px solid var(--pico-muted-border-color);
+		border-top: 1px solid var(--ui-border-subtle);
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -474,12 +474,12 @@
 	}
 
 	.primary-button {
-		background: var(--pico-primary);
-		color: var(--pico-primary-inverse);
+		background: var(--ui-interactive-primary);
+		color: var(--ui-text-on-primary);
 	}
 
 	.primary-button:hover:not(:disabled) {
-		background: var(--pico-primary-hover);
+		background: var(--ui-interactive-primary-hover);
 	}
 
 	.primary-button:disabled {
@@ -521,7 +521,7 @@
 	}
 
 	.confirm-content {
-		background: var(--pico-background-color);
+		background: var(--ui-surface-primary);
 		border-radius: 8px;
 		padding: 2rem;
 		max-width: 400px;

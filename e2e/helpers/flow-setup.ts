@@ -69,7 +69,7 @@ export interface TestFlowResult {
  * @example
  * // Create flow with components
  * const { url, id } = await createTestFlow(page, {
- *   nodes: [{ id: 'node-1', type: 'udp-input', name: 'UDP Input 1', config: {} }]
+ *   nodes: [{ id: 'node-1', type: 'udp-input', name: 'udp 1', config: {} }]
  * });
  */
 export async function createTestFlow(
@@ -139,7 +139,7 @@ export async function createFlowWithValidationErrors(page: Page): Promise<TestFl
 			{
 				id: 'node-1',
 				type: 'udp-input',
-				name: 'UDP Input 1',
+				name: 'udp 1',
 				config: {} // Unconfigured - will cause validation error
 			},
 			{

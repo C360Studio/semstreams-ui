@@ -182,7 +182,7 @@ describe("FlowNode", () => {
 
       const requiredPort = container.querySelector(".port-input");
       expect(requiredPort?.getAttribute("fill")).not.toBe(
-        "var(--pico-background-color)",
+        "var(--ui-surface-primary)",
       );
     });
 
@@ -199,7 +199,7 @@ describe("FlowNode", () => {
       const optionalPort = ports[1]; // Second port is optional
 
       expect(optionalPort?.getAttribute("fill")).toBe(
-        "var(--pico-background-color)",
+        "var(--ui-surface-primary)",
       );
     });
 

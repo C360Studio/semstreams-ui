@@ -29,7 +29,7 @@
 	const isAuto = $derived(edge.original.source === 'auto');
 </script>
 
-<g class="flow-edge" class:selected class:auto={isAuto}>
+<g class="flow-edge" class:selected class:auto={isAuto} data-connection-id={edge.id} data-source={isAuto ? 'auto' : 'manual'}>
 	<!-- Invisible wider path for easier click targeting -->
 	<path
 		class="edge-hitbox"
@@ -58,7 +58,7 @@
 			<circle
 				class="edge-status-indicator"
 				r="8"
-				fill={edge.original.validationState === 'error' ? 'var(--pico-del-color)' : 'var(--pico-mark-background-color)'}
+				fill={edge.original.validationState === 'error' ? 'var(--status-error)' : 'var(--status-warning)'}
 			/>
 			<text
 				class="edge-status-icon"
@@ -91,7 +91,7 @@
 
 	.flow-edge.selected .edge-path {
 		stroke-width: 3;
-		stroke: var(--pico-primary);
+		stroke: var(--ui-interactive-primary);
 	}
 
 	.flow-edge.auto .edge-path {

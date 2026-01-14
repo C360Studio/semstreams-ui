@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const E2E_UI_PORT = process.env.E2E_UI_PORT || '3000';
+
 export default defineConfig({
 	testDir: 'e2e',
 
@@ -23,8 +25,8 @@ export default defineConfig({
 
 	// Start Docker Compose stack automatically
 	webServer: {
-		command: 'docker compose -f docker-compose.e2e.yml up --build',
-		url: 'http://localhost:3000/health',
+		command: `E2E_UI_PORT=${E2E_UI_PORT} docker compose -f docker-compose.e2e.yml up --build`,
+		url: `http://localhost:${E2E_UI_PORT}/health`,
 		timeout: 120000,
 		reuseExistingServer: !process.env.CI,
 		stdout: 'pipe',
@@ -32,7 +34,7 @@ export default defineConfig({
 	},
 
 	use: {
-		baseURL: 'http://localhost:3000',
+		baseURL: `http://localhost:${E2E_UI_PORT}`,
 
 		// Collect trace on failure for debugging
 		trace: 'on-first-retry',

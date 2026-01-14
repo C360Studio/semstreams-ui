@@ -53,7 +53,7 @@ test.describe('Deploy Blocking', () => {
 		});
 
 		// Add Robotics component (has required input port)
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 		await expect(canvas.nodes).toHaveCount(1);
 
 		// Wait for validation to complete
@@ -125,7 +125,7 @@ test.describe('Deploy Blocking', () => {
 		});
 
 		// Add Robotics component
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 		await expect(canvas.nodes).toHaveCount(1);
 
 		// Wait for validation
@@ -203,7 +203,7 @@ test.describe('Deploy Blocking', () => {
 
 		// Add UDP and Robotics components (creates valid connection)
 		await palette.addComponentToCanvas('UDP Input');
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 		await expect(canvas.nodes).toHaveCount(2);
 
 		// Wait for validation

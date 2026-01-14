@@ -9,7 +9,9 @@ import { FlowListPage } from './pages/FlowListPage';
  */
 
 test.describe('Component Palette', () => {
-	test('Scenario 4: View canvas → See component palette with 7 types', async ({ page }) => {
+	test('Scenario 4: Open Add modal → See component palette with component types', async ({
+		page
+	}) => {
 		// Navigate to flow list
 		const flowList = new FlowListPage(page);
 		await flowList.goto();
@@ -23,19 +25,16 @@ test.describe('Component Palette', () => {
 		const canvas = new FlowCanvasPage(page);
 		await canvas.expectCanvasLoaded();
 
-		// Verify component palette is visible
+		// Open the Add Component modal to see the palette
 		const palette = new ComponentPalettePage(page);
+		await palette.openAddModal();
+
+		// Verify component palette is visible inside modal
 		await palette.expectPaletteVisible();
 
-		// Verify all 7 component types are present
+		// Verify key component types are present (backend returns 22+ types)
 		// Input types
 		await palette.expectComponentInPalette('UDP Input');
-
-		// Processor types
-		await palette.expectComponentInPalette('Robotics Processor');
-		await palette.expectComponentInPalette('Graph Processor');
-		await palette.expectComponentInPalette('Rule Processor');
-		await palette.expectComponentInPalette('Context Processor');
 
 		// Output types
 		await palette.expectComponentInPalette('WebSocket Output');
@@ -43,12 +42,14 @@ test.describe('Component Palette', () => {
 		// Storage types
 		await palette.expectComponentInPalette('Object Store');
 
-		// Verify total component count (at least 7)
+		// Verify we have multiple component types loaded
 		const componentCount = await palette.componentCards.count();
 		expect(componentCount).toBeGreaterThanOrEqual(7);
 	});
 
-	test('Scenario 5: Check categories → See Input, Output, Processor, Storage groups', async ({ page }) => {
+	test('Scenario 5: Open Add modal → See Input, Output, Processor, Storage categories', async ({
+		page
+	}) => {
 		// Navigate to flow list
 		const flowList = new FlowListPage(page);
 		await flowList.goto();
@@ -62,8 +63,11 @@ test.describe('Component Palette', () => {
 		const canvas = new FlowCanvasPage(page);
 		await canvas.expectCanvasLoaded();
 
-		// Verify palette is visible
+		// Open the Add Component modal to see the palette
 		const palette = new ComponentPalettePage(page);
+		await palette.openAddModal();
+
+		// Verify palette is visible
 		await palette.expectPaletteVisible();
 
 		// Verify all 4 categories are present (categories are lowercase in HTML)
@@ -71,10 +75,5 @@ test.describe('Component Palette', () => {
 		await palette.expectCategoryVisible('output');
 		await palette.expectCategoryVisible('processor');
 		await palette.expectCategoryVisible('storage');
-
-		// Verify categories can be expanded/collapsed
-		// (Optional: Click to expand/collapse if implemented)
-		// await palette.clickCategory('Input');
-		// await palette.expectCategoryExpanded('Input');
 	});
 });

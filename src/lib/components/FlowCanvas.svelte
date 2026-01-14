@@ -157,15 +157,16 @@
 
 	// Arrow marker colors
 	const arrowMarkers = [
-		{ id: 'arrow-default', color: 'var(--pico-primary)' },
-		{ id: 'arrow-error', color: 'var(--pico-del-color)' },
-		{ id: 'arrow-warning', color: 'var(--pico-mark-background-color)' },
-		{ id: 'arrow-auto', color: 'var(--pico-secondary)' }
+		{ id: 'arrow-default', color: 'var(--ui-interactive-primary)' },
+		{ id: 'arrow-error', color: 'var(--status-error)' },
+		{ id: 'arrow-warning', color: 'var(--status-warning)' },
+		{ id: 'arrow-auto', color: 'var(--ui-interactive-secondary)' }
 	];
 </script>
 
 <div class="flow-canvas-container" bind:this={containerElement}>
 	<svg
+		id="flow-canvas"
 		class="flow-canvas"
 		bind:this={svgElement}
 		role="img"
@@ -196,7 +197,7 @@
 					<path
 						d="M 20 0 L 0 0 0 20"
 						fill="none"
-						stroke="var(--pico-muted-border-color)"
+						stroke="var(--ui-border-subtle)"
 						stroke-width="0.5"
 						opacity="0.5"
 					/>
@@ -280,9 +281,9 @@
 		width: 100%;
 		height: 100%;
 		min-height: 400px;
-		background: var(--pico-background-color);
-		border: 1px solid var(--pico-muted-border-color);
-		border-radius: var(--pico-border-radius);
+		background: var(--ui-surface-primary);
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: var(--radius-md);
 		overflow: hidden;
 	}
 
@@ -315,15 +316,15 @@
 		justify-content: center;
 		font-size: 18px;
 		font-weight: bold;
-		background: var(--pico-background-color);
-		border: 1px solid var(--pico-muted-border-color);
-		border-radius: var(--pico-border-radius);
+		background: var(--ui-surface-primary);
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: var(--radius-md);
 		cursor: pointer;
 		transition: background 0.2s;
 	}
 
 	.control-button:hover {
-		background: var(--pico-secondary-background);
+		background: var(--ui-surface-secondary);
 	}
 
 	.empty-state {
@@ -332,7 +333,7 @@
 		left: 50%;
 		transform: translate(-50%, -50%);
 		text-align: center;
-		color: var(--pico-muted-color);
+		color: var(--ui-text-secondary);
 	}
 
 	.empty-state p {

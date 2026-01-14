@@ -155,18 +155,18 @@
 		font-family: inherit;
 		font-size: 1rem;
 		line-height: 1.5;
-		border: 1px solid var(--pico-muted-border-color);
-		border-radius: var(--pico-border-radius);
-		background-color: var(--pico-background-color);
-		color: var(--pico-color);
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: var(--radius-md);
+		background-color: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
 		resize: vertical;
 		transition: border-color 0.2s ease;
 	}
 
 	textarea:focus {
 		outline: none;
-		border-color: var(--pico-primary);
-		box-shadow: 0 0 0 2px var(--pico-primary-focus);
+		border-color: var(--ui-interactive-primary);
+		box-shadow: 0 0 0 2px var(--ui-focus-ring);
 	}
 
 	textarea:disabled {
@@ -179,16 +179,16 @@
 		bottom: 0.5rem;
 		right: 0.75rem;
 		font-size: 0.875rem;
-		color: var(--pico-muted-color);
+		color: var(--ui-text-secondary);
 		pointer-events: none;
 	}
 
 	.character-count .warning {
-		color: var(--pico-warning-color, #ff9800);
+		color: var(--status-warning);
 	}
 
 	.character-count .error {
-		color: var(--pico-error-color, #f44336);
+		color: var(--status-error);
 		font-weight: 600;
 	}
 
@@ -196,10 +196,10 @@
 		margin-top: 0.5rem;
 		padding: 0.5rem;
 		font-size: 0.875rem;
-		color: var(--pico-error-color, #f44336);
-		background-color: var(--pico-error-background, #ffebee);
-		border-radius: var(--pico-border-radius);
-		border-left: 3px solid var(--pico-error-color, #f44336);
+		color: var(--status-error);
+		background-color: var(--status-error-container);
+		border-radius: var(--radius-md);
+		border-left: 3px solid var(--status-error);
 	}
 
 	.actions {
@@ -214,7 +214,7 @@
 		gap: 0.5rem;
 		padding: 0.5rem 1rem;
 		font-size: 1rem;
-		border-radius: var(--pico-border-radius);
+		border-radius: var(--radius-md);
 		cursor: pointer;
 		transition: all 0.2s ease;
 	}
@@ -225,13 +225,13 @@
 	}
 
 	button.primary {
-		background-color: var(--pico-primary);
-		color: var(--pico-primary-inverse);
+		background-color: var(--ui-interactive-primary);
+		color: var(--ui-text-on-primary);
 		border: none;
 	}
 
 	button.primary:hover:not(:disabled) {
-		background-color: var(--pico-primary-hover);
+		background-color: var(--ui-interactive-primary-hover);
 	}
 
 	.spinner {

@@ -22,25 +22,25 @@ export interface PathStyle {
 /** Default path styles by validation state */
 export const PATH_STYLES = {
 	valid: {
-		stroke: 'var(--pico-primary)',
+		stroke: 'var(--ui-interactive-primary)',
 		strokeWidth: 2,
 		strokeDasharray: '',
 		showArrow: true
 	},
 	error: {
-		stroke: 'var(--pico-del-color, #c62828)',
+		stroke: 'var(--status-error)',
 		strokeWidth: 2,
 		strokeDasharray: '5,5',
 		showArrow: true
 	},
 	warning: {
-		stroke: 'var(--pico-mark-background-color, #ff9800)',
+		stroke: 'var(--status-warning)',
 		strokeWidth: 2,
 		strokeDasharray: '5,5',
 		showArrow: true
 	},
 	auto: {
-		stroke: 'var(--pico-secondary)',
+		stroke: 'var(--ui-interactive-secondary)',
 		strokeWidth: 2,
 		strokeDasharray: '3,3',
 		showArrow: true
@@ -109,7 +109,7 @@ export function getPathStyle(edge: LayoutEdge): PathStyle {
  */
 export function generateArrowMarker(
 	id: string,
-	color: string = 'var(--pico-primary)'
+	color: string = 'var(--ui-interactive-primary)'
 ): string {
 	return `
 		<marker

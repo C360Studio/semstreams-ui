@@ -27,18 +27,19 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/flows" | "/flows/[id]" | "/test-xyflow-wrapped" | "/test-xyflow";
+		RouteId(): "/" | "/api" | "/api/ai" | "/api/ai/generate-flow" | "/flows" | "/flows/[id]";
 		RouteParams(): {
 			"/flows/[id]": { id: string }
 		};
 		LayoutParams(): {
 			"/": { id?: string };
+			"/api": Record<string, never>;
+			"/api/ai": Record<string, never>;
+			"/api/ai/generate-flow": Record<string, never>;
 			"/flows": { id?: string };
-			"/flows/[id]": { id: string };
-			"/test-xyflow-wrapped": Record<string, never>;
-			"/test-xyflow": Record<string, never>
+			"/flows/[id]": { id: string }
 		};
-		Pathname(): "/" | "/flows" | "/flows/" | `/flows/${string}` & {} | `/flows/${string}/` & {} | "/test-xyflow-wrapped" | "/test-xyflow-wrapped/" | "/test-xyflow" | "/test-xyflow/";
+		Pathname(): "/" | "/api" | "/api/" | "/api/ai" | "/api/ai/" | "/api/ai/generate-flow" | "/api/ai/generate-flow/" | "/flows" | "/flows/" | `/flows/${string}` & {} | `/flows/${string}/` & {};
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/robots.txt" | string & {};
 	}

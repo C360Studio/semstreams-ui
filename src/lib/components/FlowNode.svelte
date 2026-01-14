@@ -71,6 +71,8 @@
 <g
 	class="flow-node"
 	class:selected
+	data-node-id={node.id}
+	data-node-type={node.type}
 	transform="translate({node.x}, {node.y})"
 	onclick={handleClick}
 	onkeydown={handleKeydown}
@@ -130,10 +132,11 @@
 		<circle
 			class="port port-input"
 			class:port-required={port.required}
+			data-port-name={port.name}
 			cx={x}
 			cy={y}
 			r={portRadius}
-			fill={port.required ? style.color : 'var(--pico-background-color)'}
+			fill={port.required ? style.color : 'var(--ui-surface-primary)'}
 			stroke={style.color}
 			stroke-width="2"
 		>
@@ -146,10 +149,11 @@
 		<circle
 			class="port port-output"
 			class:port-required={port.required}
+			data-port-name={port.name}
 			cx={x}
 			cy={y}
 			r={portRadius}
-			fill={port.required ? style.color : 'var(--pico-background-color)'}
+			fill={port.required ? style.color : 'var(--ui-surface-primary)'}
 			stroke={style.color}
 			stroke-width="2"
 		>
@@ -168,40 +172,40 @@
 	}
 
 	.flow-node:focus .node-background {
-		stroke: var(--pico-primary-focus);
+		stroke: var(--ui-focus-ring);
 		stroke-width: 3;
 	}
 
 	.node-background {
-		fill: var(--pico-background-color);
-		stroke: var(--pico-muted-border-color);
+		fill: var(--ui-surface-primary);
+		stroke: var(--ui-border-subtle);
 		stroke-width: 2;
 		transition: stroke 0.2s, stroke-width 0.2s;
 	}
 
 	.flow-node:hover .node-background {
-		stroke: var(--pico-primary);
+		stroke: var(--ui-interactive-primary);
 	}
 
 	.flow-node.selected .node-background {
-		stroke: var(--pico-primary);
+		stroke: var(--ui-interactive-primary);
 		stroke-width: 3;
 	}
 
 	.node-label {
 		font-size: 14px;
 		font-weight: 600;
-		fill: var(--pico-color);
+		fill: var(--ui-text-primary);
 	}
 
 	.node-type {
 		font-size: 11px;
-		fill: var(--pico-muted-color);
+		fill: var(--ui-text-secondary);
 	}
 
 	.port-summary {
 		font-size: 10px;
-		fill: var(--pico-muted-color);
+		fill: var(--ui-text-secondary);
 	}
 
 	.port {

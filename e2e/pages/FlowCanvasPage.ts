@@ -28,6 +28,35 @@ export class FlowCanvasPage {
 		return this.page.locator('[data-node-id]');
 	}
 
+	get edges(): Locator {
+		return this.page.locator('g.flow-edge');
+	}
+
+	getAutoEdges(): Locator {
+		return this.page.locator('g.flow-edge[data-source="auto"]');
+	}
+
+	getManualEdges(): Locator {
+		return this.page.locator('g.flow-edge[data-source="manual"]');
+	}
+
+	getEdgeById(edgeId: string): Locator {
+		return this.page.locator(`g.flow-edge[data-connection-id="${edgeId}"]`);
+	}
+
+	// Port locators
+	getInputPorts(nodeId: string): Locator {
+		return this.getNodeById(nodeId).locator('.port-input');
+	}
+
+	getOutputPorts(nodeId: string): Locator {
+		return this.getNodeById(nodeId).locator('.port-output');
+	}
+
+	getPortByName(nodeId: string, portName: string): Locator {
+		return this.getNodeById(nodeId).locator(`[data-port-name="${portName}"]`);
+	}
+
 	// Actions
 	async goto(flowId: string): Promise<void> {
 		await this.page.goto(`/flows/${flowId}`);
@@ -44,6 +73,24 @@ export class FlowCanvasPage {
 	async clickNode(nodeId: string): Promise<void> {
 		const node = this.getNodeById(nodeId);
 		await node.click();
+	}
+
+	/**
+	 * Click the edit button for a component in the sidebar
+	 * This opens the EditComponentModal
+	 */
+	async clickEditButton(nodeName: string): Promise<void> {
+		const editButton = this.page.locator(`button[aria-label="Edit ${nodeName}"]`);
+		await editButton.click();
+	}
+
+	/**
+	 * Get the first node's name from the sidebar
+	 */
+	async getFirstNodeName(): Promise<string> {
+		const firstCard = this.page.locator('.component-card').first();
+		const nameElement = firstCard.locator('h4');
+		return await nameElement.textContent() || '';
 	}
 
 	async clickSaveButton(): Promise<void> {

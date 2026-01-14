@@ -2,9 +2,10 @@
 	"/": [
 		"src/routes/+page.ts"
 	],
+	"/api/ai/generate-flow": [
+		"src/routes/api/ai/generate-flow/+server.ts"
+	],
 	"/flows/[id]": [
 		"src/routes/flows/[id]/+page.ts"
-	],
-	"/test-xyflow-wrapped": [],
-	"/test-xyflow": []
+	]
 }

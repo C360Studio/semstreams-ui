@@ -1,109 +1,90 @@
 import { Page, Locator, expect } from '@playwright/test';
 
 /**
- * Page Object Model for the Configuration Panel
- * Encapsulates interactions with component configuration UI
+ * Page Object Model for the Component Configuration
+ *
+ * After the D3 canvas refactor, configuration is now in EditComponentModal.
+ * The flow is:
+ * 1. Click Edit button (⚙️) in sidebar component list
+ * 2. EditComponentModal opens
+ * 3. Configure and click Save
  */
 export class ConfigPanelPage {
 	constructor(private page: Page) {}
 
-	// Locators
+	// Locators - config is now in EditComponentModal dialog
 	get panel(): Locator {
-		return this.page.locator('.config-panel');
+		return this.page.locator('[role="dialog"]');
 	}
 
-	get configTextarea(): Locator {
-		return this.page.locator('textarea#config-json');
+	get dialogTitle(): Locator {
+		return this.panel.locator('#dialog-title');
 	}
 
-	get applyButton(): Locator {
-		return this.page.locator('button:has-text("Apply")');
+	get closeButton(): Locator {
+		return this.panel.locator('button[aria-label="Close dialog"]');
+	}
+
+	get saveButton(): Locator {
+		// EditComponentModal uses just "Save" button
+		return this.panel.locator('button:has-text("Save")');
 	}
 
 	get cancelButton(): Locator {
-		return this.page.locator('button:has-text("Cancel")');
+		return this.panel.locator('button:has-text("Cancel")');
 	}
 
-	get errorMessage(): Locator {
-		return this.page.locator('#config-error');
+	get deleteButton(): Locator {
+		return this.panel.locator('button:has-text("Delete")');
 	}
 
-	get componentTitle(): Locator {
-		// Use .first() to get only the main title (not section headings like "Basic Configuration")
-		return this.page.locator('.config-panel h3').first();
+	get nameInput(): Locator {
+		return this.panel.locator('input[name="name"]');
 	}
 
-	// Schema form locators
+	// Config section in modal
+	get configSection(): Locator {
+		return this.panel.locator('.config-section');
+	}
+
+	// Schema form locators (inside modal)
 	get schemaForm(): Locator {
-		return this.page.locator('.schema-form');
+		return this.panel.locator('form');
 	}
 
 	get basicConfigSection(): Locator {
-		return this.page.locator('.basic-config');
+		return this.panel.locator('.config-section');
 	}
 
-	get advancedConfigSection(): Locator {
-		return this.page.locator('details.advanced-config');
-	}
-
-	get advancedConfigSummary(): Locator {
-		return this.page.locator('details.advanced-config summary');
-	}
-
-	get submitButton(): Locator {
-		return this.page.locator('button[type="submit"]');
-	}
-
-	get validationErrors(): Locator {
-		return this.page.locator('.error');
-	}
-
-	// Get form field by name (matches ID attribute)
+	// Get form field by name (matches ID attribute or name attribute)
 	getFormField(fieldName: string): Locator {
-		return this.page.locator(`#${fieldName}`);
+		return this.panel.locator(`[id="config.${fieldName}"], [name="config.${fieldName}"]`);
 	}
 
 	getFieldLabel(fieldName: string): Locator {
-		return this.page.locator(`label[for="${fieldName}"]`);
-	}
-
-	getFieldError(fieldName: string): Locator {
-		return this.page.locator(`.field-group:has(#${fieldName}) .error`);
+		return this.panel.locator(`label[for="config.${fieldName}"]`);
 	}
 
 	// Actions
-	async fillConfig(configJson: string): Promise<void> {
-		await this.configTextarea.fill(configJson);
+	async fillFormField(fieldName: string, value: string): Promise<void> {
+		const field = this.getFormField(fieldName);
+		await field.fill(value);
 	}
 
-	async clearConfig(): Promise<void> {
-		await this.configTextarea.clear();
+	async fillName(value: string): Promise<void> {
+		await this.nameInput.fill(value);
 	}
 
-	async clickApply(): Promise<void> {
-		await this.applyButton.click();
+	async clickSave(): Promise<void> {
+		await this.saveButton.click();
 	}
 
 	async clickCancel(): Promise<void> {
 		await this.cancelButton.click();
 	}
 
-	async getConfigValue(): Promise<string> {
-		return await this.configTextarea.inputValue();
-	}
-
-	// Schema form actions
-	async fillFormField(fieldName: string, value: string): Promise<void> {
-		const field = this.getFormField(fieldName);
-		await field.fill(value);
-	}
-
-	async clickSubmit(): Promise<void> {
-		await this.submitButton.click();
-	}
-
-	async expandAdvancedConfig(): Promise<void> {
-		await this.advancedConfigSummary.click();
+	async clickClose(): Promise<void> {
+		await this.closeButton.click();
 	}
 
 	async getFieldValue(fieldName: string): Promise<string> {
@@ -113,43 +94,19 @@ export class ConfigPanelPage {
 
 	// Assertions
 	async expectPanelVisible(): Promise<void> {
-		await expect(this.panel).toBeVisible();
+		await expect(this.panel).toBeVisible({ timeout: 5000 });
 	}
 
 	async expectPanelHidden(): Promise<void> {
 		await expect(this.panel).not.toBeVisible();
 	}
 
-	async expectConfigValue(expectedJson: string): Promise<void> {
-		const actualValue = await this.getConfigValue();
-		// Parse and compare as JSON to handle formatting differences
-		expect(JSON.parse(actualValue)).toEqual(JSON.parse(expectedJson));
+	async expectComponentTitle(typeOrName: string): Promise<void> {
+		// EditComponentModal title is "Edit: {name}" format
+		// Can match either the full title or just a substring
+		await expect(this.dialogTitle).toContainText(typeOrName);
 	}
 
-	async expectErrorVisible(errorText?: string): Promise<void> {
-		await expect(this.errorMessage).toBeVisible();
-		if (errorText) {
-			await expect(this.errorMessage).toContainText(errorText);
-		}
-	}
-
-	async expectNoError(): Promise<void> {
-		await expect(this.errorMessage).not.toBeVisible();
-	}
-
-	async expectComponentTitle(title: string): Promise<void> {
-		await expect(this.componentTitle).toHaveText(title);
-	}
-
-	async expectApplyEnabled(): Promise<void> {
-		await expect(this.applyButton).toBeEnabled();
-	}
-
-	async expectApplyDisabled(): Promise<void> {
-		await expect(this.applyButton).toBeDisabled();
-	}
-
-	// Schema form assertions
 	async expectSchemaFormVisible(): Promise<void> {
 		await expect(this.schemaForm).toBeVisible();
 	}
@@ -164,69 +121,38 @@ export class ConfigPanelPage {
 		await expect(field).toHaveValue(expectedValue);
 	}
 
-	async expectFieldHasAttribute(fieldName: string, attribute: string, value: string): Promise<void> {
-		const field = this.getFormField(fieldName);
-		await expect(field).toHaveAttribute(attribute, value);
+	async expectSaveEnabled(): Promise<void> {
+		await expect(this.saveButton).toBeEnabled();
 	}
 
-	async expectValidationError(errorText?: string): Promise<void> {
-		await expect(this.validationErrors.first()).toBeVisible();
-		if (errorText) {
-			await expect(this.validationErrors.first()).toContainText(errorText);
-		}
-	}
-
-	async expectNoValidationErrors(): Promise<void> {
-		await expect(this.validationErrors).not.toBeVisible();
-	}
-
-	async expectFieldLabelContainsText(fieldName: string, text: string): Promise<void> {
-		const label = this.getFieldLabel(fieldName);
-		await expect(label).toContainText(text);
+	async expectSaveDisabled(): Promise<void> {
+		await expect(this.saveButton).toBeDisabled();
 	}
 
 	async expectBasicSectionVisible(): Promise<void> {
 		await expect(this.basicConfigSection).toBeVisible();
 	}
 
-	async expectAdvancedSectionVisible(): Promise<void> {
-		await expect(this.advancedConfigSection).toBeVisible();
-	}
-
-	async expectFieldInSection(fieldName: string, section: 'basic' | 'advanced'): Promise<void> {
-		const sectionLoc = section === 'basic' ? this.basicConfigSection : this.advancedConfigSection;
-		const field = sectionLoc.locator(`#${fieldName}`);
-		await expect(field).toBeVisible();
-	}
-
-	async expectSubmitDisabled(): Promise<void> {
-		await expect(this.submitButton).toBeDisabled();
-	}
-
-	async expectSubmitEnabled(): Promise<void> {
-		await expect(this.submitButton).toBeEnabled();
-	}
-
 	// ==========================================
 	// PortConfigEditor Support Methods
 	// ==========================================
 
-	// Locators for PortConfigEditor
+	// Locators for PortConfigEditor (inside modal)
 	get portConfigEditor(): Locator {
-		return this.page.locator('.port-config-editor');
+		return this.panel.locator('.port-config-editor');
 	}
 
 	get addInputPortButton(): Locator {
-		return this.page.locator('button:has-text("Add Input Port")');
+		return this.panel.locator('button:has-text("Add Input Port")');
 	}
 
 	get addOutputPortButton(): Locator {
-		return this.page.locator('button:has-text("Add Output Port")');
+		return this.panel.locator('button:has-text("Add Output Port")');
 	}
 
 	getPortSection(direction: 'input' | 'output'): Locator {
 		const heading = direction === 'input' ? 'Input Ports' : 'Output Ports';
-		return this.page.locator(`.port-section:has(h4:has-text("${heading}"))`);
+		return this.panel.locator(`.port-section:has(h4:has-text("${heading}"))`);
 	}
 
 	getPortItem(direction: 'input' | 'output', index: number): Locator {
@@ -236,7 +162,7 @@ export class ConfigPanelPage {
 
 	getPortFieldInput(direction: 'input' | 'output', portIndex: number, fieldName: string): Locator {
 		// ID format: "ports-input-0-subject" or "ports-output-0-subject"
-		return this.page.locator(`#ports-${direction}-${portIndex}-${fieldName}`);
+		return this.panel.locator(`#ports-${direction}-${portIndex}-${fieldName}`);
 	}
 
 	getRemovePortButton(direction: 'input' | 'output', index: number): Locator {
@@ -253,7 +179,12 @@ export class ConfigPanelPage {
 		await this.addOutputPortButton.click();
 	}
 
-	async fillPortField(direction: 'input' | 'output', portIndex: number, fieldName: string, value: string): Promise<void> {
+	async fillPortField(
+		direction: 'input' | 'output',
+		portIndex: number,
+		fieldName: string,
+		value: string
+	): Promise<void> {
 		const field = this.getPortFieldInput(direction, portIndex, fieldName);
 		await field.fill(value);
 	}
@@ -263,7 +194,11 @@ export class ConfigPanelPage {
 		await removeButton.click();
 	}
 
-	async getPortFieldValue(direction: 'input' | 'output', portIndex: number, fieldName: string): Promise<string> {
+	async getPortFieldValue(
+		direction: 'input' | 'output',
+		portIndex: number,
+		fieldName: string
+	): Promise<string> {
 		const field = this.getPortFieldInput(direction, portIndex, fieldName);
 		return await field.inputValue();
 	}
@@ -279,12 +214,21 @@ export class ConfigPanelPage {
 		await expect(portItems).toHaveCount(count);
 	}
 
-	async expectPortFieldValue(direction: 'input' | 'output', portIndex: number, fieldName: string, expectedValue: string): Promise<void> {
+	async expectPortFieldValue(
+		direction: 'input' | 'output',
+		portIndex: number,
+		fieldName: string,
+		expectedValue: string
+	): Promise<void> {
 		const field = this.getPortFieldInput(direction, portIndex, fieldName);
 		await expect(field).toHaveValue(expectedValue);
 	}
 
-	async expectPortFieldVisible(direction: 'input' | 'output', portIndex: number, fieldName: string): Promise<void> {
+	async expectPortFieldVisible(
+		direction: 'input' | 'output',
+		portIndex: number,
+		fieldName: string
+	): Promise<void> {
 		const field = this.getPortFieldInput(direction, portIndex, fieldName);
 		await expect(field).toBeVisible();
 	}
@@ -293,7 +237,8 @@ export class ConfigPanelPage {
 		const section = this.getPortSection(direction);
 		const emptyState = section.locator('.empty-state');
 		await expect(emptyState).toBeVisible();
-		const text = direction === 'input' ? 'No input ports configured' : 'No output ports configured';
+		const text =
+			direction === 'input' ? 'No input ports configured' : 'No output ports configured';
 		await expect(emptyState).toContainText(text);
 	}
 }

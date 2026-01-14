@@ -119,7 +119,10 @@ export async function clickTab(
 	page: Page,
 	tabName: 'logs' | 'messages' | 'metrics' | 'health'
 ): Promise<void> {
+	// Click the tab button
 	await page.click(`[data-testid="tab-${tabName}"]`);
+	// Small wait for state to update and re-render
+	await page.waitForTimeout(100);
 	await waitForTabContent(page, tabName);
 }
 

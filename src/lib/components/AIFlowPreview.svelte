@@ -305,7 +305,7 @@
 
 	dialog {
 		border: none;
-		border-radius: var(--pico-border-radius);
+		border-radius: var(--radius-md);
 		max-width: 800px;
 		width: 100%;
 		max-height: 90vh;
@@ -326,7 +326,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1.5rem;
-		border-bottom: 1px solid var(--pico-muted-border-color);
+		border-bottom: 1px solid var(--ui-border-subtle);
 	}
 
 	header h2 {
@@ -339,13 +339,13 @@
 		border: none;
 		font-size: 1.5rem;
 		cursor: pointer;
-		color: var(--pico-muted-color);
+		color: var(--ui-text-secondary);
 		padding: 0.25rem 0.5rem;
 		line-height: 1;
 	}
 
 	.close:hover:not(:disabled) {
-		color: var(--pico-color);
+		color: var(--ui-text-primary);
 	}
 
 	.modal-content {
@@ -366,8 +366,8 @@
 	.spinner {
 		width: 3rem;
 		height: 3rem;
-		border: 4px solid var(--pico-muted-border-color);
-		border-top-color: var(--pico-primary);
+		border: 4px solid var(--ui-border-subtle);
+		border-top-color: var(--ui-interactive-primary);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
@@ -392,14 +392,14 @@
 
 	.error-state h3 {
 		margin: 0;
-		color: var(--pico-error-color, #f44336);
+		color: var(--status-error);
 	}
 
 	.flow-description {
 		margin-bottom: 1.5rem;
 		padding: 1rem;
-		background-color: var(--pico-card-background-color);
-		border-radius: var(--pico-border-radius);
+		background-color: var(--ui-surface-elevated-1);
+		border-radius: var(--radius-md);
 	}
 
 	.flow-section {
@@ -423,13 +423,13 @@
 	.connection-list li {
 		padding: 0.75rem;
 		margin-bottom: 0.5rem;
-		background-color: var(--pico-card-background-color);
-		border-radius: var(--pico-border-radius);
-		border: 1px solid var(--pico-muted-border-color);
+		background-color: var(--ui-surface-elevated-1);
+		border-radius: var(--radius-md);
+		border: 1px solid var(--ui-border-subtle);
 	}
 
 	.node-type {
-		color: var(--pico-muted-color);
+		color: var(--ui-text-secondary);
 		font-size: 0.875rem;
 		margin-left: 0.5rem;
 	}
@@ -438,7 +438,7 @@
 		margin-top: 0.5rem;
 		padding-left: 1rem;
 		font-size: 0.875rem;
-		color: var(--pico-muted-color);
+		color: var(--ui-text-secondary);
 	}
 
 	.config-item {
@@ -446,7 +446,7 @@
 	}
 
 	.empty-state {
-		color: var(--pico-muted-color);
+		color: var(--ui-text-secondary);
 		font-style: italic;
 		text-align: center;
 		padding: 2rem;
@@ -455,7 +455,7 @@
 	.validation-section {
 		margin-top: 1.5rem;
 		padding-top: 1.5rem;
-		border-top: 1px solid var(--pico-muted-border-color);
+		border-top: 1px solid var(--ui-border-subtle);
 	}
 
 	.validation-section h3 {
@@ -468,9 +468,9 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.75rem;
-		background-color: var(--pico-success-background, #e8f5e9);
-		color: var(--pico-success-color, #2e7d32);
-		border-radius: var(--pico-border-radius);
+		background-color: var(--status-success-container);
+		color: var(--status-success);
+		border-radius: var(--radius-md);
 		margin-bottom: 1rem;
 	}
 
@@ -493,11 +493,11 @@
 	}
 
 	.validation-errors h4 {
-		color: var(--pico-error-color, #f44336);
+		color: var(--status-error);
 	}
 
 	.validation-warnings h4 {
-		color: var(--pico-warning-color, #ff9800);
+		color: var(--status-warning);
 	}
 
 	.validation-errors ul,
@@ -510,19 +510,19 @@
 	.validation-errors li {
 		padding: 0.5rem;
 		margin-bottom: 0.5rem;
-		background-color: var(--pico-error-background, #ffebee);
-		color: var(--pico-error-color, #f44336);
-		border-left: 3px solid var(--pico-error-color, #f44336);
-		border-radius: var(--pico-border-radius);
+		background-color: var(--status-error-container);
+		color: var(--status-error);
+		border-left: 3px solid var(--status-error);
+		border-radius: var(--radius-md);
 	}
 
 	.validation-warnings li {
 		padding: 0.5rem;
 		margin-bottom: 0.5rem;
-		background-color: var(--pico-warning-background, #fff3e0);
-		color: var(--pico-warning-color, #ff9800);
-		border-left: 3px solid var(--pico-warning-color, #ff9800);
-		border-radius: var(--pico-border-radius);
+		background-color: var(--status-warning-container);
+		color: var(--status-warning);
+		border-left: 3px solid var(--status-warning);
+		border-radius: var(--radius-md);
 	}
 
 	.port-name {
@@ -535,7 +535,7 @@
 		gap: 0.75rem;
 		justify-content: flex-end;
 		padding: 1.5rem;
-		border-top: 1px solid var(--pico-muted-border-color);
+		border-top: 1px solid var(--ui-border-subtle);
 	}
 
 	footer button {
@@ -543,13 +543,13 @@
 	}
 
 	footer button.primary {
-		background-color: var(--pico-primary);
-		color: var(--pico-primary-inverse);
+		background-color: var(--ui-interactive-primary);
+		color: var(--ui-text-on-primary);
 		border: none;
 	}
 
 	footer button.primary:hover:not(:disabled) {
-		background-color: var(--pico-primary-hover);
+		background-color: var(--ui-interactive-primary-hover);
 	}
 
 	footer button:disabled {

@@ -77,14 +77,14 @@
 	}
 
 	.required {
-		color: var(--pico-del-color, #d32f2f);
+		color: var(--status-error);
 		margin-left: 0.25rem;
 	}
 
 	.fallback-message {
 		padding: 1rem;
-		background-color: var(--pico-card-background-color, #f8f9fa);
-		border: 1px solid var(--pico-muted-border-color, #dee2e6);
+		background-color: var(--ui-surface-elevated-1);
+		border: 1px solid var(--ui-border-subtle);
 		border-radius: 0.25rem;
 		margin-top: 0.5rem;
 	}
@@ -96,13 +96,13 @@
 
 	.fallback-message .description {
 		margin-top: 0.5rem;
-		color: var(--pico-muted-color, #6c757d);
+		color: var(--ui-text-secondary);
 	}
 
 	.error {
 		display: block;
 		font-size: 0.875rem;
-		color: var(--pico-del-color, #d32f2f);
+		color: var(--status-error);
 		margin-top: 0.25rem;
 	}
 </style>

@@ -187,8 +187,8 @@
 	section,
 	details {
 		padding: 1rem;
-		background-color: var(--pico-card-background-color, #ffffff);
-		border: 1px solid var(--pico-muted-border-color, #dee2e6);
+		background-color: var(--ui-surface-elevated-1);
+		border: 1px solid var(--ui-border-subtle);
 		border-radius: 0.25rem;
 	}
 

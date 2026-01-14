@@ -964,7 +964,7 @@
 
 	.ai-prompt-section {
 		padding: 1rem 1.5rem;
-		background: var(--pico-background-color, white);
+		background: var(--ui-surface-primary);
 		border-bottom: 1px solid var(--border-color, #dee2e6);
 	}
 

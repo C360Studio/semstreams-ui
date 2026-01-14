@@ -130,7 +130,7 @@ test.describe('Flow Validation UX', () => {
 
 		// Verify modal content structure (warnings for unconnected component)
 		await expect(modal).toContainText(/warning/i);
-		await expect(modal).toContainText(/UDP Input|component/i);
+		await expect(modal).toContainText(/udp|component/i);
 
 		// Verify modal has backdrop
 		const backdrop = page.locator('[data-testid="modal-backdrop"]');
@@ -197,11 +197,11 @@ test.describe('Flow Validation UX', () => {
 
 		const palette = new ComponentPalettePage(page);
 
-		// Add UDP Input component
+		// Add udp component
 		await palette.addComponentToCanvas('UDP Input');
 
-		// Add Robotics Processor component (should create warning for unconnected port)
-		await palette.addComponentToCanvas('Robotics Processor');
+		// Add iot_sensor component (should create warning for unconnected port)
+		await palette.addComponentToCanvas('iot_sensor');
 
 		// Wait for validation to run
 		await page.waitForTimeout(700);
@@ -215,8 +215,8 @@ test.describe('Flow Validation UX', () => {
 		await expect(modal).toBeVisible();
 
 		// Critical: Modal should show component name (not "Flow") for port warnings
-		// Look for the robotics processor component name in the modal
-		await expect(modal).toContainText(/robotics.*processor/i);
+		// Look for the iot_sensor component name in the modal
+		await expect(modal).toContainText(/iot_sensor/i);
 
 		// Should NOT show "Flow" for component-specific port warnings
 		// (Only flow-level issues should show "Flow")

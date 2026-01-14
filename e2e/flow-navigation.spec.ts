@@ -10,7 +10,7 @@ import type { Flow } from '../src/lib/types/flow';
  * User Story: As a user, I want to be warned before navigating away from unsaved
  * changes so I don't lose work.
  *
- * Updated: Fixed to use addComponentToCanvas() instead of unreliable dragComponentToCanvas()
+ * Updated: Fixed to use addComponentToCanvas() instead of unreliable addComponentToCanvas()
  */
 test.describe('Navigation Warning', () => {
 	let flowId: string;

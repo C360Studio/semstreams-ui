@@ -139,8 +139,8 @@
 
 	.add-button {
 		padding: 0.5rem 1rem;
-		background: var(--pico-primary);
-		color: var(--pico-primary-inverse);
+		background: var(--ui-interactive-primary);
+		color: var(--ui-text-on-primary);
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
@@ -150,7 +150,7 @@
 	}
 
 	.add-button:hover {
-		background: var(--pico-primary-hover);
+		background: var(--ui-interactive-primary-hover);
 	}
 
 	.add-button:focus {
@@ -169,14 +169,14 @@
 		border: 1px solid var(--ui-border-default);
 		border-radius: 4px;
 		font-size: 0.875rem;
-		background: var(--pico-background-color);
-		color: var(--pico-color);
+		background: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
 	}
 
 	.search-input:focus {
 		outline: 2px solid var(--ui-focus-ring);
 		outline-offset: 1px;
-		border-color: var(--pico-primary);
+		border-color: var(--ui-interactive-primary);
 	}
 
 	.list-content {

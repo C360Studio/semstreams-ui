@@ -317,22 +317,22 @@
 	}
 
 	.required {
-		color: var(--pico-del-color, #d32f2f);
+		color: var(--status-error);
 		margin-left: 0.25rem;
 	}
 
 	.description {
 		display: block;
 		font-size: 0.875rem;
-		color: var(--pico-muted-color, #6c757d);
+		color: var(--ui-text-secondary);
 		margin-bottom: 1rem;
 	}
 
 	.port-section {
 		margin-top: 1.5rem;
 		padding: 1rem;
-		background-color: var(--pico-card-background-color, #ffffff);
-		border: 1px solid var(--pico-muted-border-color, #dee2e6);
+		background-color: var(--ui-surface-elevated-1);
+		border: 1px solid var(--ui-border-subtle);
 		border-radius: 0.25rem;
 	}
 
@@ -341,12 +341,12 @@
 		margin-bottom: 1rem;
 		font-size: 1rem;
 		font-weight: 600;
-		color: var(--pico-primary-color, #1976d2);
+		color: var(--ui-interactive-primary);
 	}
 
 	.empty-state {
 		font-size: 0.875rem;
-		color: var(--pico-muted-color, #6c757d);
+		color: var(--ui-text-secondary);
 		font-style: italic;
 		margin: 0.5rem 0;
 	}
@@ -359,8 +359,8 @@
 
 	.port-item {
 		padding: 0.75rem;
-		background-color: var(--pico-card-sectioning-background-color, #f8f9fa);
-		border: 1px solid var(--pico-muted-border-color, #dee2e6);
+		background-color: var(--ui-surface-tertiary);
+		border: 1px solid var(--ui-border-subtle);
 		border-radius: 0.25rem;
 	}
 
@@ -381,21 +381,21 @@
 		font-size: 0.75rem;
 		font-weight: 500;
 		text-transform: capitalize;
-		color: var(--pico-muted-color, #6c757d);
+		color: var(--ui-text-secondary);
 		margin: 0;
 	}
 
 	.editable-field {
 		padding: 0.25rem 0.5rem;
 		font-size: 0.875rem;
-		border: 1px solid var(--pico-muted-border-color, #dee2e6);
+		border: 1px solid var(--ui-border-subtle);
 		border-radius: 0.25rem;
-		background-color: var(--pico-background-color, #ffffff);
+		background-color: var(--ui-surface-primary);
 	}
 
 	.readonly-field {
 		font-size: 0.875rem;
-		color: var(--pico-color, #212529);
+		color: var(--ui-text-primary);
 		padding: 0.25rem 0;
 		word-break: break-word;
 	}
@@ -409,19 +409,19 @@
 	.remove-button {
 		margin-bottom: 0;
 		font-size: 0.875rem;
-		background-color: var(--pico-del-color, #d32f2f);
-		border-color: var(--pico-del-color, #d32f2f);
+		background-color: var(--status-error);
+		border-color: var(--status-error);
 	}
 
 	.remove-button:hover {
-		background-color: var(--pico-del-hover-background-color, #c62828);
-		border-color: var(--pico-del-hover-background-color, #c62828);
+		background-color: var(--status-error-hover);
+		border-color: var(--status-error-hover);
 	}
 
 	.error {
 		display: block;
 		font-size: 0.875rem;
-		color: var(--pico-del-color, #d32f2f);
+		color: var(--status-error);
 		margin-top: 0.5rem;
 	}
 

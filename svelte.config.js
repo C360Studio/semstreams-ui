@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-node';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,14 +8,11 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// Build static SPA for deployment with Caddy/nginx
-		// All routes fall back to index.html for client-side routing
+		// Build Node.js server for deployment behind Caddy reverse proxy
+		// Enables server-side features: API routes, hooks, MCP server
 		adapter: adapter({
-			pages: 'build',
-			assets: 'build',
-			fallback: 'index.html',
-			precompress: false,
-			strict: true
+			out: 'build',
+			precompress: false
 		})
 	}
 };

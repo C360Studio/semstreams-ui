@@ -99,9 +99,9 @@
 	}
 
 	.dialog-content {
-		background: var(--pico-background-color, white);
+		background: var(--ui-surface-primary);
 		padding: 2rem;
-		border-radius: var(--pico-border-radius, 8px);
+		border-radius: var(--radius-md);
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 		max-width: 500px;
 		width: 90%;
@@ -110,12 +110,12 @@
 	h2 {
 		margin: 0 0 1rem 0;
 		font-size: 1.5rem;
-		color: var(--pico-color, #000);
+		color: var(--ui-text-primary);
 	}
 
 	p {
 		margin: 0 0 1.5rem 0;
-		color: var(--pico-muted-color, #666);
+		color: var(--ui-text-secondary);
 	}
 
 	.dialog-actions {
@@ -126,7 +126,7 @@
 
 	button {
 		padding: 0.5rem 1rem;
-		border-radius: var(--pico-border-radius, 4px);
+		border-radius: var(--radius-md);
 		border: 1px solid transparent;
 		cursor: pointer;
 		font-weight: 500;
@@ -134,19 +134,19 @@
 	}
 
 	.button-save {
-		background: var(--pico-primary, #0066cc);
+		background: var(--ui-interactive-primary);
 		color: white;
-		border-color: var(--pico-primary, #0066cc);
+		border-color: var(--ui-interactive-primary);
 	}
 
 	.button-save:hover {
-		background: var(--pico-primary-hover, #0052a3);
+		background: var(--ui-interactive-primary-hover);
 	}
 
 	.button-discard {
-		background: var(--pico-del-color, #dc3545);
+		background: var(--status-error);
 		color: white;
-		border-color: var(--pico-del-color, #dc3545);
+		border-color: var(--status-error);
 	}
 
 	.button-discard:hover {
@@ -155,11 +155,11 @@
 
 	.button-cancel {
 		background: transparent;
-		color: var(--pico-color, #000);
-		border-color: var(--pico-muted-border-color, #dee2e6);
+		color: var(--ui-text-primary);
+		border-color: var(--ui-border-subtle);
 	}
 
 	.button-cancel:hover {
-		background: var(--pico-secondary-background, #f8f9fa);
+		background: var(--ui-surface-secondary);
 	}
 </style>

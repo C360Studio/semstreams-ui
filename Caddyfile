@@ -1,5 +1,5 @@
-# Caddyfile for SemStreams UI Static SPA
-# Serves static files and proxies API requests to Go backend
+# Caddyfile for SemStreams UI
+# Reverse proxy: Routes Go backend APIs and SvelteKit Node server
 
 {
 	# Global options
@@ -8,28 +8,22 @@
 }
 
 :3000 {
-	# Handle API routes first (proxy to backend)
+	# Handle Go backend API routes first
 	handle /flowbuilder/* {
-		reverse_proxy {$BACKEND_URL:http://backend:8080}
+		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
 	handle /components/* {
-		reverse_proxy {$BACKEND_URL:http://backend:8080}
+		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
 	handle /health {
-		reverse_proxy {$BACKEND_URL:http://backend:8080}
+		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
-	handle /api/* {
-		reverse_proxy {$BACKEND_URL:http://backend:8080}
-	}
-
-	# Handle static files and SPA routes
+	# SvelteKit handles everything else (UI, assets, /api/ai/*)
 	handle {
-		root * /usr/share/caddy
-		try_files {path} /index.html
-		file_server
+		reverse_proxy {$UI_HOST:ui:3000}
 	}
 
 	# Security headers

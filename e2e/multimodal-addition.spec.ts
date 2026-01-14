@@ -32,7 +32,7 @@ test.describe('Multi-Modal Component Addition', () => {
 		await expect(canvas.nodes).toHaveCount(1);
 
 		// Add second component
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 
 		// Verify both nodes appear
 		await expect(canvas.nodes).toHaveCount(2);
@@ -74,7 +74,7 @@ test.describe('Multi-Modal Component Addition', () => {
 		// Add components
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('UDP Input');
-		await palette.addComponentToCanvas('Robotics Processor');
+		await palette.addComponentToCanvas('iot_sensor');
 
 		await expect(canvas.nodes).toHaveCount(2);
 

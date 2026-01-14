@@ -74,10 +74,10 @@
 
 	.warning {
 		padding: 0.75rem 1rem;
-		background-color: var(--pico-mark-background-color, #fff3cd);
-		border: 1px solid var(--pico-mark-color, #ffc107);
+		background-color: var(--status-warning-container);
+		border: 1px solid var(--status-warning);
 		border-radius: 0.25rem;
-		color: var(--pico-mark-color, #856404);
+		color: var(--status-warning-on-container);
 		font-size: 0.875rem;
 	}
 
@@ -91,24 +91,24 @@
 		font-size: 0.875rem;
 		width: 100%;
 		padding: 0.75rem;
-		border: 1px solid var(--pico-muted-border-color, #dee2e6);
+		border: 1px solid var(--ui-border-subtle);
 		border-radius: 0.25rem;
 		resize: vertical;
 	}
 
 	textarea[aria-invalid='true'] {
-		border-color: var(--pico-del-color, #d32f2f);
+		border-color: var(--status-error);
 	}
 
 	.error {
 		display: block;
 		font-size: 0.875rem;
-		color: var(--pico-del-color, #d32f2f);
+		color: var(--status-error);
 	}
 
 	.help-text {
 		font-size: 0.875rem;
-		color: var(--pico-muted-color, #6c757d);
+		color: var(--ui-text-secondary);
 		margin: 0;
 	}
 </style>

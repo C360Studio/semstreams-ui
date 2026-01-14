@@ -374,7 +374,7 @@ describe("getPathStyle", () => {
 describe("PATH_STYLES constants", () => {
   test("defines valid style", () => {
     expect(PATH_STYLES.valid).toMatchObject({
-      stroke: "var(--pico-primary)",
+      stroke: "var(--ui-interactive-primary)",
       strokeWidth: 2,
       strokeDasharray: "",
       showArrow: true,
@@ -383,7 +383,7 @@ describe("PATH_STYLES constants", () => {
 
   test("defines error style", () => {
     expect(PATH_STYLES.error).toMatchObject({
-      stroke: "var(--pico-del-color, #c62828)",
+      stroke: "var(--status-error)",
       strokeWidth: 2,
       strokeDasharray: "5,5",
       showArrow: true,
@@ -392,7 +392,7 @@ describe("PATH_STYLES constants", () => {
 
   test("defines warning style", () => {
     expect(PATH_STYLES.warning).toMatchObject({
-      stroke: "var(--pico-mark-background-color, #ff9800)",
+      stroke: "var(--status-warning)",
       strokeWidth: 2,
       strokeDasharray: "5,5",
       showArrow: true,
@@ -401,7 +401,7 @@ describe("PATH_STYLES constants", () => {
 
   test("defines auto style", () => {
     expect(PATH_STYLES.auto).toMatchObject({
-      stroke: "var(--pico-secondary)",
+      stroke: "var(--ui-interactive-secondary)",
       strokeWidth: 2,
       strokeDasharray: "3,3",
       showArrow: true,

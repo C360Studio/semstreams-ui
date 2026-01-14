@@ -11,7 +11,12 @@
  * WCAG AA Compliant - All color combinations verified for 4.5:1 contrast ratio
  */
 
+/* CSS Layers for cascade management (2026 best practice) */
+@layer reset, theme, components, utilities;
+
 :root {
+  /* Enable CSS color scheme support for native dark mode */
+  color-scheme: light dark;
   /* ============================================
      LAYER 1: UI COLORS
      Foundation colors with no semantic meaning
@@ -237,6 +242,28 @@
   --modal-header-background: var(--ui-surface-tertiary);
   --modal-header-text: var(--ui-text-primary);
   --modal-header-border-bottom: 1px solid var(--ui-border-subtle);
+
+  /* ============================================
+     UTILITY VARIABLES
+     Modern CSS utilities (Pico replacements)
+     ============================================ */
+
+  /* Border Radius Utilities */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Semantic Button Colors */
+  --button-primary-background: var(--ui-interactive-primary);
+  --button-primary-background-hover: var(--ui-interactive-primary-hover);
+  --button-primary-text: var(--ui-text-on-primary);
+  --button-secondary-background: var(--ui-interactive-secondary);
+  --button-secondary-background-hover: var(--ui-interactive-secondary-hover);
+  --button-secondary-text: var(--ui-text-on-primary);
+  --button-danger-background: var(--status-error);
+  --button-danger-background-hover: var(--status-error-hover);
+  --button-danger-text: var(--ui-text-on-error);
 }
 
 /* ============================================
@@ -268,6 +295,18 @@
   --domain-semantic: #08bdba;           /* Teal-50 */
   --domain-network: #4589ff;            /* Blue-50 */
   --domain-storage: #42be65;            /* Green-40 */
+
+  /* Utility Variables (Dark) */
+  /* Note: Radius values remain the same across themes */
+  --button-primary-background: #78a9ff;              /* Blue-40 (lighter for dark bg) */
+  --button-primary-background-hover: #4589ff;        /* Blue-50 */
+  --button-primary-text: #161616;                    /* Dark text on light button */
+  --button-secondary-background: #6f6f6f;            /* Gray-60 */
+  --button-secondary-background-hover: #8d8d8d;      /* Gray-50 */
+  --button-secondary-text: #f4f4f4;                  /* Light text */
+  --button-danger-background: #ff8389;               /* Red-40 */
+  --button-danger-background-hover: #fa4d56;         /* Red-50 */
+  --button-danger-text: #161616;                     /* Dark text on light button */
 }
 
 /* Media query alternative for dark mode */

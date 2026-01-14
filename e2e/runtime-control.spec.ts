@@ -26,7 +26,7 @@ test.describe('Runtime Control', () => {
 		const canvas = new FlowCanvasPage(page);
 		await canvas.expectCanvasLoaded();
 
-		// Add UDP Input component (valid minimal flow - will deploy with warning for no subscribers)
+		// Add udp component (valid minimal flow - will deploy with warning for no subscribers)
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('UDP Input');
 
@@ -66,7 +66,7 @@ test.describe('Runtime Control', () => {
 		const canvas = new FlowCanvasPage(page);
 		await canvas.expectCanvasLoaded();
 
-		// Add UDP Input component (valid minimal flow - will deploy with warning for no subscribers)
+		// Add udp component (valid minimal flow - will deploy with warning for no subscribers)
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('UDP Input');
 
@@ -103,7 +103,7 @@ test.describe('Runtime Control', () => {
 		const canvas = new FlowCanvasPage(page);
 		await canvas.expectCanvasLoaded();
 
-		// Add UDP Input component (valid minimal flow - will deploy with warning for no subscribers)
+		// Add udp component (valid minimal flow - will deploy with warning for no subscribers)
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('UDP Input');
 
@@ -146,7 +146,7 @@ test.describe('Runtime Control', () => {
 		const canvas = new FlowCanvasPage(page);
 		await canvas.expectCanvasLoaded();
 
-		// Add UDP Input component (valid minimal flow - will deploy with warning for no subscribers)
+		// Add udp component (valid minimal flow - will deploy with warning for no subscribers)
 		const palette = new ComponentPalettePage(page);
 		await palette.addComponentToCanvas('UDP Input');
 
