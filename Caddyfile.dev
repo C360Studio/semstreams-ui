@@ -1,0 +1,35 @@
+# Caddyfile for Local Development
+# Routes API to Docker backend, UI to native Vite dev server
+#
+# Environment variables (set by docker-compose):
+#   VITE_PORT - Vite dev server port on host (default: 5173)
+
+{
+	auto_https off
+	admin off
+}
+
+:3000 {
+	# Go backend API routes (internal Docker network)
+	handle /flowbuilder/* {
+		reverse_proxy backend:8080
+	}
+
+	handle /components/* {
+		reverse_proxy backend:8080
+	}
+
+	handle /health {
+		reverse_proxy backend:8080
+	}
+
+	# Vite dev server on host (configurable port via VITE_PORT env var)
+	handle {
+		reverse_proxy host.docker.internal:{$VITE_PORT:5173}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

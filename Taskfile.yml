@@ -11,6 +11,10 @@ vars:
   #   - Custom app:          /path/to/your-app/specs/openapi.v3.yaml
   OPENAPI_SPEC_PATH: '{{.OPENAPI_SPEC_PATH}}'
 
+  # Development ports (configurable to avoid collisions)
+  DEV_UI_PORT: '{{.DEV_UI_PORT | default "3001"}}'
+  DEV_VITE_PORT: '{{.DEV_VITE_PORT | default "5173"}}'
+
 tasks:
   # === Type Generation ===
 
@@ -69,6 +73,61 @@ tasks:
       - echo "Starting UI dev server..."
       - echo "Expecting backend at {{.BACKEND_URL}}"
       - npm run dev
+
+  # === Full Stack Development ===
+
+  dev:backend:
+    desc: Start backend infrastructure (NATS + backend) in foreground
+    cmds:
+      - echo "Starting backend infrastructure..."
+      - echo "NATS will be at localhost:4222"
+      - echo "Backend API will be at localhost:8080"
+      - docker compose -f docker-compose.dev.yml up
+
+  dev:backend:start:
+    desc: Start backend infrastructure in background
+    env:
+      DEV_UI_PORT: '{{.DEV_UI_PORT}}'
+      DEV_VITE_PORT: '{{.DEV_VITE_PORT}}'
+    cmds:
+      - docker compose -f docker-compose.dev.yml up -d
+      - echo "✅ Backend infrastructure starting..."
+      - echo "   Access UI at http://localhost:{{.DEV_UI_PORT}}"
+      - echo "   Run 'task dev:backend:logs' to see logs"
+      - echo "   Run 'task dev:backend:stop' to stop"
+
+  dev:backend:stop:
+    desc: Stop backend infrastructure
+    cmds:
+      - docker compose -f docker-compose.dev.yml down
+      - echo "✅ Backend infrastructure stopped"
+
+  dev:backend:logs:
+    desc: View backend infrastructure logs
+    cmds:
+      - docker compose -f docker-compose.dev.yml logs -f
+
+  dev:full:
+    desc: Start full development stack (backend + frontend)
+    env:
+      DEV_UI_PORT: '{{.DEV_UI_PORT}}'
+      DEV_VITE_PORT: '{{.DEV_VITE_PORT}}'
+    cmds:
+      - task: dev:backend:start
+      - echo "Waiting for Caddy health check..."
+      - |
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:{{.DEV_UI_PORT}}/health > /dev/null 2>&1; then
+            echo "✅ Backend ready!"
+            break
+          fi
+          echo "   Waiting... ($i/30)"
+          sleep 2
+        done
+      - echo ""
+      - echo "📱 Open http://localhost:{{.DEV_UI_PORT}} in your browser"
+      - echo ""
+      - npm run dev -- --port {{.DEV_VITE_PORT}} --host
 
   dev:docker:
     desc: Start UI in Docker (backend at host.docker.internal:8080)

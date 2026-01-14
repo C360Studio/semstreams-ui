@@ -39,6 +39,40 @@ The UI discovers components, schemas, and capabilities **at runtime** from the b
 - A running SemStreams-compatible backend (semstreams, semmem, etc.)
 - Docker (optional, for containerized deployment)
 
+### Full Stack Development (Recommended)
+
+Start both backend infrastructure and frontend with a single command:
+
+```bash
+# Install dependencies first
+npm install
+
+# Start everything (NATS + backend + UI)
+task dev:full
+# Access at http://localhost:3001
+```
+
+This starts:
+- **Caddy** at `localhost:3001` (reverse proxy - unified access point)
+- **NATS** (internal Docker network - message broker)
+- **Backend** (internal Docker network - API server)
+- **Vite** at `localhost:5173` (dev server with HMR)
+
+**Manage backend separately:**
+```bash
+task dev:backend:start   # Start NATS + backend in background
+task dev                 # Start frontend (in another terminal)
+task dev:backend:logs    # View backend logs
+task dev:backend:stop    # Stop backend when done
+```
+
+**Custom ports (avoid collisions):**
+```bash
+DEV_UI_PORT=3002 DEV_VITE_PORT=5174 task dev:full
+```
+
+> **Note:** Requires Docker and the semstreams backend at `../semstreams` (configurable via `BACKEND_CONTEXT`).
+
 ### Development Mode (Native)
 
 ```bash
