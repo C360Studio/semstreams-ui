@@ -243,6 +243,46 @@
   --modal-header-text: var(--ui-text-primary);
   --modal-header-border-bottom: 1px solid var(--ui-border-subtle);
 
+  /* Panel Layout (VS Code-style three-panel) */
+  --panel-left-width: 280px;
+  --panel-left-min-width: 200px;
+  --panel-left-max-width: 400px;
+  --panel-right-width: 320px;
+  --panel-right-min-width: 240px;
+  --panel-right-max-width: 480px;
+  --panel-center-min-width: 400px;
+
+  --panel-resize-handle-width: 4px;
+  --panel-resize-handle-hover-width: 6px;
+  --panel-resize-handle-bg: transparent;
+  --panel-resize-handle-hover-bg: var(--ui-interactive-primary);
+  --panel-resize-handle-active-bg: var(--ui-interactive-primary-active);
+
+  --panel-collapse-button-size: 20px;
+  --panel-collapse-button-bg: var(--ui-surface-tertiary);
+  --panel-collapse-button-hover-bg: var(--ui-surface-secondary);
+  --panel-collapse-button-icon-color: var(--ui-text-secondary);
+
+  --panel-transition-duration: 200ms;
+  --panel-transition-timing: ease-out;
+
+  /* Explorer Panel (Left) */
+  --explorer-background: var(--ui-surface-secondary);
+  --explorer-tab-bar-bg: var(--ui-surface-tertiary);
+  --explorer-tab-active-bg: var(--ui-surface-secondary);
+  --explorer-tab-inactive-bg: transparent;
+  --explorer-tab-text: var(--ui-text-secondary);
+  --explorer-tab-active-text: var(--ui-text-primary);
+  --explorer-tab-border-bottom: 2px solid var(--ui-interactive-primary);
+
+  /* Properties Panel (Right) */
+  --properties-background: var(--ui-surface-secondary);
+  --properties-header-bg: var(--ui-surface-tertiary);
+  --properties-header-text: var(--ui-text-primary);
+  --properties-section-header-bg: var(--ui-surface-tertiary);
+  --properties-section-header-text: var(--ui-text-secondary);
+  --properties-empty-state-text: var(--ui-text-tertiary);
+
   /* ============================================
      UTILITY VARIABLES
      Modern CSS utilities (Pico replacements)

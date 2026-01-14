@@ -1,8 +1,8 @@
 <script lang="ts">
 	import FlowCanvas from '$lib/components/FlowCanvas.svelte';
-	import ComponentList from '$lib/components/ComponentList.svelte';
-	import AddComponentModal from '$lib/components/AddComponentModal.svelte';
-	import EditComponentModal from '$lib/components/EditComponentModal.svelte';
+	import ThreePanelLayout from '$lib/components/layout/ThreePanelLayout.svelte';
+	import ExplorerPanel from '$lib/components/ExplorerPanel.svelte';
+	import PropertiesPanel from '$lib/components/PropertiesPanel.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
 	import RuntimePanel from '$lib/components/RuntimePanel.svelte';
 	import SaveStatusIndicator from '$lib/components/SaveStatusIndicator.svelte';
@@ -15,12 +15,13 @@
 	import AIFlowPreview from '$lib/components/AIFlowPreview.svelte';
 	import type { PageData } from './$types';
 	import type { ComponentInstance, FlowNode, FlowConnection, Flow } from '$lib/types/flow';
-	import type { SaveState, RuntimeStateInfo } from '$lib/types/ui-state';
+	import type { SaveState, RuntimeStateInfo, ExplorerTab, PropertiesPanelMode } from '$lib/types/ui-state';
 	import type { ValidationResult as PortValidationResult, ValidatedPort } from '$lib/types/port';
 	import type { ValidationResult as SimpleValidationResult } from '$lib/types/validation';
 	import type { ComponentType } from '$lib/types/component';
 	import { saveFlow, deployFlow, startFlow, stopFlow, isValidationError } from '$lib/api/flows';
 	import { flowHistory } from '$lib/stores/flowHistory.svelte';
+	import { createPanelLayoutStore } from '$lib/stores/panelLayoutStore.svelte';
 	import { onMount } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -35,11 +36,28 @@
 	// Component types for add modal (fetched from backend)
 	let componentTypes = $state<ComponentType[]>([]);
 
-	// Modal state
-	let showAddModal = $state(false);
-	let showEditModal = $state(false);
-	let editingNode = $state<FlowNode | null>(null);
-	let editingComponentType = $state<ComponentType | undefined>(undefined);
+	// Panel layout store
+	const panelLayout = createPanelLayoutStore();
+
+	// Explorer panel state
+	let explorerTab = $state<ExplorerTab>('components');
+	let hoveredComponentType = $state<ComponentType | null>(null);
+
+	// Properties panel state
+	const propertiesPanelMode = $derived.by((): PropertiesPanelMode => {
+		if (hoveredComponentType) return 'type-preview';
+		if (selectedComponent) return 'edit';
+		return 'empty';
+	});
+
+	// Get component type for the selected node
+	const selectedNodeComponentType = $derived.by(() => {
+		const selected = selectedComponent;
+		if (!selected) return null;
+		return componentTypes.find((ct) => ct.id === selected.type) ?? null;
+	});
+
+	// Note: Add/Edit modals replaced by ExplorerPanel and PropertiesPanel
 
 	// Navigation dialog state
 	let showNavigationDialog = $state(false);
@@ -104,8 +122,12 @@
 	let initialConnectionCount = flowConnections.length;
 	let initialLoadComplete = false;
 
-	// Fetch component types on mount
+	// Fetch component types and set up viewport handling on mount
 	onMount(async () => {
+		// Initialize responsive layout based on current viewport
+		panelLayout.handleViewportResize(window.innerWidth);
+
+		// Fetch component types
 		try {
 			const response = await fetch('/components/types');
 			if (response.ok) {
@@ -115,6 +137,49 @@
 			console.error('Failed to fetch component types:', error);
 		}
 	});
+
+	// Handle viewport resize for responsive panel behavior
+	function handleWindowResize() {
+		panelLayout.handleViewportResize(window.innerWidth);
+	}
+
+	// Handle keyboard shortcuts for explorer tabs and deselection
+	function handleKeyDown(event: KeyboardEvent) {
+		const isMod = event.metaKey || event.ctrlKey;
+
+		// Escape: Deselect component or exit palette tab
+		if (event.key === 'Escape') {
+			if (selectedComponent) {
+				selectedComponent = null;
+				return;
+			}
+			if (explorerTab === 'palette') {
+				explorerTab = 'components';
+				hoveredComponentType = null;
+				return;
+			}
+		}
+
+		// Cmd/Ctrl + Shift + E: Switch to Components tab
+		if (isMod && event.shiftKey && event.key === 'E') {
+			event.preventDefault();
+			explorerTab = 'components';
+			if (!panelLayout.state.leftPanelOpen) {
+				panelLayout.toggleLeft();
+			}
+			return;
+		}
+
+		// Cmd/Ctrl + Shift + P: Switch to Palette tab
+		if (isMod && event.shiftKey && event.key === 'P') {
+			event.preventDefault();
+			explorerTab = 'palette';
+			if (!panelLayout.state.leftPanelOpen) {
+				panelLayout.toggleLeft();
+			}
+			return;
+		}
+	}
 
 	// Canvas event handlers
 	function handleNodeClick(nodeId: string) {
@@ -347,18 +412,11 @@
 		}
 	}
 
-	// ComponentList handlers
+	// ExplorerPanel handlers
 	function handleSelectNode(nodeId: string) {
 		handleNodeClick(nodeId);
-	}
-
-	function handleEditNode(nodeId: string) {
-		const node = flowNodes.find((n) => n.id === nodeId);
-		if (node) {
-			editingNode = node;
-			editingComponentType = componentTypes.find((ct) => ct.id === node.type);
-			showEditModal = true;
-		}
+		// Clear any hovered type when selecting a node
+		hoveredComponentType = null;
 	}
 
 	function handleDeleteNode(nodeId: string) {
@@ -375,46 +433,59 @@
 		saveState = { ...saveState, status: 'dirty' };
 	}
 
-	function handleOpenAddModal() {
-		showAddModal = true;
+	function handleExplorerTabChange(tab: ExplorerTab) {
+		explorerTab = tab;
+		// Clear hovered type when switching tabs
+		if (tab === 'components') {
+			hoveredComponentType = null;
+		}
 	}
 
-	// AddComponentModal handlers
-	function handleAddComponentFromModal(
-		componentType: ComponentType,
-		name: string,
-		config: Record<string, unknown>
-	) {
+	function handleHoverType(type: ComponentType | null) {
+		hoveredComponentType = type;
+	}
+
+	function handleAddComponentFromPalette(componentType: ComponentType) {
 		const nodeId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+		const timestamp = Date.now();
+		const sanitizedId = componentType.id.replace(/[^a-z0-9-_]/gi, '-');
+
+		// Build default config from schema
+		const defaultConfig: Record<string, unknown> = {};
+		if (componentType.configSchema?.properties) {
+			for (const [key, schema] of Object.entries(componentType.configSchema.properties)) {
+				if (schema.default !== undefined) {
+					defaultConfig[key] = schema.default;
+				}
+			}
+		}
 
 		const flowNode: FlowNode = {
 			id: nodeId,
 			type: componentType.id,
-			name: name,
+			name: `${sanitizedId}-${timestamp}`,
 			position: {
 				x: 400 + (flowNodes.length % 3) * 200,
 				y: 300 + Math.floor(flowNodes.length / 3) * 150
 			},
-			config: config
+			config: defaultConfig
 		};
 
 		flowNodes = [...flowNodes, flowNode];
-		showAddModal = false;
 		dirty = true;
 		saveState = { ...saveState, status: 'dirty' };
+
+		// Auto-select the new node and switch to Components tab
+		handleNodeClick(nodeId);
+		explorerTab = 'components';
+		hoveredComponentType = null;
 	}
 
-	function handleCloseAddModal() {
-		showAddModal = false;
-	}
-
-	// EditComponentModal handlers
-	function handleSaveEdit(nodeId: string, name: string, config: Record<string, unknown>) {
+	// PropertiesPanel handlers
+	function handlePropertiesSave(nodeId: string, name: string, config: Record<string, unknown>) {
 		flowNodes = flowNodes.map((node) =>
 			node.id === nodeId ? { ...node, name, config } : node
 		);
-		showEditModal = false;
-		editingNode = null;
 		dirty = true;
 		saveState = { ...saveState, status: 'dirty' };
 
@@ -430,16 +501,29 @@
 		}
 	}
 
-	function handleDeleteFromEditModal(nodeId: string) {
+	function handlePropertiesDelete(nodeId: string) {
 		handleDeleteNode(nodeId);
-		showEditModal = false;
-		editingNode = null;
 	}
 
-	function handleCloseEditModal() {
-		showEditModal = false;
-		editingNode = null;
+	// Panel layout handlers
+	function handleLeftWidthChange(width: number) {
+		panelLayout.setLeftWidth(width);
 	}
+
+	function handleRightWidthChange(width: number) {
+		panelLayout.setRightWidth(width);
+	}
+
+	function handleToggleLeftPanel() {
+		panelLayout.toggleLeft();
+	}
+
+	function handleToggleRightPanel() {
+		panelLayout.toggleRight();
+	}
+
+
+	// Note: Add/Edit modal handlers removed - now using ExplorerPanel and PropertiesPanel
 
 	// AI Flow Generation handlers
 	async function handleAISubmit(prompt: string) {
@@ -745,20 +829,22 @@
 	}
 
 	// Calculate dynamic canvas height based on panel state
-	const headerHeight = 70; // Approximate header height
-	const aiPromptHeight = 180; // AI prompt section height
-	const statusBarHeight = 50; // Approximate status bar height
+	// Canvas fills remaining space in center panel, accounting for status bar and runtime panel
+	const statusBarHeight = 48;
 
 	const canvasHeight = $derived(
 		showRuntimePanel
-			? `calc(100vh - ${headerHeight}px - ${aiPromptHeight}px - ${statusBarHeight}px - ${runtimePanelHeight}px)`
-			: `calc(100vh - ${headerHeight}px - ${aiPromptHeight}px - ${statusBarHeight}px)`
+			? `calc(100% - ${statusBarHeight}px - ${runtimePanelHeight}px)`
+			: `calc(100% - ${statusBarHeight}px)`
 	);
 </script>
 
 <svelte:head>
 	<title>{backendFlow?.name || 'Flow Editor'} - SemStreams</title>
 </svelte:head>
+
+<!-- Window event handlers for responsive layout and keyboard shortcuts -->
+<svelte:window onresize={handleWindowResize} onkeydown={handleKeyDown} />
 
 <!-- Navigation guard for unsaved changes -->
 <NavigationGuard
@@ -810,108 +896,109 @@
 />
 
 <div class="editor-layout">
-	<aside class="palette-sidebar">
-		<ComponentList
-			nodes={flowNodes}
-			selectedNodeId={selectedComponent?.id || null}
-			onSelectNode={handleSelectNode}
-			onEditNode={handleEditNode}
-			onDeleteNode={handleDeleteNode}
-			onAddComponent={handleOpenAddModal}
-		/>
-	</aside>
-
-	<main class="canvas-area">
-		<header class="editor-header">
-			<div class="header-content">
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<a href="/" data-sveltekit-reload class="back-button" aria-label="Back to flows">← Flows</a>
-				<div class="header-text">
-					<h1>{backendFlow?.name || 'Loading...'}</h1>
-					{#if backendFlow?.description}
-						<p>{backendFlow.description}</p>
-					{/if}
-				</div>
-				<SaveStatusIndicator
-					{saveState}
-					onSave={handleSave}
-					{validationResult}
-					onValidationClick={handleValidationStatusClick}
-				/>
+	<!-- Header -->
+	<header class="editor-header">
+		<div class="header-content">
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+			<a href="/" data-sveltekit-reload class="back-button" aria-label="Back to flows">← Flows</a>
+			<div class="header-text">
+				<h1>{backendFlow?.name || 'Loading...'}</h1>
+				{#if backendFlow?.description}
+					<p>{backendFlow.description}</p>
+				{/if}
 			</div>
-		</header>
-
-		<!-- AI Prompt Input Section -->
-		<div class="ai-prompt-section">
-			<AIPromptInput
-				loading={aiLoading}
-				disabled={aiLoading}
-				onSubmit={handleAISubmit}
+			<SaveStatusIndicator
+				{saveState}
+				onSave={handleSave}
+				{validationResult}
+				onValidationClick={handleValidationStatusClick}
 			/>
 		</div>
+	</header>
 
-		<div class="canvas-container" style="height: {canvasHeight};">
-			<FlowCanvas
-				nodes={flowNodes}
-				connections={flowConnections}
-				{portsMap}
-				selectedNodeId={selectedComponent?.id || null}
-				onNodeClick={handleNodeClick}
-			/>
-		</div>
+	<!-- Three-Panel Layout -->
+	<div class="panel-area">
+		<ThreePanelLayout
+			leftPanelOpen={panelLayout.state.leftPanelOpen}
+			rightPanelOpen={panelLayout.state.rightPanelOpen}
+			leftPanelWidth={panelLayout.state.leftPanelWidth}
+			rightPanelWidth={panelLayout.state.rightPanelWidth}
+			onLeftWidthChange={handleLeftWidthChange}
+			onRightWidthChange={handleRightWidthChange}
+			onToggleLeft={handleToggleLeftPanel}
+			onToggleRight={handleToggleRightPanel}
+		>
+			{#snippet leftPanel()}
+				<ExplorerPanel
+					nodes={flowNodes}
+					selectedNodeId={selectedComponent?.id || null}
+					activeTab={explorerTab}
+					hoveredType={hoveredComponentType}
+					onSelectNode={handleSelectNode}
+					onDeleteNode={handleDeleteNode}
+					onAddComponent={handleAddComponentFromPalette}
+					onHoverType={handleHoverType}
+					onTabChange={handleExplorerTabChange}
+				>
+					{#snippet aiAssistant()}
+						<div class="ai-section-content">
+							<AIPromptInput
+								loading={aiLoading}
+								disabled={aiLoading}
+								onSubmit={handleAISubmit}
+							/>
+						</div>
+					{/snippet}
+				</ExplorerPanel>
+			{/snippet}
 
-		<StatusBar
-			{runtimeState}
-			{isFlowValid}
-			{showRuntimePanel}
-			onDeploy={handleDeploy}
-			onStart={handleStart}
-			onStop={handleStop}
-			onToggleRuntimePanel={handleToggleRuntimePanel}
-		/>
+			{#snippet centerPanel()}
+				<div class="center-content">
+					<div class="canvas-container" style="height: {canvasHeight};">
+						<FlowCanvas
+							nodes={flowNodes}
+							connections={flowConnections}
+							{portsMap}
+							selectedNodeId={selectedComponent?.id || null}
+							onNodeClick={handleNodeClick}
+						/>
+					</div>
 
-		<RuntimePanel
-			isOpen={showRuntimePanel}
-			height={runtimePanelHeight}
-			flowId={backendFlow.id}
-			onClose={handleCloseRuntimePanel}
-		/>
-	</main>
+					<StatusBar
+						{runtimeState}
+						{isFlowValid}
+						{showRuntimePanel}
+						onDeploy={handleDeploy}
+						onStart={handleStart}
+						onStop={handleStop}
+						onToggleRuntimePanel={handleToggleRuntimePanel}
+					/>
+
+					<RuntimePanel
+						isOpen={showRuntimePanel}
+						height={runtimePanelHeight}
+						flowId={backendFlow.id}
+						onClose={handleCloseRuntimePanel}
+					/>
+				</div>
+			{/snippet}
+
+			{#snippet rightPanel()}
+				<PropertiesPanel
+					mode={propertiesPanelMode}
+					componentType={hoveredComponentType}
+					node={selectedComponent}
+					nodeComponentType={selectedNodeComponentType}
+					onSave={handlePropertiesSave}
+					onDelete={handlePropertiesDelete}
+				/>
+			{/snippet}
+		</ThreePanelLayout>
+	</div>
 </div>
-
-<!-- Add Component Modal -->
-<AddComponentModal
-	isOpen={showAddModal}
-	{componentTypes}
-	onAdd={handleAddComponentFromModal}
-	onClose={handleCloseAddModal}
-/>
-
-<!-- Edit Component Modal -->
-<EditComponentModal
-	isOpen={showEditModal}
-	node={editingNode}
-	componentType={editingComponentType}
-	onSave={handleSaveEdit}
-	onDelete={handleDeleteFromEditModal}
-	onClose={handleCloseEditModal}
-/>
 
 <style>
 	.editor-layout {
-		display: grid;
-		grid-template-columns: 280px 1fr;
-		height: 100vh;
-		overflow: hidden;
-	}
-
-	.palette-sidebar {
-		border-right: 1px solid var(--border-color, #dee2e6);
-		background: var(--sidebar-bg, white);
-		overflow-y: auto;
-	}
-
-	.canvas-area {
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
@@ -919,9 +1006,10 @@
 	}
 
 	.editor-header {
-		padding: 1rem 1.5rem;
-		border-bottom: 1px solid var(--border-color, #dee2e6);
-		background: var(--header-bg, white);
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid var(--ui-border-subtle);
+		background: var(--ui-surface-primary);
+		flex-shrink: 0;
 	}
 
 	.header-content {
@@ -931,7 +1019,7 @@
 	}
 
 	.back-button {
-		color: var(--primary-color, #0066cc);
+		color: var(--ui-interactive-primary);
 		text-decoration: none;
 		font-weight: 500;
 		font-size: 0.875rem;
@@ -942,7 +1030,7 @@
 	}
 
 	.back-button:hover {
-		background-color: var(--hover-bg, #f8f9fa);
+		background-color: var(--ui-surface-secondary);
 	}
 
 	.header-text {
@@ -951,26 +1039,36 @@
 	}
 
 	.editor-header h1 {
-		margin: 0 0 0.25rem 0;
-		font-size: 1.5rem;
-		color: var(--heading-color, #212529);
+		margin: 0 0 0.125rem 0;
+		font-size: 1.25rem;
+		color: var(--ui-text-primary);
 	}
 
 	.editor-header p {
 		margin: 0;
-		color: var(--text-muted, #6c757d);
-		font-size: 0.875rem;
+		color: var(--ui-text-secondary);
+		font-size: 0.8125rem;
 	}
 
-	.ai-prompt-section {
-		padding: 1rem 1.5rem;
-		background: var(--ui-surface-primary);
-		border-bottom: 1px solid var(--border-color, #dee2e6);
+	.panel-area {
+		flex: 1;
+		overflow: hidden;
+	}
+
+	.center-content {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
 	}
 
 	.canvas-container {
+		flex: 1;
 		position: relative;
 		overflow: hidden;
 		transition: height 300ms ease-out;
+	}
+
+	.ai-section-content {
+		padding: 0.75rem;
 	}
 </style>

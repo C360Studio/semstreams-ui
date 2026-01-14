@@ -82,3 +82,68 @@ export type UserPreferences = Record<string, never>;
  * Default user preferences
  */
 export const DEFAULT_PREFERENCES: UserPreferences = {};
+
+/**
+ * Explorer panel tab types
+ */
+export type ExplorerTab = 'components' | 'palette';
+
+/**
+ * Properties panel display mode
+ * - empty: Nothing selected, show placeholder
+ * - type-preview: Hovering/selecting in Palette, show component type info
+ * - edit: Editing a flow node's configuration
+ */
+export type PropertiesPanelMode = 'empty' | 'type-preview' | 'edit';
+
+/**
+ * Panel layout state for three-panel VS Code-style layout
+ * Manages panel visibility, widths, and responsive behavior
+ */
+export interface PanelLayoutState {
+	/** Left panel (Explorer) visibility */
+	leftPanelOpen: boolean;
+
+	/** Right panel (Properties) visibility */
+	rightPanelOpen: boolean;
+
+	/** Left panel width in pixels */
+	leftPanelWidth: number;
+
+	/** Right panel width in pixels */
+	rightPanelWidth: number;
+
+	/** Whether left panel was auto-collapsed due to viewport size (vs user action) */
+	autoCollapsedLeft: boolean;
+
+	/** Whether right panel was auto-collapsed due to viewport size (vs user action) */
+	autoCollapsedRight: boolean;
+
+	/** Currently active Explorer tab */
+	explorerTab: ExplorerTab;
+}
+
+/**
+ * Default panel layout state
+ */
+export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {
+	leftPanelOpen: true,
+	rightPanelOpen: true,
+	leftPanelWidth: 280,
+	rightPanelWidth: 320,
+	autoCollapsedLeft: false,
+	autoCollapsedRight: false,
+	explorerTab: 'components'
+};
+
+/**
+ * Panel layout responsive breakpoints
+ */
+export const PANEL_BREAKPOINTS = {
+	/** Full three-panel layout */
+	FULL: 1200,
+	/** Right panel auto-collapses */
+	MEDIUM: 900,
+	/** Both panels auto-collapse */
+	SMALL: 600
+} as const;
