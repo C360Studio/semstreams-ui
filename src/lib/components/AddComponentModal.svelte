@@ -258,7 +258,7 @@
 												aria-required={isRequired}
 												aria-invalid={validationError !== null}
 											/>
-										{:else if schema.type === 'number'}
+										{:else if schema.type === 'int' || schema.type === 'integer' || schema.type === 'number'}
 											<input
 												id="config.{fieldName}"
 												name="config.{fieldName}"
@@ -270,13 +270,41 @@
 												min={schema.minimum}
 												max={schema.maximum}
 											/>
-										{:else if schema.type === 'boolean'}
+										{:else if schema.type === 'bool' || schema.type === 'boolean'}
 											<input
 												id="config.{fieldName}"
 												name="config.{fieldName}"
 												type="checkbox"
 												bind:checked={configValues[fieldName] as boolean}
 											/>
+										{:else if schema.type === 'enum' && schema.enum}
+											<select
+												id="config.{fieldName}"
+												name="config.{fieldName}"
+												bind:value={configValues[fieldName]}
+												required={isRequired}
+												aria-required={isRequired}
+											>
+												<option value="">Select...</option>
+												{#each schema.enum as option}
+													<option value={option}>{option}</option>
+												{/each}
+											</select>
+										{:else}
+											<!-- object, array, ports - JSON editor -->
+											<textarea
+												id="config.{fieldName}"
+												name="config.{fieldName}"
+												class="json-editor"
+												value={JSON.stringify(configValues[fieldName] ?? {}, null, 2)}
+												onchange={(e) => {
+													try {
+														configValues[fieldName] = JSON.parse(e.currentTarget.value);
+													} catch {
+														// Invalid JSON - keep current value
+													}
+												}}
+											></textarea>
 										{/if}
 
 										{#if validationError}
@@ -442,6 +470,27 @@
 
 	.form-group input[aria-invalid='true'] {
 		border-color: var(--status-error);
+	}
+
+	.json-editor {
+		width: 100%;
+		min-height: 100px;
+		padding: 0.5rem;
+		border: 1px solid var(--ui-border-default);
+		border-radius: 4px;
+		font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+		font-size: 0.8rem;
+		background: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
+		resize: vertical;
+		white-space: pre;
+		tab-size: 2;
+	}
+
+	.json-editor:focus {
+		outline: 2px solid var(--ui-focus-ring);
+		outline-offset: 1px;
+		border-color: var(--ui-interactive-primary);
 	}
 
 	.field-description {

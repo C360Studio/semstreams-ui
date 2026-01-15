@@ -293,7 +293,7 @@
 										required={isRequired}
 										data-testid="prop-{fieldName}-input"
 									/>
-								{:else if schema.type === 'number'}
+								{:else if schema.type === 'int' || schema.type === 'integer' || schema.type === 'number'}
 									<input
 										id="prop-{fieldName}"
 										type="number"
@@ -304,7 +304,7 @@
 										max={schema.maximum}
 										data-testid="prop-{fieldName}-input"
 									/>
-								{:else if schema.type === 'boolean'}
+								{:else if schema.type === 'bool' || schema.type === 'boolean'}
 									<label class="checkbox-label">
 										<input
 											id="prop-{fieldName}"
@@ -318,6 +318,35 @@
 										/>
 										<span>Enabled</span>
 									</label>
+								{:else if schema.type === 'enum' && schema.enum}
+									<select
+										id="prop-{fieldName}"
+										bind:value={editedConfig[fieldName]}
+										onchange={handleBlur}
+										required={isRequired}
+										data-testid="prop-{fieldName}-input"
+									>
+										<option value="">Select...</option>
+										{#each schema.enum as option}
+											<option value={option}>{option}</option>
+										{/each}
+									</select>
+								{:else}
+									<!-- object, array, ports - JSON editor -->
+									<textarea
+										id="prop-{fieldName}"
+										class="json-editor"
+										value={JSON.stringify(editedConfig[fieldName] ?? {}, null, 2)}
+										onchange={(e) => {
+											try {
+												editedConfig[fieldName] = JSON.parse(e.currentTarget.value);
+												handleBlur();
+											} catch {
+												// Invalid JSON - keep current value
+											}
+										}}
+										data-testid="prop-{fieldName}-input"
+									></textarea>
 								{/if}
 
 								{#if error}
@@ -636,7 +665,8 @@
 	}
 
 	.form-group input[type='text'],
-	.form-group input[type='number'] {
+	.form-group input[type='number'],
+	.form-group select {
 		width: 100%;
 		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--ui-border-subtle);
@@ -646,7 +676,29 @@
 		color: var(--ui-text-primary);
 	}
 
-	.form-group input:focus {
+	.form-group input:focus,
+	.form-group select:focus {
+		outline: none;
+		border-color: var(--ui-interactive-primary);
+		box-shadow: 0 0 0 2px var(--ui-focus-ring);
+	}
+
+	.json-editor {
+		width: 100%;
+		min-height: 100px;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: 4px;
+		font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+		font-size: 0.75rem;
+		background: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
+		resize: vertical;
+		white-space: pre;
+		tab-size: 2;
+	}
+
+	.json-editor:focus {
 		outline: none;
 		border-color: var(--ui-interactive-primary);
 		box-shadow: 0 0 0 2px var(--ui-focus-ring);
