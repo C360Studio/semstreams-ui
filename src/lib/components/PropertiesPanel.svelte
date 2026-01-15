@@ -12,6 +12,7 @@
 	import type { ComponentType, PropertySchema } from '$lib/types/component';
 	import type { PropertiesPanelMode } from '$lib/types/ui-state';
 	import { getDomainColor } from '$lib/utils/domain-colors';
+	import PortsEditor from './PortsEditor.svelte';
 
 	interface PropertiesPanelProps {
 		/** Panel display mode */
@@ -327,12 +328,22 @@
 										data-testid="prop-{fieldName}-input"
 									>
 										<option value="">Select...</option>
-										{#each schema.enum as option}
+										{#each schema.enum as option (option)}
 											<option value={option}>{option}</option>
 										{/each}
 									</select>
+								{:else if schema.type === 'ports'}
+									<!-- Ports editor -->
+									<PortsEditor
+										value={(editedConfig[fieldName] ?? { inputs: [], outputs: [] }) as { inputs?: Record<string, unknown>[]; outputs?: Record<string, unknown>[] }}
+										portFields={schema.portFields}
+										onChange={(v) => {
+											editedConfig[fieldName] = v;
+											handleBlur();
+										}}
+									/>
 								{:else}
-									<!-- object, array, ports - JSON editor -->
+									<!-- object, array - JSON editor -->
 									<textarea
 										id="prop-{fieldName}"
 										class="json-editor"

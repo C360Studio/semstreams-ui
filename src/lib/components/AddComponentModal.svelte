@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ComponentType, PropertySchema } from '$lib/types/component';
 	import ComponentPalette from './ComponentPalette.svelte';
+	import PortsEditor from './PortsEditor.svelte';
 
 	interface AddComponentModalProps {
 		isOpen: boolean;
@@ -286,12 +287,21 @@
 												aria-required={isRequired}
 											>
 												<option value="">Select...</option>
-												{#each schema.enum as option}
+												{#each schema.enum as option (option)}
 													<option value={option}>{option}</option>
 												{/each}
 											</select>
+										{:else if schema.type === 'ports'}
+											<!-- Ports editor -->
+											<PortsEditor
+												value={(configValues[fieldName] ?? { inputs: [], outputs: [] }) as { inputs?: Record<string, unknown>[]; outputs?: Record<string, unknown>[] }}
+												portFields={schema.portFields}
+												onChange={(v) => {
+													configValues[fieldName] = v;
+												}}
+											/>
 										{:else}
-											<!-- object, array, ports - JSON editor -->
+											<!-- object, array - JSON editor -->
 											<textarea
 												id="config.{fieldName}"
 												name="config.{fieldName}"

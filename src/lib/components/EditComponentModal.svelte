@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FlowNode } from '$lib/types/flow';
 	import type { ComponentType, PropertySchema } from '$lib/types/component';
+	import PortsEditor from './PortsEditor.svelte';
 
 	interface EditComponentModalProps {
 		isOpen: boolean;
@@ -279,12 +280,21 @@
 											aria-required={isRequired}
 										>
 											<option value="">Select...</option>
-											{#each schema.enum as option}
+											{#each schema.enum as option (option)}
 												<option value={option}>{option}</option>
 											{/each}
 										</select>
+									{:else if schema.type === 'ports'}
+										<!-- Ports editor -->
+										<PortsEditor
+											value={(editedConfig[fieldName] ?? { inputs: [], outputs: [] }) as { inputs?: Record<string, unknown>[]; outputs?: Record<string, unknown>[] }}
+											portFields={schema.portFields}
+											onChange={(v) => {
+												editedConfig[fieldName] = v;
+											}}
+										/>
 									{:else}
-										<!-- object, array, ports - JSON editor -->
+										<!-- object, array - JSON editor -->
 										<textarea
 											id="config.{fieldName}"
 											name="config.{fieldName}"
