@@ -14,7 +14,7 @@ describe("EditComponentModal", () => {
     category: "input",
     description: "Receives data over UDP protocol",
     version: "1.0.0",
-    configSchema: {
+    schema: {
       type: "object",
       properties: {
         port: {

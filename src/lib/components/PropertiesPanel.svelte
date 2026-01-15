@@ -76,13 +76,13 @@
 	const isFormValid = $derived.by(() => {
 		if (!editedName.trim()) return false;
 
-		if (nodeComponentType?.configSchema) {
-			const required = nodeComponentType.configSchema.required || [];
+		if (nodeComponentType?.schema) {
+			const required = nodeComponentType.schema.required || [];
 			for (const field of required) {
 				const value = editedConfig[field];
 				if (value === undefined || value === null || value === '') return false;
 
-				const schema = nodeComponentType.configSchema.properties[field];
+				const schema = nodeComponentType.schema.properties[field];
 				if (schema?.type === 'number') {
 					const numValue = Number(value);
 					if (isNaN(numValue)) return false;
@@ -207,12 +207,12 @@
 					</section>
 				{/if}
 
-				{#if componentType.configSchema}
+				{#if componentType.schema}
 					<section class="preview-section">
 						<h4>Configuration</h4>
 						<ul class="config-schema-list">
-							{#each Object.entries(componentType.configSchema.properties) as [key, schema] (key)}
-								{@const isRequired = componentType.configSchema.required?.includes(key)}
+							{#each Object.entries(componentType.schema.properties) as [key, schema] (key)}
+								{@const isRequired = componentType.schema.required?.includes(key)}
 								<li class="config-item">
 									<span class="config-key">{key}</span>
 									<span class="config-type">{schema.type}</span>
@@ -234,8 +234,23 @@
 		{@const domainColor = getDomainColor(nodeComponentType?.category || 'other')}
 		<div class="edit-panel" data-testid="properties-edit">
 			<header class="edit-header" style="border-left-color: {domainColor};">
-				<h3>{node.name}</h3>
-				<span class="edit-type">{node.type}</span>
+				<div class="header-top">
+					<h3>{node.name}</h3>
+					<div class="header-badges">
+						{#if nodeComponentType?.category}
+							<span class="badge badge-{nodeComponentType.category}">
+								{nodeComponentType.category}
+							</span>
+						{/if}
+						{#if nodeComponentType?.domain}
+							<span class="badge badge-domain">{nodeComponentType.domain}</span>
+						{/if}
+					</div>
+				</div>
+				<span class="edit-type">{nodeComponentType?.name || node.type}</span>
+				{#if nodeComponentType?.description}
+					<p class="component-description">{nodeComponentType.description}</p>
+				{/if}
 			</header>
 
 			<form class="edit-form" onsubmit={(e) => e.preventDefault()}>
@@ -253,11 +268,11 @@
 				</div>
 
 				<!-- Config Fields -->
-				{#if nodeComponentType?.configSchema}
+				{#if nodeComponentType?.schema}
 					<div class="config-section">
 						<h4>Configuration</h4>
-						{#each Object.entries(nodeComponentType.configSchema.properties) as [fieldName, schema] (fieldName)}
-							{@const isRequired = nodeComponentType.configSchema.required?.includes(fieldName)}
+						{#each Object.entries(nodeComponentType.schema.properties) as [fieldName, schema] (fieldName)}
+							{@const isRequired = nodeComponentType.schema.required?.includes(fieldName)}
 							{@const error = getFieldError(fieldName, schema)}
 
 							<div class="form-group" class:has-error={error}>
@@ -539,6 +554,56 @@
 		font-size: 0.75rem;
 		color: var(--ui-text-secondary);
 		font-family: monospace;
+	}
+
+	.header-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.header-badges {
+		display: flex;
+		gap: 0.25rem;
+		flex-shrink: 0;
+	}
+
+	.badge {
+		font-size: 0.625rem;
+		padding: 0.125rem 0.375rem;
+		border-radius: 4px;
+		text-transform: uppercase;
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.badge-input {
+		background: var(--status-success-container);
+		color: var(--status-success-on-container);
+	}
+
+	.badge-output {
+		background: var(--status-warning-container);
+		color: var(--status-warning-on-container);
+	}
+
+	.badge-processor {
+		background: var(--ui-interactive-primary);
+		color: white;
+	}
+
+	.badge-domain {
+		background: var(--ui-surface-tertiary);
+		color: var(--ui-text-secondary);
+		border: 1px solid var(--ui-border-subtle);
+	}
+
+	.component-description {
+		font-size: 0.75rem;
+		color: var(--ui-text-secondary);
+		margin: 0.5rem 0 0 0;
+		line-height: 1.4;
 	}
 
 	.edit-form {

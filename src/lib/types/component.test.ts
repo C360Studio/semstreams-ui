@@ -27,7 +27,7 @@ describe('Component Type Definitions', () => {
         description: 'Receives UDP packets and publishes to NATS',
         version: '1.0.0',
         ports: [],
-        configSchema: {
+        schema: {
           type: 'object',
           properties: {},
           required: []
@@ -60,7 +60,7 @@ describe('Component Type Definitions', () => {
           description: 'Test description',
           version: '1.0.0',
           ports: [],
-          configSchema: {
+          schema: {
             type: 'object',
             properties: {},
             required: []
@@ -81,7 +81,7 @@ describe('Component Type Definitions', () => {
         description: 'Test',
         version: '1.0.0',
         ports: [],
-        configSchema: {
+        schema: {
           type: 'object',
           properties: {},
           required: []

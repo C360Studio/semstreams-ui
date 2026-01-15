@@ -17,11 +17,6 @@ import { ConfigPanelPage } from './pages/ConfigPanelPage';
  * - Ports field (type:ports)
  * - Input ports: Network UDP socket configuration
  * - Output ports: NATS subject for publishing
- *
- * NOTE: These tests are SKIPPED pending schema integration.
- * The backend returns `schema` but frontend expects `configSchema`.
- * The EditComponentModal doesn't show the config section until this is resolved.
- * See: EditComponentModal.svelte line 226 - requires componentType?.configSchema
  */
 
 test.describe.skip('Port Configuration (Schema Tag System)', () => {

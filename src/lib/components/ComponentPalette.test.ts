@@ -28,7 +28,7 @@ describe('ComponentPalette', () => {
 					}
 				}
 			],
-			configSchema: {
+			schema: {
 				type: 'object',
 				properties: {
 					port: {
@@ -63,7 +63,7 @@ describe('ComponentPalette', () => {
 					}
 				}
 			],
-			configSchema: {
+			schema: {
 				type: 'object',
 				properties: {
 					port: {

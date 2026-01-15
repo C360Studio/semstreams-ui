@@ -50,9 +50,9 @@
 
 	// Initialize config values with defaults when type selected
 	$effect(() => {
-		if (selectedComponentType?.configSchema) {
+		if (selectedComponentType?.schema) {
 			const defaults: Record<string, unknown> = {};
-			Object.entries(selectedComponentType.configSchema.properties).forEach(([key, schema]) => {
+			Object.entries(selectedComponentType.schema.properties).forEach(([key, schema]) => {
 				if (schema.default !== undefined) {
 					defaults[key] = schema.default;
 				}
@@ -70,8 +70,8 @@
 		}
 
 		// Check required config fields
-		if (selectedComponentType?.configSchema) {
-			const required = selectedComponentType.configSchema.required || [];
+		if (selectedComponentType?.schema) {
+			const required = selectedComponentType.schema.required || [];
 			for (const field of required) {
 				const value = configValues[field];
 				if (value === undefined || value === null || value === '') {
@@ -79,7 +79,7 @@
 				}
 
 				// Validate number ranges
-				const schema = selectedComponentType.configSchema.properties[field];
+				const schema = selectedComponentType.schema.properties[field];
 				if (schema.type === 'number') {
 					const numValue = Number(value);
 					if (isNaN(numValue)) {
@@ -228,11 +228,11 @@
 						</div>
 
 						<!-- Config Fields (dynamic based on selected type) -->
-						{#if selectedComponentType?.configSchema}
+						{#if selectedComponentType?.schema}
 							<div class="config-section">
 								<h3>Configuration</h3>
-								{#each Object.entries(selectedComponentType.configSchema.properties) as [fieldName, schema] (fieldName)}
-									{@const isRequired = selectedComponentType.configSchema.required?.includes(
+								{#each Object.entries(selectedComponentType.schema.properties) as [fieldName, schema] (fieldName)}
+									{@const isRequired = selectedComponentType.schema.required?.includes(
 										fieldName
 									)}
 									{@const validationError = getFieldValidationError(fieldName, schema)}

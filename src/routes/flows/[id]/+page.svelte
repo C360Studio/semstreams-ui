@@ -452,10 +452,10 @@
 
 		// Build default config from schema
 		const defaultConfig: Record<string, unknown> = {};
-		if (componentType.configSchema?.properties) {
-			for (const [key, schema] of Object.entries(componentType.configSchema.properties)) {
-				if (schema.default !== undefined) {
-					defaultConfig[key] = schema.default;
+		if (componentType.schema?.properties) {
+			for (const [key, propSchema] of Object.entries(componentType.schema.properties)) {
+				if (propSchema.default !== undefined) {
+					defaultConfig[key] = propSchema.default;
 				}
 			}
 		}

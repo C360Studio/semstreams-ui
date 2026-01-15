@@ -49,10 +49,30 @@
 		margin-bottom: 2rem;
 	}
 
+	header h2 {
+		color: var(--ui-text-primary);
+		margin: 0;
+	}
+
+	header button {
+		background: var(--button-primary-background);
+		color: var(--button-primary-text);
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		font-weight: 500;
+		transition: background 0.2s;
+	}
+
+	header button:hover {
+		background: var(--button-primary-background-hover);
+	}
+
 	.empty-state {
 		text-align: center;
 		padding: 3rem;
-		color: var(--muted-color, #666);
+		color: var(--ui-text-tertiary);
 	}
 
 	.flow-grid {
@@ -62,8 +82,8 @@
 	}
 
 	.flow-card {
-		background: var(--card-background, white);
-		border: 1px solid var(--card-border, #ddd);
+		background: var(--ui-surface-secondary);
+		border: 1px solid var(--ui-border-subtle);
 		border-radius: 8px;
 		padding: 1.5rem;
 		text-align: left;
@@ -72,17 +92,18 @@
 	}
 
 	.flow-card:hover {
-		border-color: var(--primary-color, #007bff);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		border-color: var(--ui-interactive-primary);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 	}
 
 	.flow-card h3 {
 		margin: 0 0 0.5rem 0;
 		font-size: 1.25rem;
+		color: var(--ui-text-primary);
 	}
 
 	.description {
-		color: var(--muted-color, #666);
+		color: var(--ui-text-secondary);
 		margin: 0 0 1rem 0;
 		font-size: 0.9rem;
 	}
@@ -97,22 +118,22 @@
 	}
 
 	.runtime-state.not_deployed {
-		background: var(--state-not-deployed, #e9ecef);
-		color: var(--state-not-deployed-text, #495057);
+		background: var(--ui-surface-tertiary);
+		color: var(--ui-text-secondary);
 	}
 
 	.runtime-state.deployed_stopped {
-		background: var(--state-stopped, #fff3cd);
-		color: var(--state-stopped-text, #856404);
+		background: var(--status-warning-container);
+		color: var(--status-warning-on-container);
 	}
 
 	.runtime-state.running {
-		background: var(--state-running, #d4edda);
-		color: var(--state-running-text, #155724);
+		background: var(--status-success-container);
+		color: var(--status-success-on-container);
 	}
 
 	.runtime-state.error {
-		background: var(--state-error, #f8d7da);
-		color: var(--state-error-text, #721c24);
+		background: var(--status-error-container);
+		color: var(--status-error-on-container);
 	}
 </style>

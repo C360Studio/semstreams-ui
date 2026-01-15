@@ -18,7 +18,7 @@ describe("AddComponentModal", () => {
       category: "input",
       description: "Receives data over UDP protocol",
       version: "1.0.0",
-      configSchema: {
+      schema: {
         type: "object",
         properties: {
           port: {
@@ -45,7 +45,7 @@ describe("AddComponentModal", () => {
       category: "processor",
       description: "Processes messages from NATS",
       version: "1.0.0",
-      configSchema: {
+      schema: {
         type: "object",
         properties: {
           subject: {
@@ -72,7 +72,7 @@ describe("AddComponentModal", () => {
       category: "output",
       description: "Sends data via WebSocket",
       version: "1.0.0",
-      configSchema: {
+      schema: {
         type: "object",
         properties: {
           endpoint: {
@@ -1115,7 +1115,7 @@ describe("AddComponentModal", () => {
 
   // Test 8: Edge Cases
   describe("Edge Cases", () => {
-    it("should handle component type without configSchema", async () => {
+    it("should handle component type without schema", async () => {
       const componentWithoutSchema: ComponentType = {
         id: "simple-component",
         name: "Simple Component",

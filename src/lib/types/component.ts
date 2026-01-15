@@ -7,10 +7,11 @@ export interface ComponentType {
   type: string;           // "input", "processor", "output", "storage"
   protocol: string;       // "udp", "mavlink", "websocket", etc.
   category: string;       // Same as type, for grouping
+  domain?: string;        // Domain classification (e.g., "network", "graph", "storage")
   description: string;
   version: string;
   ports?: PortDefinition[];       // Optional, for future use
-  configSchema?: ConfigSchema;    // Optional, for future use
+  schema?: ConfigSchema;          // Component configuration schema from backend
   icon?: string;
 }
 
@@ -91,10 +92,19 @@ export interface ConfigSchema {
 }
 
 export interface PropertySchema {
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
-  description: string;
+  // Backend uses Go-style type names: int, bool, integer
+  // Also supports: string, number, boolean, array, object, enum, ports
+  type: string;
+  description?: string;
   default?: unknown;
   minimum?: number;
   maximum?: number;
   enum?: string[];
+  category?: string;         // Field category (e.g., "basic", "advanced")
+  portFields?: Record<string, PortFieldSchema>;  // For ports type
+}
+
+export interface PortFieldSchema {
+  type: string;
+  editable: boolean;
 }

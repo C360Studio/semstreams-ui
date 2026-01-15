@@ -215,7 +215,7 @@ describe("MCP Tools - get_component_catalog Implementation", () => {
       expect(result[0]).toHaveProperty("version");
     });
 
-    it("should include optional ports and configSchema if present", async () => {
+    it("should include optional ports and schema if present", async () => {
       const mockComponents: ComponentType[] = [
         {
           id: "advanced-component",
@@ -241,7 +241,7 @@ describe("MCP Tools - get_component_catalog Implementation", () => {
               },
             },
           ],
-          configSchema: {
+          schema: {
             type: "object",
             properties: {
               timeout: {
@@ -269,7 +269,7 @@ describe("MCP Tools - get_component_catalog Implementation", () => {
       const result = await getComponentCatalog();
 
       expect(result[0].ports).toBeDefined();
-      expect(result[0].configSchema).toBeDefined();
+      expect(result[0].schema).toBeDefined();
     });
 
     it("should handle empty component list", async () => {

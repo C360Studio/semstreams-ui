@@ -64,8 +64,8 @@
 		}
 
 		// Check required config fields
-		if (componentType?.configSchema) {
-			const required = componentType.configSchema.required || [];
+		if (componentType?.schema) {
+			const required = componentType.schema.required || [];
 			for (const field of required) {
 				const value = editedConfig[field];
 				if (value === undefined || value === null || value === '') {
@@ -73,7 +73,7 @@
 				}
 
 				// Validate number ranges
-				const schema = componentType.configSchema.properties[field];
+				const schema = componentType.schema.properties[field];
 				if (schema.type === 'number') {
 					const numValue = Number(value);
 					if (isNaN(numValue)) {
@@ -223,11 +223,11 @@
 					</div>
 
 					<!-- Config Fields (dynamic based on component type) -->
-					{#if componentType?.configSchema}
+					{#if componentType?.schema}
 						<div class="config-section">
 							<h3>Configuration</h3>
-							{#each Object.entries(componentType.configSchema.properties) as [fieldName, schema] (fieldName)}
-								{@const isRequired = componentType.configSchema.required?.includes(fieldName)}
+							{#each Object.entries(componentType.schema.properties) as [fieldName, schema] (fieldName)}
+								{@const isRequired = componentType.schema.required?.includes(fieldName)}
 								{@const validationError = getFieldValidationError(fieldName, schema)}
 
 								<div class="form-group">

@@ -12,11 +12,6 @@ import { ConfigPanelPage } from './pages/ConfigPanelPage';
  *
  * After the D3 canvas refactor, configuration is done via EditComponentModal
  * accessed by clicking the Edit (⚙️) button in the sidebar.
- *
- * NOTE: These tests are SKIPPED pending schema integration.
- * The backend returns `schema` but frontend expects `configSchema`.
- * The EditComponentModal doesn't show the config section until this is resolved.
- * See: EditComponentModal.svelte line 226 - requires componentType?.configSchema
  */
 
 test.describe.skip('Schema-Driven Configuration', () => {

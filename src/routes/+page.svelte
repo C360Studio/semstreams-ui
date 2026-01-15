@@ -87,21 +87,21 @@
 	.page-header h1 {
 		font-size: 2rem;
 		margin: 0 0 0.5rem 0;
-		color: var(--heading-color, #212529);
+		color: var(--ui-text-primary);
 	}
 
 	.page-header p {
 		margin: 0;
-		color: var(--text-muted, #6c757d);
+		color: var(--ui-text-secondary);
 		font-size: 1.125rem;
 	}
 
 	.connectivity-banner {
 		padding: 1.5rem;
 		margin-bottom: 1.5rem;
-		background: var(--warning-bg, #fff3cd);
-		color: var(--warning-text, #856404);
-		border: 2px solid var(--warning-border, #ffc107);
+		background: var(--status-warning-container);
+		color: var(--status-warning-on-container);
+		border: 2px solid var(--status-warning);
 		border-radius: 6px;
 	}
 
@@ -117,16 +117,16 @@
 
 	.connectivity-banner .help-text {
 		font-size: 0.875rem;
-		color: var(--warning-text-muted, #6c5a1a);
+		opacity: 0.8;
 		margin-top: 1rem;
 	}
 
 	.error-banner {
 		padding: 1rem;
 		margin-bottom: 1.5rem;
-		background: var(--error-bg, #f8d7da);
-		color: var(--error-text, #721c24);
-		border: 1px solid var(--error-border, #f5c6cb);
+		background: var(--status-error-container);
+		color: var(--status-error-on-container);
+		border: 1px solid var(--status-error);
 		border-radius: 4px;
 	}
 
