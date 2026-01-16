@@ -11,7 +11,7 @@
 	import type { FlowNode } from '$lib/types/flow';
 	import type { ComponentType, PropertySchema } from '$lib/types/component';
 	import type { PropertiesPanelMode } from '$lib/types/ui-state';
-	import { getDomainColor } from '$lib/utils/domain-colors';
+	import { getTypeColor } from '$lib/utils/category-colors';
 	import PortsEditor from './PortsEditor.svelte';
 
 	interface PropertiesPanelProps {
@@ -169,11 +169,11 @@
 
 	{:else if mode === 'type-preview' && componentType}
 		<!-- Type Preview -->
-		{@const domainColor = getDomainColor(componentType.category || 'other')}
+		{@const categoryColor = getTypeColor(componentType.type)}
 		<div class="type-preview" data-testid="properties-type-preview">
-			<header class="preview-header" style="border-left-color: {domainColor};">
+			<header class="preview-header" style="border-left-color: {categoryColor};">
 				<h3>{componentType.name}</h3>
-				<span class="preview-category">{componentType.category}</span>
+				<span class="preview-category">{componentType.type}</span>
 			</header>
 
 			<div class="preview-content">
@@ -232,15 +232,15 @@
 
 	{:else if mode === 'edit' && node}
 		<!-- Edit Mode -->
-		{@const domainColor = getDomainColor(nodeComponentType?.category || 'other')}
+		{@const categoryColor = getTypeColor(node.type)}
 		<div class="edit-panel" data-testid="properties-edit">
-			<header class="edit-header" style="border-left-color: {domainColor};">
+			<header class="edit-header" style="border-left-color: {categoryColor};">
 				<div class="header-top">
 					<h3>{node.name}</h3>
 					<div class="header-badges">
-						{#if nodeComponentType?.category}
-							<span class="badge badge-{nodeComponentType.category}">
-								{nodeComponentType.category}
+						{#if node.type}
+							<span class="badge badge-{node.type}">
+								{node.type}
 							</span>
 						{/if}
 						{#if nodeComponentType?.domain}
@@ -248,7 +248,7 @@
 						{/if}
 					</div>
 				</div>
-				<span class="edit-type">{nodeComponentType?.name || node.type}</span>
+				<span class="edit-type">{nodeComponentType?.name || node.component}</span>
 				{#if nodeComponentType?.description}
 					<p class="component-description">{nodeComponentType.description}</p>
 				{/if}

@@ -220,7 +220,7 @@
 					<!-- Component Type (Read-only) -->
 					<div class="form-group">
 						<span class="form-label">Component Type</span>
-						<div class="component-type-readonly">Type: {node.type}</div>
+						<div class="component-type-readonly">Type: {node.component}</div>
 					</div>
 
 					<!-- Config Fields (dynamic based on component type) -->

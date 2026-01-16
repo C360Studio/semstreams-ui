@@ -32,7 +32,7 @@ test.describe('Deploy Blocking', () => {
 					errors: [
 						{
 							severity: 'error',
-							component_id: 'robotics-1',
+							component: 'robotics-1',
 							message: 'Required input port has no connection',
 							port_name: 'nats_input',
 							suggestion: 'Connect a NATS publisher to this port'
@@ -96,14 +96,14 @@ test.describe('Deploy Blocking', () => {
 					errors: [
 						{
 							severity: 'error',
-							component_id: 'robotics-1',
+							component: 'robotics-1',
 							message: 'Required input port has no connection',
 							port_name: 'nats_input',
 							suggestion: 'Connect a NATS publisher to this port'
 						},
 						{
 							severity: 'error',
-							component_id: 'robotics-1',
+							component: 'robotics-1',
 							message: 'Required output port has no connection',
 							port_name: 'entities_output',
 							suggestion: 'Connect to graph processor'

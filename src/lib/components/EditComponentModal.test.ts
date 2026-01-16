@@ -36,7 +36,8 @@ describe("EditComponentModal", () => {
 
   const mockNode: FlowNode = {
     id: "node_123_abc",
-    type: "udp-input",
+    component: "udp-input",
+    type: "input",
     name: "udp-input-1",
     position: { x: 100, y: 100 },
     config: {
@@ -1094,7 +1095,8 @@ describe("EditComponentModal", () => {
     it("should handle node without config", () => {
       const nodeWithoutConfig: FlowNode = {
         id: "node_simple",
-        type: "simple-component",
+        component: "simple-component",
+        type: "processor",
         name: "simple-1",
         position: { x: 0, y: 0 },
         config: {},
@@ -1221,7 +1223,8 @@ describe("EditComponentModal", () => {
     it("should preserve other config fields when editing", async () => {
       const nodeWithManyFields: FlowNode = {
         id: "node_complex",
-        type: "udp-input",
+        component: "udp-input",
+        type: "input",
         name: "complex-1",
         position: { x: 0, y: 0 },
         config: {

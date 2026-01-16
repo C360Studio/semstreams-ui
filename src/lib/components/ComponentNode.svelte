@@ -21,7 +21,7 @@
 		}
 	}
 
-	const displayName = $derived(component.type || component.id);
+	const displayName = $derived(component.component || component.id);
 </script>
 
 <div

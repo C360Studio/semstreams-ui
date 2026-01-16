@@ -2,7 +2,7 @@
 	import { SvelteMap } from "svelte/reactivity";
 	import { onMount } from 'svelte';
 	import type { ComponentType } from '$lib/types/component';
-	import { getDomainColor } from '$lib/utils/domain-colors';
+	import { getTypeColor } from '$lib/utils/category-colors';
 	import { isConnectivityError } from '$lib/services/healthCheck';
 
 	interface ComponentPaletteProps {
@@ -101,7 +101,7 @@
 					<div class="category-header">{category}</div>
 					<div class="component-list">
 						{#each categoryComponents as component (component.id)}
-							{@const domainColor = getDomainColor(component.category || category)}
+							{@const categoryColor = getTypeColor(component.type)}
 							<div
 								class="component-card"
 								data-component-id={component.id}
@@ -113,7 +113,7 @@
 								role="button"
 								tabindex="0"
 								aria-label={`${component.name}: ${component.description}. Drag to canvas, double-click, or press Enter to add.`}
-								style="border-left: var(--palette-domain-stripe-width) solid {domainColor};"
+								style="border-left: var(--palette-domain-stripe-width) solid {categoryColor};"
 							>
 								<div class="component-name">{component.name}</div>
 								<div class="component-description">{component.description}</div>

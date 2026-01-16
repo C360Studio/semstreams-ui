@@ -28,14 +28,16 @@ describe("FlowCanvas", () => {
   const mockNodes: FlowNode[] = [
     {
       id: "node-1",
-      type: "udp-input",
+      component: "udp-input",
+      type: "input",
       name: "UDP Input",
       position: { x: 0, y: 0 },
       config: { port: 5000 },
     },
     {
       id: "node-2",
-      type: "json-transform",
+      component: "json-transform",
+      type: "processor",
       name: "JSON Transform",
       position: { x: 0, y: 0 },
       config: {},
@@ -719,6 +721,7 @@ describe("FlowCanvas", () => {
       const branchingNodes: FlowNode[] = [
         {
           id: "source",
+          component: "input",
           type: "input",
           name: "Source",
           position: { x: 0, y: 0 },
@@ -726,14 +729,16 @@ describe("FlowCanvas", () => {
         },
         {
           id: "branch-1",
-          type: "transform",
+          component: "transform",
+          type: "processor",
           name: "Branch 1",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "branch-2",
-          type: "transform",
+          component: "transform",
+          type: "processor",
           name: "Branch 2",
           position: { x: 0, y: 0 },
           config: {},
@@ -774,7 +779,8 @@ describe("FlowCanvas", () => {
     test("handles large flow with many nodes", () => {
       const manyNodes: FlowNode[] = Array.from({ length: 20 }, (_, i) => ({
         id: `node-${i}`,
-        type: "test",
+        component: "test",
+        type: "processor",
         name: `Node ${i}`,
         position: { x: 0, y: 0 },
         config: {},

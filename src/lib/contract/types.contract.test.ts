@@ -76,12 +76,12 @@ describe.skipIf(!existsSync(GENERATED_TYPES_PATH))('TypeScript Type Generation C
 		}
 	});
 
-	it('should export operations for component management', () => {
+	it('should export operations for flow management', () => {
 		const content = loadGeneratedTypes();
 		expect(content).not.toBeNull();
 		if (content) {
-			// Check for component-related paths
-			expect(content).toContain('/components/types');
+			// Check for flow-related paths
+			expect(content).toContain('/flows');
 		}
 	});
 });

@@ -6,7 +6,8 @@ import type { ComponentInstance } from '$lib/types/flow';
 describe('ComponentNode', () => {
 	const createMockComponent = (overrides?: Partial<ComponentInstance>): ComponentInstance => ({
 		id: 'comp-1',
-		type: 'udp-input',
+		component: 'udp-input',
+		type: 'input',
 		name: 'UDP Input 1',
 		position: { x: 100, y: 100 },
 		config: { port: 14550 },
@@ -27,7 +28,7 @@ describe('ComponentNode', () => {
 	});
 
 	it('should render component type', () => {
-		const component = createMockComponent({ type: 'websocket-output' });
+		const component = createMockComponent({ component: 'websocket-output', type: 'output' });
 
 		render(ComponentNode, { props: { component } });
 
@@ -127,7 +128,7 @@ describe('ComponentNode', () => {
 	});
 
 	it('should render component ID when no type provided', () => {
-		const component = createMockComponent({ type: '' });
+		const component = createMockComponent({ component: '' });
 
 		render(ComponentNode, { props: { component } });
 

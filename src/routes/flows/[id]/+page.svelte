@@ -54,7 +54,7 @@
 	const selectedNodeComponentType = $derived.by(() => {
 		const selected = selectedComponent;
 		if (!selected) return null;
-		return componentTypes.find((ct) => ct.id === selected.type) ?? null;
+		return componentTypes.find((ct) => ct.id === selected.component) ?? null;
 	});
 
 	// Note: Add/Edit modals replaced by ExplorerPanel and PropertiesPanel
@@ -462,7 +462,8 @@
 
 		const flowNode: FlowNode = {
 			id: nodeId,
-			type: componentType.id,
+			component: componentType.id,
+			type: componentType.type,
 			name: `${sanitizedId}-${timestamp}`,
 			position: {
 				x: 400 + (flowNodes.length % 3) * 200,
@@ -935,7 +936,6 @@
 					activeTab={explorerTab}
 					hoveredType={hoveredComponentType}
 					onSelectNode={handleSelectNode}
-					onDeleteNode={handleDeleteNode}
 					onAddComponent={handleAddComponentFromPalette}
 					onHoverType={handleHoverType}
 					onTabChange={handleExplorerTabChange}

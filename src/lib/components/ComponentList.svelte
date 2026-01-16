@@ -6,8 +6,6 @@
 		nodes: FlowNode[];
 		selectedNodeId?: string | null;
 		onSelectNode?: (nodeId: string) => void;
-		onEditNode?: (nodeId: string) => void;
-		onDeleteNode?: (nodeId: string) => void;
 		onAddComponent?: () => void;
 	}
 
@@ -15,8 +13,6 @@
 		nodes,
 		selectedNodeId = null,
 		onSelectNode,
-		onEditNode,
-		onDeleteNode,
 		onAddComponent
 	}: ComponentListProps = $props();
 
@@ -32,7 +28,7 @@
 		const query = searchQuery.toLowerCase().trim();
 		return nodes.filter(
 			(node) =>
-				node.name.toLowerCase().includes(query) || node.type.toLowerCase().includes(query)
+				node.name.toLowerCase().includes(query) || node.component.toLowerCase().includes(query)
 		);
 	});
 
@@ -44,16 +40,6 @@
 	// Handle node selection
 	function handleSelectNode(nodeId: string) {
 		onSelectNode?.(nodeId);
-	}
-
-	// Handle node edit
-	function handleEditNode(nodeId: string) {
-		onEditNode?.(nodeId);
-	}
-
-	// Handle node delete
-	function handleDeleteNode(nodeId: string) {
-		onDeleteNode?.(nodeId);
 	}
 </script>
 
@@ -101,8 +87,6 @@
 							{node}
 							selected={node.id === selectedNodeId}
 							onSelect={() => handleSelectNode(node.id)}
-							onEdit={() => handleEditNode(node.id)}
-							onDelete={() => handleDeleteNode(node.id)}
 						/>
 					</li>
 				{/each}

@@ -11,7 +11,8 @@ globalThis.fetch = mockFetch;
 describe('ConfigPanel (Prop-Based Architecture)', () => {
 	const mockComponent: ComponentInstance = {
 		id: 'node-1',
-		type: 'udp-input',
+		component: 'udp-input',
+		type: 'input',
 		name: 'UDP Input 1',
 		position: { x: 100, y: 100 },
 		config: {
@@ -284,7 +285,8 @@ describe('ConfigPanel (Prop-Based Architecture)', () => {
 
 			const newComponent: ComponentInstance = {
 				id: 'node-2',
-				type: 'websocket-output',
+				component: 'websocket-output',
+				type: 'output',
 				name: 'WebSocket Output 1',
 				position: { x: 200, y: 200 },
 				config: { port: 8080 },
@@ -427,7 +429,8 @@ describe('ConfigPanel (Prop-Based Architecture)', () => {
 			// Switch to different component type
 			const otherComponent: ComponentInstance = {
 				id: 'node-2',
-				type: 'websocket-output',
+				component: 'websocket-output',
+				type: 'output',
 				name: 'WebSocket Output',
 				position: { x: 200, y: 200 },
 				config: {},
@@ -549,7 +552,8 @@ describe('ConfigPanel (Prop-Based Architecture)', () => {
 			// Switch to different component
 			const otherComponent: ComponentInstance = {
 				id: 'node-2',
-				type: 'websocket-output',
+				component: 'websocket-output',
+				type: 'output',
 				name: 'WebSocket Output',
 				position: { x: 200, y: 200 },
 				config: { port: 3000 },

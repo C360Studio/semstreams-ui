@@ -6,7 +6,8 @@ import type { FlowNode } from "$lib/types/flow";
 describe("ComponentCard", () => {
   const createMockNode = (overrides?: Partial<FlowNode>): FlowNode => ({
     id: "node-1",
-    type: "udp-input",
+    component: "udp-input",
+    type: "input",
     name: "UDP Input",
     position: { x: 100, y: 100 },
     config: { port: 14550 },
@@ -23,7 +24,7 @@ describe("ComponentCard", () => {
     });
 
     it("should render node type", () => {
-      const node = createMockNode({ type: "websocket-output" });
+      const node = createMockNode({ component: "websocket-output", type: "output" });
 
       render(ComponentCard, { props: { node } });
 
@@ -33,7 +34,8 @@ describe("ComponentCard", () => {
     it("should render both name and type", () => {
       const node = createMockNode({
         name: "My Component",
-        type: "json-transform",
+        component: "json-transform",
+        type: "processor",
       });
 
       render(ComponentCard, { props: { node } });
@@ -43,7 +45,7 @@ describe("ComponentCard", () => {
     });
 
     it("should apply domain color accent from type", () => {
-      const node = createMockNode({ type: "udp-input" });
+      const node = createMockNode({ component: "udp-input", type: "input" });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -54,18 +56,18 @@ describe("ComponentCard", () => {
 
     it("should render with different node types", () => {
       const nodeTypes = [
-        "udp-input",
-        "websocket-output",
-        "json-transform",
-        "storage-writer",
+        { component: "udp-input", type: "input" as const },
+        { component: "websocket-output", type: "output" as const },
+        { component: "json-transform", type: "processor" as const },
+        { component: "storage-writer", type: "storage" as const },
       ];
 
-      nodeTypes.forEach((type) => {
-        const node = createMockNode({ type, name: `${type}-instance` });
+      nodeTypes.forEach(({ component, type }) => {
+        const node = createMockNode({ component, type, name: `${component}-instance` });
         const { container } = render(ComponentCard, { props: { node } });
 
-        expect(screen.getByText(`${type}-instance`)).toBeInTheDocument();
-        expect(screen.getByText(`Type: ${type}`)).toBeInTheDocument();
+        expect(screen.getByText(`${component}-instance`)).toBeInTheDocument();
+        expect(screen.getByText(`Type: ${component}`)).toBeInTheDocument();
 
         container.remove();
       });
@@ -80,18 +82,6 @@ describe("ComponentCard", () => {
       expect(screen.getByText("Type: udp-input")).toBeInTheDocument();
     });
 
-    it("should display action buttons", () => {
-      const node = createMockNode();
-
-      render(ComponentCard, { props: { node } });
-
-      // Edit and Delete buttons should be present
-      const editButton = screen.getByRole("button", { name: /edit/i });
-      const deleteButton = screen.getByRole("button", { name: /delete/i });
-
-      expect(editButton).toBeInTheDocument();
-      expect(deleteButton).toBeInTheDocument();
-    });
   });
 
   describe("selection", () => {
@@ -141,26 +131,6 @@ describe("ComponentCard", () => {
       }
     });
 
-    it("should not call onSelect when action buttons are clicked", async () => {
-      const node = createMockNode();
-      const onSelect = vi.fn();
-      const onEdit = vi.fn();
-      const onDelete = vi.fn();
-
-      render(ComponentCard, {
-        props: { node, onSelect, onEdit, onDelete },
-      });
-
-      const editButton = screen.getByRole("button", { name: /edit/i });
-      const deleteButton = screen.getByRole("button", { name: /delete/i });
-
-      await fireEvent.click(editButton);
-      await fireEvent.click(deleteButton);
-
-      // onSelect should not be called when clicking action buttons
-      expect(onSelect).not.toHaveBeenCalled();
-    });
-
     it("should handle multiple selection state changes", async () => {
       const node = createMockNode();
 
@@ -183,53 +153,7 @@ describe("ComponentCard", () => {
     });
   });
 
-  describe("actions", () => {
-    it("should call onEdit when edit button is clicked", async () => {
-      const node = createMockNode();
-      const onEdit = vi.fn();
-
-      render(ComponentCard, { props: { node, onEdit } });
-
-      const editButton = screen.getByRole("button", { name: /edit/i });
-      await fireEvent.click(editButton);
-
-      expect(onEdit).toHaveBeenCalledTimes(1);
-    });
-
-    it("should call onDelete when delete button is clicked", async () => {
-      const node = createMockNode();
-      const onDelete = vi.fn();
-
-      render(ComponentCard, { props: { node, onDelete } });
-
-      const deleteButton = screen.getByRole("button", { name: /delete/i });
-      await fireEvent.click(deleteButton);
-
-      expect(onDelete).toHaveBeenCalledTimes(1);
-    });
-
-    it("should not error if onEdit callback is not provided", async () => {
-      const node = createMockNode();
-
-      render(ComponentCard, { props: { node } });
-
-      const editButton = screen.getByRole("button", { name: /edit/i });
-
-      // Should not throw error
-      await expect(fireEvent.click(editButton)).resolves.not.toThrow();
-    });
-
-    it("should not error if onDelete callback is not provided", async () => {
-      const node = createMockNode();
-
-      render(ComponentCard, { props: { node } });
-
-      const deleteButton = screen.getByRole("button", { name: /delete/i });
-
-      // Should not throw error
-      await expect(fireEvent.click(deleteButton)).resolves.not.toThrow();
-    });
-
+  describe("callbacks", () => {
     it("should not error if onSelect callback is not provided", async () => {
       const node = createMockNode();
 
@@ -242,31 +166,6 @@ describe("ComponentCard", () => {
         await expect(fireEvent.click(card)).resolves.not.toThrow();
       }
     });
-
-    it("should call all callbacks independently", async () => {
-      const node = createMockNode();
-      const onSelect = vi.fn();
-      const onEdit = vi.fn();
-      const onDelete = vi.fn();
-
-      render(ComponentCard, {
-        props: { node, onSelect, onEdit, onDelete },
-      });
-
-      const card = screen.getByText("UDP Input").closest(".component-card");
-      const editButton = screen.getByRole("button", { name: /edit/i });
-      const deleteButton = screen.getByRole("button", { name: /delete/i });
-
-      if (card) {
-        await fireEvent.click(card);
-      }
-      await fireEvent.click(editButton);
-      await fireEvent.click(deleteButton);
-
-      expect(onSelect).toHaveBeenCalledTimes(1);
-      expect(onEdit).toHaveBeenCalledTimes(1);
-      expect(onDelete).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe("accessibility", () => {
@@ -277,28 +176,6 @@ describe("ComponentCard", () => {
 
       const card = screen.getByRole("button", { name: "UDP Input" });
       expect(card).toBeInTheDocument();
-    });
-
-    it("should have aria-label for edit button", () => {
-      const node = createMockNode();
-
-      render(ComponentCard, { props: { node } });
-
-      const editButton = screen.getByRole("button", {
-        name: /edit UDP Input/i,
-      });
-      expect(editButton).toBeInTheDocument();
-    });
-
-    it("should have aria-label for delete button", () => {
-      const node = createMockNode();
-
-      render(ComponentCard, { props: { node } });
-
-      const deleteButton = screen.getByRole("button", {
-        name: /delete UDP Input/i,
-      });
-      expect(deleteButton).toBeInTheDocument();
     });
 
     it("should have aria-pressed attribute when selected", () => {
@@ -358,7 +235,8 @@ describe("ComponentCard", () => {
     it("should have descriptive text for screen readers", () => {
       const node = createMockNode({
         name: "Main UDP Receiver",
-        type: "udp-input",
+        component: "udp-input",
+        type: "input",
       });
 
       render(ComponentCard, { props: { node } });
@@ -371,7 +249,7 @@ describe("ComponentCard", () => {
 
   describe("domain colors", () => {
     it("should apply robotics domain color for MAVLink components", () => {
-      const node = createMockNode({ type: "mavlink-decoder" });
+      const node = createMockNode({ component: "mavlink-decoder", type: "processor" });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -381,7 +259,7 @@ describe("ComponentCard", () => {
     });
 
     it("should apply network domain color for I/O components", () => {
-      const node = createMockNode({ type: "udp-input" });
+      const node = createMockNode({ component: "udp-input", type: "input" });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -390,7 +268,7 @@ describe("ComponentCard", () => {
     });
 
     it("should apply semantic domain color for processing components", () => {
-      const node = createMockNode({ type: "json-transform" });
+      const node = createMockNode({ component: "json-transform", type: "processor" });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -399,7 +277,7 @@ describe("ComponentCard", () => {
     });
 
     it("should apply storage domain color for storage components", () => {
-      const node = createMockNode({ type: "storage-writer" });
+      const node = createMockNode({ component: "storage-writer", type: "storage" });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -408,7 +286,7 @@ describe("ComponentCard", () => {
     });
 
     it("should use fallback color for unknown component types", () => {
-      const node = createMockNode({ type: "unknown-component" });
+      const node = createMockNode({ component: "unknown-component", type: "processor" });
 
       const { container } = render(ComponentCard, { props: { node } });
 

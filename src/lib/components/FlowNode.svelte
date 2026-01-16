@@ -10,7 +10,7 @@
 
 	import type { LayoutNode } from '$lib/utils/d3-layout';
 	import type { ValidatedPort } from '$lib/types/port';
-	import { getDomainColor } from '$lib/utils/domain-colors';
+	import { getTypeColor } from '$lib/utils/category-colors';
 	import { computePortVisualStyle } from '$lib/utils/port-utils';
 
 	interface FlowNodeProps {
@@ -29,8 +29,8 @@
 		onclick
 	}: FlowNodeProps = $props();
 
-	// Domain color for accent
-	const domainColor = $derived(getDomainColor(node.type || 'network'));
+	// Category color from backend
+	const categoryColor = $derived(getTypeColor(node.original?.type));
 
 	// Port spacing
 	const portSpacing = 20;
@@ -72,7 +72,7 @@
 	class="flow-node"
 	class:selected
 	data-node-id={node.id}
-	data-node-type={node.type}
+	data-node-type={node.component}
 	transform="translate({node.x}, {node.y})"
 	onclick={handleClick}
 	onkeydown={handleKeydown}
@@ -100,7 +100,7 @@
 		height={node.height}
 		rx="8"
 		ry="0"
-		fill={domainColor}
+		fill={categoryColor}
 	/>
 	<!-- Cover the right side of accent border-radius -->
 	<rect
@@ -109,7 +109,7 @@
 		y="0"
 		width="4"
 		height={node.height}
-		fill={domainColor}
+		fill={categoryColor}
 	/>
 
 	<!-- Node label -->
@@ -119,7 +119,7 @@
 
 	<!-- Node type -->
 	<text class="node-type" x={accentWidth + 12} y="42">
-		{node.type}
+		{node.component}
 	</text>
 
 	<!-- Port summary -->

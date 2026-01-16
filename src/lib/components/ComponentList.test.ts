@@ -7,9 +7,11 @@ describe("ComponentList", () => {
   const createMockNode = (
     id: string,
     name: string,
-    type: string,
+    component: string,
+    type: string = "processor",
   ): FlowNode => ({
     id,
+    component,
     type,
     name,
     position: { x: 100, y: 100 },
@@ -17,10 +19,10 @@ describe("ComponentList", () => {
   });
 
   const mockNodes: FlowNode[] = [
-    createMockNode("node-1", "UDP Input 1", "udp-input"),
-    createMockNode("node-2", "JSON Transform", "json-transform"),
-    createMockNode("node-3", "WebSocket Output", "websocket-output"),
-    createMockNode("node-4", "UDP Input 2", "udp-input"),
+    createMockNode("node-1", "UDP Input 1", "udp-input", "input"),
+    createMockNode("node-2", "JSON Transform", "json-transform", "processor"),
+    createMockNode("node-3", "WebSocket Output", "websocket-output", "output"),
+    createMockNode("node-4", "UDP Input 2", "udp-input", "input"),
   ];
 
   describe("rendering", () => {
@@ -39,7 +41,7 @@ describe("ComponentList", () => {
     });
 
     it("should render single node", () => {
-      const nodes = [createMockNode("node-1", "UDP Input", "udp-input")];
+      const nodes = [createMockNode("node-1", "UDP Input", "udp-input", "input")];
 
       render(ComponentList, { props: { nodes } });
 
@@ -80,10 +82,10 @@ describe("ComponentList", () => {
 
     it("should render all node types correctly", () => {
       const diverseNodes = [
-        createMockNode("n1", "UDP In", "udp-input"),
-        createMockNode("n2", "WS Out", "websocket-output"),
-        createMockNode("n3", "Transform", "json-transform"),
-        createMockNode("n4", "Storage", "storage-writer"),
+        createMockNode("n1", "UDP In", "udp-input", "input"),
+        createMockNode("n2", "WS Out", "websocket-output", "output"),
+        createMockNode("n3", "Transform", "json-transform", "processor"),
+        createMockNode("n4", "Storage", "storage-writer", "storage"),
       ];
 
       render(ComponentList, { props: { nodes: diverseNodes } });
@@ -296,32 +298,6 @@ describe("ComponentList", () => {
       expect(onAddComponent).toHaveBeenCalledTimes(1);
     });
 
-    it("should call onEditNode when edit button is clicked", async () => {
-      const onEditNode = vi.fn();
-
-      render(ComponentList, {
-        props: { nodes: mockNodes, onEditNode },
-      });
-
-      const editButtons = screen.getAllByRole("button", { name: /edit/i });
-      await fireEvent.click(editButtons[0]);
-
-      expect(onEditNode).toHaveBeenCalledWith("node-1");
-    });
-
-    it("should call onDeleteNode when delete button is clicked", async () => {
-      const onDeleteNode = vi.fn();
-
-      render(ComponentList, {
-        props: { nodes: mockNodes, onDeleteNode },
-      });
-
-      const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-      await fireEvent.click(deleteButtons[0]);
-
-      expect(onDeleteNode).toHaveBeenCalledWith("node-1");
-    });
-
     it("should show Add button in empty state", () => {
       render(ComponentList, { props: { nodes: [] } });
 
@@ -343,33 +319,6 @@ describe("ComponentList", () => {
       await expect(fireEvent.click(addButton)).resolves.not.toThrow();
     });
 
-    it("should handle edit action for specific node", async () => {
-      const onEditNode = vi.fn();
-
-      render(ComponentList, {
-        props: { nodes: mockNodes, onEditNode },
-      });
-
-      // Click edit on second node
-      const editButtons = screen.getAllByRole("button", { name: /edit/i });
-      await fireEvent.click(editButtons[1]);
-
-      expect(onEditNode).toHaveBeenCalledWith("node-2");
-    });
-
-    it("should handle delete action for specific node", async () => {
-      const onDeleteNode = vi.fn();
-
-      render(ComponentList, {
-        props: { nodes: mockNodes, onDeleteNode },
-      });
-
-      // Click delete on third node
-      const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-      await fireEvent.click(deleteButtons[2]);
-
-      expect(onDeleteNode).toHaveBeenCalledWith("node-3");
-    });
   });
 
   describe("accessibility", () => {
@@ -409,9 +358,7 @@ describe("ComponentList", () => {
       const componentCards = cards.filter(
         (card) =>
           card.getAttribute("aria-label") &&
-          !card.textContent?.toLowerCase().includes("add") &&
-          !card.textContent?.includes("⚙️") &&
-          !card.textContent?.includes("🗑️"),
+          !card.textContent?.toLowerCase().includes("add"),
       );
 
       // All component cards should be keyboard accessible with tabindex
@@ -442,20 +389,6 @@ describe("ComponentList", () => {
       ).toBeInTheDocument();
     });
 
-    it("should have descriptive labels for action buttons", () => {
-      render(ComponentList, { props: { nodes: [mockNodes[0]] } });
-
-      const editButton = screen.getByRole("button", {
-        name: /edit UDP Input 1/i,
-      });
-      const deleteButton = screen.getByRole("button", {
-        name: /delete UDP Input 1/i,
-      });
-
-      expect(editButton).toBeInTheDocument();
-      expect(deleteButton).toBeInTheDocument();
-    });
-
     it("should indicate selected state to screen readers", () => {
       render(ComponentList, {
         props: { nodes: mockNodes, selectedNodeId: "node-1" },
@@ -474,7 +407,7 @@ describe("ComponentList", () => {
     });
 
     it("should handle single node", () => {
-      const nodes = [createMockNode("node-1", "Single Node", "udp-input")];
+      const nodes = [createMockNode("node-1", "Single Node", "udp-input", "input")];
 
       render(ComponentList, { props: { nodes } });
 
@@ -483,7 +416,7 @@ describe("ComponentList", () => {
 
     it("should handle many nodes", () => {
       const manyNodes = Array.from({ length: 50 }, (_, i) =>
-        createMockNode(`node-${i}`, `Component ${i}`, "udp-input"),
+        createMockNode(`node-${i}`, `Component ${i}`, "udp-input", "input"),
       );
 
       render(ComponentList, { props: { nodes: manyNodes } });
@@ -495,9 +428,9 @@ describe("ComponentList", () => {
 
     it("should handle nodes with duplicate names", () => {
       const duplicateNodes = [
-        createMockNode("node-1", "UDP Input", "udp-input"),
-        createMockNode("node-2", "UDP Input", "udp-input"),
-        createMockNode("node-3", "UDP Input", "udp-input"),
+        createMockNode("node-1", "UDP Input", "udp-input", "input"),
+        createMockNode("node-2", "UDP Input", "udp-input", "input"),
+        createMockNode("node-3", "UDP Input", "udp-input", "input"),
       ];
 
       render(ComponentList, { props: { nodes: duplicateNodes } });
@@ -522,9 +455,9 @@ describe("ComponentList", () => {
 
     it("should handle special characters in search", async () => {
       const specialNodes = [
-        createMockNode("n1", "Component-123", "udp-input"),
-        createMockNode("n2", "Component@456", "websocket-output"),
-        createMockNode("n3", "Component#789", "json-transform"),
+        createMockNode("n1", "Component-123", "udp-input", "input"),
+        createMockNode("n2", "Component@456", "websocket-output", "output"),
+        createMockNode("n3", "Component#789", "json-transform", "processor"),
       ];
 
       render(ComponentList, { props: { nodes: specialNodes } });
@@ -582,26 +515,6 @@ describe("ComponentList", () => {
       expect(screen.getByText("UDP Input 2")).toBeInTheDocument();
     });
 
-    it("should handle node deletion gracefully", async () => {
-      const onDeleteNode = vi.fn();
-
-      const { rerender } = render(ComponentList, {
-        props: { nodes: mockNodes, onDeleteNode },
-      });
-
-      // Delete first node
-      const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-      await fireEvent.click(deleteButtons[0]);
-
-      expect(onDeleteNode).toHaveBeenCalledWith("node-1");
-
-      // Simulate node removal
-      await rerender({ nodes: mockNodes.slice(1), onDeleteNode });
-
-      expect(screen.queryByText("UDP Input 1")).not.toBeInTheDocument();
-      expect(screen.getByText("JSON Transform")).toBeInTheDocument();
-    });
-
     it("should handle selecting non-existent node", () => {
       render(ComponentList, {
         props: { nodes: mockNodes, selectedNodeId: "non-existent-id" },
@@ -648,7 +561,7 @@ describe("ComponentList", () => {
 
     it("should apply scrollable container for many items", () => {
       const manyNodes = Array.from({ length: 20 }, (_, i) =>
-        createMockNode(`node-${i}`, `Component ${i}`, "udp-input"),
+        createMockNode(`node-${i}`, `Component ${i}`, "udp-input", "input"),
       );
 
       const { container } = render(ComponentList, {

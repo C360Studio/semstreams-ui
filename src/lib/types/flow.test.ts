@@ -101,7 +101,8 @@ describe('Flow Type Definitions', () => {
     it('should match backend schema', () => {
       const component: ComponentInstance = {
         id: 'comp-1',
-        type: 'udp-input',
+        component: 'udp-input',
+        type: 'input',
         name: 'UDP Input 1',
         position: { x: 100, y: 200 },
         config: { port: 14550, host: '0.0.0.0' },
@@ -112,7 +113,7 @@ describe('Flow Type Definitions', () => {
       };
 
       expect(component.id).toBe('comp-1');
-      expect(component.type).toBe('udp-input');
+      expect(component.component).toBe('udp-input');
       expect(component.name).toBe('UDP Input 1');
       expect(component.position.x).toBe(100);
       expect(component.position.y).toBe(200);

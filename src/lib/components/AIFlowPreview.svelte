@@ -176,7 +176,7 @@
 										<li>
 											<div>
 												<strong class="node-name">{node.name}</strong>
-												<span class="node-type"> ({node.type})</span>
+												<span class="node-type"> ({node.component})</span>
 											</div>
 											{#if Object.keys(node.config || {}).length > 0}
 												<div class="node-config">

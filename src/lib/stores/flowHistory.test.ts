@@ -66,7 +66,8 @@ interface FlowHistoryStore {
 function createTestFlow(id: string, name: string, nodeCount = 0): Flow {
   const nodes = Array.from({ length: nodeCount }, (_, i) => ({
     id: `node-${i + 1}`,
-    type: "test-component",
+    component: "test-component",
+    type: "processor",
     name: `Node ${i + 1}`,
     position: { x: 100 * (i + 1), y: 100 },
     config: {},

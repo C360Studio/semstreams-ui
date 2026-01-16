@@ -24,14 +24,16 @@ describe("aiApi", () => {
     nodes: [
       {
         id: "node-1",
-        type: "udp-input",
+        component: "udp-input",
+        type: "input",
         name: "UDP Input",
         position: { x: 100, y: 100 },
         config: { port: 5000 },
       },
       {
         id: "node-2",
-        type: "json-transform",
+        component: "json-transform",
+        type: "processor",
         name: "JSON Transform",
         position: { x: 300, y: 100 },
         config: {},
@@ -986,7 +988,8 @@ describe("aiApi", () => {
         ...createMockFlow(),
         nodes: Array.from({ length: 1000 }, (_, i) => ({
           id: `node-${i}`,
-          type: "test-component",
+          component: "test-component",
+          type: "processor",
           name: `Component ${i}`,
           position: { x: i * 100, y: i * 100 },
           config: {},

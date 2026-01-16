@@ -15,7 +15,7 @@
 	import type { ComponentType } from '$lib/types/component';
 	import type { ExplorerTab } from '$lib/types/ui-state';
 	import ComponentCard from './ComponentCard.svelte';
-	import { getDomainColor } from '$lib/utils/domain-colors';
+	import { getTypeColor } from '$lib/utils/category-colors';
 	import { isConnectivityError } from '$lib/services/healthCheck';
 
 	interface ExplorerPanelProps {
@@ -29,8 +29,6 @@
 		hoveredType?: ComponentType | null;
 		/** Callback when node is selected */
 		onSelectNode?: (nodeId: string) => void;
-		/** Callback when node should be deleted */
-		onDeleteNode?: (nodeId: string) => void;
 		/** Callback when component type is clicked (add to flow) */
 		onAddComponent?: (type: ComponentType) => void;
 		/** Callback when hovering over a component type */
@@ -47,7 +45,6 @@
 		activeTab = 'components',
 		hoveredType = null,
 		onSelectNode,
-		onDeleteNode,
 		onAddComponent,
 		onHoverType,
 		onTabChange,
@@ -100,7 +97,7 @@
 		const query = searchQuery.toLowerCase().trim();
 		return nodes.filter(
 			(node) =>
-				node.name.toLowerCase().includes(query) || node.type.toLowerCase().includes(query)
+				node.name.toLowerCase().includes(query) || node.component.toLowerCase().includes(query)
 		);
 	});
 
@@ -243,7 +240,6 @@
 									{node}
 									selected={node.id === selectedNodeId}
 									onSelect={() => onSelectNode?.(node.id)}
-									onDelete={() => onDeleteNode?.(node.id)}
 								/>
 							</li>
 						{/each}
@@ -279,7 +275,7 @@
 							<div class="category-header">{category}</div>
 							<div class="type-list">
 								{#each types as type (type.id)}
-									{@const domainColor = getDomainColor(type.category || category)}
+									{@const categoryColor = getTypeColor(type.type)}
 									<div
 										class="type-card"
 										class:hovered={hoveredType?.id === type.id}
@@ -291,7 +287,7 @@
 										onmouseenter={() => handleTypeMouseEnter(type)}
 										onmouseleave={handleTypeMouseLeave}
 										onkeydown={(e) => handleTypeKeyDown(e, type)}
-										style="border-left-color: {domainColor};"
+										style="border-left-color: {categoryColor};"
 										data-testid="type-card-{type.id}"
 									>
 										<div class="type-name">{type.name}</div>

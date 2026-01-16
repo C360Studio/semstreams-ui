@@ -51,7 +51,7 @@
 
 			currentComponentId = component.id;
 			previousComponentId = currentComponentId;
-			loadSchemaForComponent(component.type);
+			loadSchemaForComponent(component.component);
 
 			// T095: Restore dirty state if exists
 			if (dirtyConfigs.has(component.id)) {
@@ -171,7 +171,7 @@
 {#if component}
 	<div class="config-panel">
 		<header>
-			<h3>Configure: {component.type}</h3>
+			<h3>Configure: {component.component}</h3>
 			<button class="close-button" onclick={handleCancel} aria-label="Close">✕</button>
 		</header>
 
@@ -183,7 +183,7 @@
 				</div>
 				<div class="info-item">
 					<span class="label">Type:</span>
-					<span class="value">{component.type}</span>
+					<span class="value">{component.component}</span>
 				</div>
 				<div class="info-item">
 					<span class="label">Name:</span>

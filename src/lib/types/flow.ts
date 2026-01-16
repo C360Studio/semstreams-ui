@@ -42,7 +42,8 @@ export interface FlowMetadata {
 // Backend schema: FlowNode
 export interface FlowNode {
   id: string;
-  type: string;
+  component: string;       // References ComponentType.id (e.g., "json_filter")
+  type: string;            // Component type for colors: "input" | "output" | "processor" | "gateway" | "storage"
   name: string;
   position: Position;
   config: Record<string, unknown>;  // Component-specific config

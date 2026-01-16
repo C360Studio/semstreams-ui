@@ -11,6 +11,7 @@ import type { FlowNode, FlowConnection } from "$lib/types/flow";
 /** Node with computed layout position */
 export interface LayoutNode {
   id: string;
+  component: string;
   type: string;
   name: string;
   x: number;
@@ -150,6 +151,7 @@ export function layoutNodes(
 
       layoutNodes.push({
         id: node.id,
+        component: node.component,
         type: node.type,
         name: node.name,
         x,

@@ -140,6 +140,13 @@
   --domain-media: #ff8389;              /* Red-40 (video, audio, images) */
   --domain-integration: #8d8d8d;        /* Gray-50 (external systems) */
 
+  /* Component Categories (backend categories: input, output, processor, gateway, storage) */
+  --category-input: #4589ff;            /* Blue - receiving data */
+  --category-output: #08bdba;           /* Teal - sending data */
+  --category-processor: #a56eff;        /* Purple - transforming data */
+  --category-gateway: #ff832b;          /* Orange - routing/bridging */
+  --category-storage: #42be65;          /* Green - persisting data */
+
   /* Data Visualization: Categorical Palette (14 colors for discrete categories) */
   --dataviz-cat-01: #a56eff;    /* Purple */
   --dataviz-cat-02: #4589ff;    /* Blue */
@@ -405,6 +412,13 @@
   --domain-geospatial: #08bdba;         /* Cyan-50 */
   --domain-media: #fa4d56;              /* Red-50 */
   --domain-integration: #6f6f6f;        /* Gray-60 */
+
+  /* Component Categories (Light) */
+  --category-input: #1192e8;            /* Blue - receiving data */
+  --category-output: #005d5d;           /* Teal - sending data */
+  --category-processor: #6929c4;        /* Purple - transforming data */
+  --category-gateway: #ba4e00;          /* Orange - routing/bridging */
+  --category-storage: #198038;          /* Green - persisting data */
 
   /* Data Viz (Light) */
   --dataviz-cat-01: #6929c4;

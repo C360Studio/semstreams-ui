@@ -11,7 +11,8 @@ import type { ValidatedPort } from "$lib/types/port";
 describe("FlowNode", () => {
   const mockNode: LayoutNode = {
     id: "test-node-1",
-    type: "udp-input",
+    component: "udp-input",
+    type: "input",
     name: "UDP Input",
     x: 100,
     y: 200,
@@ -20,7 +21,8 @@ describe("FlowNode", () => {
     config: { port: 5000 },
     original: {
       id: "test-node-1",
-      type: "udp-input",
+      component: "udp-input",
+      type: "input",
       name: "UDP Input",
       position: { x: 0, y: 0 },
       config: { port: 5000 },
@@ -435,7 +437,8 @@ describe("FlowNode", () => {
     test("renders network domain node", () => {
       const networkNode: LayoutNode = {
         ...mockNode,
-        type: "network",
+        component: "network",
+        type: "input",
         name: "TCP Server",
       };
 
@@ -457,7 +460,8 @@ describe("FlowNode", () => {
     test("renders nats domain node", () => {
       const natsNode: LayoutNode = {
         ...mockNode,
-        type: "nats",
+        component: "nats",
+        type: "gateway",
         name: "NATS Publisher",
       };
 

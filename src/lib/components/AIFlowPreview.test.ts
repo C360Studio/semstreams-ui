@@ -14,21 +14,24 @@ describe("AIFlowPreview", () => {
     nodes: [
       {
         id: "node-1",
-        type: "udp-input",
+        component: "udp-input",
+        type: "input",
         name: "UDP Input",
         position: { x: 100, y: 100 },
         config: { port: 5000 },
       },
       {
         id: "node-2",
-        type: "json-transform",
+        component: "json-transform",
+        type: "processor",
         name: "JSON Transform",
         position: { x: 300, y: 100 },
         config: {},
       },
       {
         id: "node-3",
-        type: "nats-publisher",
+        component: "nats-publisher",
+        type: "output",
         name: "NATS Publisher",
         position: { x: 500, y: 100 },
         config: { subject: "sensor.data" },
@@ -740,7 +743,8 @@ describe("AIFlowPreview", () => {
         ...createMockFlow(),
         nodes: Array.from({ length: 50 }, (_, i) => ({
           id: `node-${i}`,
-          type: "test-component",
+          component: "test-component",
+          type: "processor",
           name: `Component ${i}`,
           position: { x: 100 * i, y: 100 },
           config: {},
