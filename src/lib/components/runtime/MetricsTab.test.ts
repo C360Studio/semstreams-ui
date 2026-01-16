@@ -1,273 +1,212 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/svelte';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/svelte';
+import { writable, type Writable } from 'svelte/store';
 import MetricsTab from './MetricsTab.svelte';
+import type { RuntimeStoreState, MetricValue } from '$lib/stores/runtimeStore.svelte';
 
 /**
  * MetricsTab Component Tests
- * Phase 3 of Runtime Visualization Panel
- *
- * Tests:
- * - Polling lifecycle (start, stop, interval changes)
- * - Metrics display and formatting
- * - Refresh rate selector
- * - Error handling
- * - Accessibility
+ * Tests for store-based metrics display with computed rates
  */
 
-// Mock metrics data
-const mockMetricsResponse = {
-	timestamp: '2025-11-17T14:23:05.123Z',
-	components: [
-		{
-			name: 'udp-source',
-			throughput: 1234,
-			errorRate: 0,
-			status: 'healthy' as const,
-			cpu: 5.2,
-			memory: 12582912 // 12 MB in bytes
-		},
-		{
-			name: 'json-processor',
-			throughput: 1230,
-			errorRate: 4,
-			status: 'degraded' as const,
-			cpu: 12.4,
-			memory: 29360128 // 28 MB in bytes
-		},
-		{
-			name: 'nats-sink',
-			throughput: 1226,
-			errorRate: 0,
-			status: 'healthy' as const,
-			cpu: 3.1,
-			memory: 8388608 // 8 MB in bytes
+// Create a mock store that we can control
+let mockStoreState: Writable<RuntimeStoreState>;
+
+// Mock the runtimeStore module
+vi.mock('$lib/stores/runtimeStore.svelte', () => {
+	return {
+		runtimeStore: {
+			subscribe: (fn: (state: RuntimeStoreState) => void) => {
+				return mockStoreState.subscribe(fn);
+			},
+			getMetricsArray: (state: RuntimeStoreState) => {
+				const result: Array<{
+					component: string;
+					metricName: string;
+					rate: number;
+					raw: MetricValue | undefined;
+				}> = [];
+
+				for (const [key, rate] of state.metricsRates) {
+					const [component, metricName] = key.split(':');
+					result.push({
+						component,
+						metricName,
+						rate,
+						raw: state.metricsRaw.get(key)
+					});
+				}
+
+				return result.sort((a, b) => a.component.localeCompare(b.component));
+			}
 		}
-	]
-};
+	};
+});
+
+function createDefaultState(): RuntimeStoreState {
+	return {
+		connected: false,
+		error: null,
+		flowId: null,
+		flowStatus: null,
+		healthOverall: null,
+		healthComponents: [],
+		logs: [],
+		metricsRaw: new Map(),
+		metricsRates: new Map(),
+		lastMetricsTimestamp: null
+	};
+}
+
+function createMetricsState(
+	metrics: Array<{ component: string; metric: string; rate: number }>
+): Pick<RuntimeStoreState, 'metricsRaw' | 'metricsRates' | 'lastMetricsTimestamp'> {
+	const metricsRaw = new Map<string, MetricValue>();
+	const metricsRates = new Map<string, number>();
+
+	for (const m of metrics) {
+		const key = `${m.component}:${m.metric}`;
+		metricsRaw.set(key, {
+			name: m.metric,
+			type: 'counter',
+			value: m.rate * 5, // Simulate raw value
+			labels: {}
+		});
+		metricsRates.set(key, m.rate);
+	}
+
+	return {
+		metricsRaw,
+		metricsRates,
+		lastMetricsTimestamp: Date.now()
+	};
+}
 
 describe('MetricsTab', () => {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let fetchSpy: any;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let setIntervalSpy: any;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let clearIntervalSpy: any;
-
 	beforeEach(() => {
-		vi.useFakeTimers();
-
-		// Mock fetch API
-		fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
-			ok: true,
-			json: async () => mockMetricsResponse
-		} as Response);
-
-		// Spy on interval functions
-		setIntervalSpy = vi.spyOn(global, 'setInterval');
-		clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+		vi.clearAllMocks();
+		mockStoreState = writable<RuntimeStoreState>(createDefaultState());
 	});
 
-	afterEach(() => {
-		vi.restoreAllMocks();
-		vi.useRealTimers();
-	});
-
-	describe('Polling Lifecycle', () => {
-		it('should start polling when tab becomes active', async () => {
-			const { rerender } = render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: false
-				}
+	describe('Connection Status', () => {
+		it('should show connecting status when not connected', () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: false
 			});
 
-			// No polling when inactive
-			expect(setIntervalSpy).not.toHaveBeenCalled();
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
-			// Activate tab
-			await rerender({ flowId: 'test-flow-123', isActive: true });
+			expect(screen.getByText(/Connecting to runtime stream/)).toBeTruthy();
+		});
 
-			// Should start polling
+		it('should hide connecting status when connected', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true
+			});
+
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
+
 			await waitFor(() => {
-				expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 2000);
+				expect(screen.queryByText(/Connecting to runtime stream/)).toBeNull();
 			});
 		});
 
-		it('should stop polling when tab becomes inactive', async () => {
-			const { rerender } = render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+		it('should show error message when store has error', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: false,
+				error: 'WebSocket connection failed'
 			});
 
-			// Wait for polling to start
-			await waitFor(() => {
-				expect(setIntervalSpy).toHaveBeenCalled();
-			});
-
-			const intervalId = setIntervalSpy.mock.results[0]?.value;
-
-			// Deactivate tab
-			await rerender({ flowId: 'test-flow-123', isActive: false });
-
-			// Should clear interval
-			await waitFor(() => {
-				expect(clearIntervalSpy).toHaveBeenCalledWith(intervalId);
-			});
-		});
-
-		it('should fetch metrics immediately when activated', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			// Should fetch immediately
-			await waitFor(() => {
-				expect(fetchSpy).toHaveBeenCalledWith('/flowbuilder/flows/test-flow-123/runtime/metrics');
-			});
-		});
-
-		it('should poll metrics at specified interval', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			// Initial fetch
-			await waitFor(() => {
-				expect(fetchSpy).toHaveBeenCalledTimes(1);
-			});
-
-			// Advance time by 2 seconds
-			vi.advanceTimersByTime(2000);
-
-			// Should fetch again
-			await waitFor(() => {
-				expect(fetchSpy).toHaveBeenCalledTimes(2);
-			});
-
-			// Advance time by another 2 seconds
-			vi.advanceTimersByTime(2000);
-
-			// Should fetch third time
-			await waitFor(() => {
-				expect(fetchSpy).toHaveBeenCalledTimes(3);
-			});
-		});
-
-		it('should clear interval on component unmount', async () => {
-			const { unmount } = render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
-				expect(setIntervalSpy).toHaveBeenCalled();
+				const alert = screen.getByRole('alert');
+				expect(alert).toBeTruthy();
+				expect(alert.textContent).toContain('WebSocket connection failed');
 			});
-
-			const intervalId = setIntervalSpy.mock.results[0]?.value;
-
-			unmount();
-
-			// Should clear interval
-			expect(clearIntervalSpy).toHaveBeenCalledWith(intervalId);
 		});
 	});
 
 	describe('Metrics Display', () => {
 		it('should render metrics table with correct columns', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'udp-source', metric: 'messages_received_total', rate: 1234 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
 
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
+
 			await waitFor(() => {
-				expect(screen.getByText('Component')).toBeInTheDocument();
-				expect(screen.getByText('Msg/sec')).toBeInTheDocument();
-				expect(screen.getByText('Errors/sec')).toBeInTheDocument();
-				expect(screen.getByText('CPU')).toBeInTheDocument();
-				expect(screen.getByText('Memory')).toBeInTheDocument();
-				expect(screen.getByText('Status')).toBeInTheDocument();
+				expect(screen.getByText('Component')).toBeTruthy();
+				expect(screen.getByText('Msg/sec')).toBeTruthy();
+				expect(screen.getByText('Errors/sec')).toBeTruthy();
+				expect(screen.getByText('Status')).toBeTruthy();
 			});
 		});
 
 		it('should display component metrics correctly', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'udp-source', metric: 'messages_received_total', rate: 1234 },
+				{ component: 'json-processor', metric: 'messages_processed_total', rate: 1230 },
+				{ component: 'nats-sink', metric: 'messages_received_total', rate: 1226 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
 
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
+
 			await waitFor(() => {
-				// Component names
-				expect(screen.getByText('udp-source')).toBeInTheDocument();
-				expect(screen.getByText('json-processor')).toBeInTheDocument();
-				expect(screen.getByText('nats-sink')).toBeInTheDocument();
+				expect(screen.getByText('udp-source')).toBeTruthy();
+				expect(screen.getByText('json-processor')).toBeTruthy();
+				expect(screen.getByText('nats-sink')).toBeTruthy();
 			});
 		});
 
 		it('should format numbers with commas', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'udp-source', metric: 'messages_received_total', rate: 1234 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
+
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				// 1234 should be formatted as "1,234"
-				expect(screen.getByText('1,234')).toBeInTheDocument();
-			});
-		});
-
-		it('should format memory in MB with 2 decimals', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			await waitFor(() => {
-				// 12582912 bytes = 12.00 MB
-				expect(screen.getByText('12.00 MB')).toBeInTheDocument();
-				// 29360128 bytes = 28.00 MB
-				expect(screen.getByText('28.00 MB')).toBeInTheDocument();
-			});
-		});
-
-		it('should format CPU percentages with 1 decimal', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			await waitFor(() => {
-				expect(screen.getByText('5.2%')).toBeInTheDocument();
-				expect(screen.getByText('12.4%')).toBeInTheDocument();
+				expect(screen.getByText('1,234')).toBeTruthy();
 			});
 		});
 
 		it('should show status indicators for each component', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'udp-source', metric: 'messages_received_total', rate: 100 },
+				{ component: 'processor', metric: 'messages_processed_total', rate: 100 },
+				{ component: 'sink', metric: 'messages_received_total', rate: 100 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
+
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const statusIndicators = screen.getAllByTestId('status-indicator');
@@ -276,12 +215,19 @@ describe('MetricsTab', () => {
 		});
 
 		it('should sort components alphabetically by name', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'udp-source', metric: 'messages_received_total', rate: 100 },
+				{ component: 'json-processor', metric: 'messages_processed_total', rate: 100 },
+				{ component: 'nats-sink', metric: 'messages_received_total', rate: 100 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
+
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const rows = screen.getAllByTestId('metrics-row');
@@ -291,438 +237,221 @@ describe('MetricsTab', () => {
 			});
 		});
 
-		it('should show N/A for missing CPU metrics', async () => {
-			fetchSpy.mockResolvedValue({
-				ok: true,
-				json: async () => ({
-					timestamp: '2025-11-17T14:23:05.123Z',
-					components: [
-						{
-							name: 'test-component',
-							throughput: 100,
-							errorRate: 0,
-							status: 'healthy'
-							// No cpu or memory fields
-						}
-					]
-				})
-			} as Response);
-
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+		it('should show empty state when no metrics available', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true
+				// No metrics
 			});
 
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
+
 			await waitFor(() => {
-				const naElements = screen.getAllByText('N/A');
-				expect(naElements.length).toBeGreaterThan(0);
+				expect(screen.getByText('No metrics available')).toBeTruthy();
 			});
 		});
 
-		it('should show empty state when no components', async () => {
-			fetchSpy.mockResolvedValue({
-				ok: true,
-				json: async () => ({
-					timestamp: '2025-11-17T14:23:05.123Z',
-					components: []
-				})
-			} as Response);
-
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+		it('should update when store changes', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true
 			});
 
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
+
+			// Initially no metrics
 			await waitFor(() => {
-				expect(screen.getByText('No metrics available')).toBeInTheDocument();
+				expect(screen.getByText('No metrics available')).toBeTruthy();
+			});
+
+			// Update store with metrics
+			const metricsData = createMetricsState([
+				{ component: 'test-component', metric: 'messages_received_total', rate: 500 }
+			]);
+
+			mockStoreState.update((state) => ({
+				...state,
+				...metricsData
+			}));
+
+			await waitFor(() => {
+				expect(screen.getByText('test-component')).toBeTruthy();
+				expect(screen.getByText('500')).toBeTruthy();
 			});
 		});
 	});
 
-	describe('Refresh Rate Selector', () => {
-		it('should render refresh rate selector with default value', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+	describe('Error Rate Display', () => {
+		it('should show error rate for components with errors', async () => {
+			const metricsData = createMetricsState([
+				{ component: 'processor', metric: 'messages_processed_total', rate: 100 },
+				{ component: 'processor', metric: 'errors_total', rate: 5 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
 
-			const selector = screen.getByTestId('refresh-rate-selector');
-			expect(selector).toBeInTheDocument();
-			expect(selector).toHaveValue('2000');
-		});
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
-		it('should change polling interval when selector is changed', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			// Initial interval should be 2000
 			await waitFor(() => {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const calls = setIntervalSpy.mock.calls.filter((call: any) => call[1] === 2000);
-				expect(calls.length).toBeGreaterThan(0);
-			});
-
-			const initialCallCount = setIntervalSpy.mock.calls.length;
-
-			const selector = screen.getByTestId('refresh-rate-selector') as HTMLSelectElement;
-
-			// Change to 5 seconds
-			await fireEvent.change(selector, { target: { value: '5000' } });
-
-			// Should create a new interval with 5000ms
-			await waitFor(() => {
-				expect(setIntervalSpy.mock.calls.length).toBeGreaterThan(initialCallCount);
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const calls5s = setIntervalSpy.mock.calls.filter((call: any) => call[1] === 5000);
-				expect(calls5s.length).toBeGreaterThan(0);
+				expect(screen.getByText('processor')).toBeTruthy();
+				// Should show error rate of 5
+				expect(screen.getByText('5')).toBeTruthy();
 			});
 		});
 
-		it('should stop polling when manual mode is selected', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+		it('should show degraded status when error rate is low', async () => {
+			const metricsData = createMetricsState([
+				{ component: 'processor', metric: 'messages_processed_total', rate: 100 },
+				{ component: 'processor', metric: 'errors_total', rate: 0.5 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
 
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
+
 			await waitFor(() => {
-				expect(setIntervalSpy).toHaveBeenCalled();
-			});
-
-			const initialCalls = clearIntervalSpy.mock.calls.length;
-
-			const selector = screen.getByTestId('refresh-rate-selector') as HTMLSelectElement;
-			await fireEvent.change(selector, { target: { value: 'manual' } });
-
-			// Should clear interval
-			await waitFor(() => {
-				expect(clearIntervalSpy.mock.calls.length).toBeGreaterThan(initialCalls);
+				const indicator = screen.getByTestId('status-indicator');
+				expect(indicator.getAttribute('aria-label')).toContain('Degraded');
 			});
 		});
 
-		it('should show refresh button in manual mode', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+		it('should show error status when error rate is high', async () => {
+			const metricsData = createMetricsState([
+				{ component: 'processor', metric: 'messages_processed_total', rate: 100 },
+				{ component: 'processor', metric: 'errors_total', rate: 5 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
 
-			const selector = screen.getByTestId('refresh-rate-selector') as HTMLSelectElement;
-			await fireEvent.change(selector, { target: { value: 'manual' } });
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
-				expect(screen.getByTestId('manual-refresh-button')).toBeInTheDocument();
-			});
-		});
-
-		it('should fetch metrics when manual refresh button is clicked', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			// Wait for initial fetch
-			await waitFor(() => {
-				expect(fetchSpy).toHaveBeenCalledTimes(1);
-			});
-
-			const selector = screen.getByTestId('refresh-rate-selector') as HTMLSelectElement;
-			await fireEvent.change(selector, { target: { value: 'manual' } });
-
-			const refreshButton = await screen.findByTestId('manual-refresh-button');
-			await fireEvent.click(refreshButton);
-
-			// Should fetch again
-			await waitFor(() => {
-				expect(fetchSpy).toHaveBeenCalledTimes(2);
+				const indicator = screen.getByTestId('status-indicator');
+				expect(indicator.getAttribute('aria-label')).toContain('Error');
 			});
 		});
 	});
 
 	describe('Last Updated Timestamp', () => {
-		it('should show last updated timestamp after fetch', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+		it('should show last updated timestamp when metrics exist', async () => {
+			const metricsData = createMetricsState([
+				{ component: 'test', metric: 'messages_received_total', rate: 100 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
 
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
+
 			await waitFor(() => {
-				expect(screen.getByTestId('last-updated')).toBeInTheDocument();
+				expect(screen.getByTestId('last-updated')).toBeTruthy();
 			});
 		});
 
-		it('should update timestamp on each poll', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+		it('should not show last updated when no metrics timestamp', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				lastMetricsTimestamp: null
 			});
 
-			// Wait for initial fetch
-			await waitFor(() => {
-				expect(screen.getByTestId('last-updated')).toBeInTheDocument();
-			});
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
-			const firstTimestamp = screen.getByTestId('last-updated').textContent;
-
-			// Advance time
-			vi.advanceTimersByTime(2000);
-
-			// Wait for next fetch
-			await waitFor(() => {
-				const newTimestamp = screen.getByTestId('last-updated').textContent;
-				expect(newTimestamp).not.toBe(firstTimestamp);
-			});
-		});
-	});
-
-	describe('Error Handling', () => {
-		it('should show error message when fetch fails', async () => {
-			fetchSpy.mockRejectedValue(new Error('Network error'));
-
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			await waitFor(() => {
-				expect(
-					screen.getByText('Metrics unavailable - backend endpoint not ready')
-				).toBeInTheDocument();
-			});
-		});
-
-		it('should show error message when response is not ok', async () => {
-			fetchSpy.mockResolvedValue({
-				ok: false,
-				status: 404,
-				statusText: 'Not Found'
-			} as Response);
-
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			await waitFor(() => {
-				expect(
-					screen.getByText('Metrics unavailable - backend endpoint not ready')
-				).toBeInTheDocument();
-			});
-		});
-
-		it('should continue polling after error', async () => {
-			// First call fails
-			fetchSpy.mockRejectedValueOnce(new Error('Network error'));
-			// Second call succeeds
-			fetchSpy.mockResolvedValueOnce({
-				ok: true,
-				json: async () => mockMetricsResponse
-			} as Response);
-
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			// Should show error initially
-			await waitFor(() => {
-				expect(
-					screen.getByText('Metrics unavailable - backend endpoint not ready')
-				).toBeInTheDocument();
-			});
-
-			// Advance time to next poll
-			vi.advanceTimersByTime(2000);
-
-			// Should show metrics after successful fetch
-			await waitFor(() => {
-				expect(screen.getByText('udp-source')).toBeInTheDocument();
-			});
-		});
-
-		it('should clear error message after successful fetch', async () => {
-			fetchSpy.mockRejectedValueOnce(new Error('Network error'));
-			fetchSpy.mockResolvedValueOnce({
-				ok: true,
-				json: async () => mockMetricsResponse
-			} as Response);
-
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			// Wait for error
-			await waitFor(() => {
-				expect(
-					screen.getByText('Metrics unavailable - backend endpoint not ready')
-				).toBeInTheDocument();
-			});
-
-			// Advance time
-			vi.advanceTimersByTime(2000);
-
-			// Error should be cleared
-			await waitFor(() => {
-				expect(
-					screen.queryByText('Metrics unavailable - backend endpoint not ready')
-				).not.toBeInTheDocument();
-			});
+			expect(screen.queryByTestId('last-updated')).toBeNull();
 		});
 	});
 
 	describe('Accessibility', () => {
 		it('should have proper table structure', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'test', metric: 'messages_received_total', rate: 100 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
+
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const table = screen.getByRole('table');
-				expect(table).toBeInTheDocument();
+				expect(table).toBeTruthy();
 			});
 		});
 
 		it('should have column headers with scope attributes', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'test', metric: 'messages_received_total', rate: 100 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
+
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const headers = screen.getAllByRole('columnheader');
 				expect(headers.length).toBeGreaterThan(0);
 				headers.forEach((header) => {
-					expect(header).toHaveAttribute('scope', 'col');
+					expect(header.getAttribute('scope')).toBe('col');
 				});
-			});
-		});
-
-		it('should have accessible refresh rate selector', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			const selector = screen.getByLabelText('Refresh rate');
-			expect(selector).toBeInTheDocument();
-		});
-
-		it('should have accessible manual refresh button', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			const selector = screen.getByTestId('refresh-rate-selector') as HTMLSelectElement;
-			await fireEvent.change(selector, { target: { value: 'manual' } });
-
-			const button = await screen.findByRole('button', { name: /refresh/i });
-			expect(button).toBeInTheDocument();
-		});
-
-		it('should have accessible error alerts', async () => {
-			fetchSpy.mockRejectedValue(new Error('Network error'));
-
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
-
-			await waitFor(() => {
-				const alert = screen.getByRole('alert');
-				expect(alert).toBeInTheDocument();
 			});
 		});
 
 		it('should have text alternatives for status indicators', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
+			const metricsData = createMetricsState([
+				{ component: 'test', metric: 'messages_received_total', rate: 100 }
+			]);
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				...metricsData
 			});
+
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const indicators = screen.getAllByTestId('status-indicator');
 				indicators.forEach((indicator) => {
-					expect(indicator).toHaveAttribute('aria-label');
+					expect(indicator.getAttribute('aria-label')).toBeTruthy();
 				});
 			});
 		});
-	});
 
-	describe('Performance', () => {
-		it('should not poll when tab is inactive', async () => {
-			render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: false
-				}
+		it('should have accessible error alerts', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: false,
+				error: 'Connection failed'
 			});
 
-			// Should not start polling
-			expect(setIntervalSpy).not.toHaveBeenCalled();
-
-			// Advance time
-			vi.advanceTimersByTime(5000);
-
-			// Still should not have polled
-			expect(fetchSpy).not.toHaveBeenCalled();
-		});
-
-		it('should cancel in-flight request when unmounting', async () => {
-			// This is harder to test directly, but we can verify the cleanup effect runs
-			const { unmount } = render(MetricsTab, {
-				props: {
-					flowId: 'test-flow-123',
-					isActive: true
-				}
-			});
+			render(MetricsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
-				expect(setIntervalSpy).toHaveBeenCalled();
+				const alert = screen.getByRole('alert');
+				expect(alert).toBeTruthy();
 			});
-
-			// Should not throw when unmounting
-			expect(() => unmount()).not.toThrow();
 		});
 	});
 });

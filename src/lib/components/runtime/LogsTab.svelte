@@ -1,87 +1,97 @@
 <script lang="ts">
 	/**
-	 * LogsTab Component - Real-time log streaming with filtering
-	 * Phase 2 of Runtime Visualization Panel
+	 * LogsTab Component - Real-time log display with filtering
+	 * Uses runtimeStore for WebSocket-driven data
 	 *
 	 * Features:
-	 * - SSE connection to backend /flows/{flowId}/runtime/logs
-	 * - Real-time log streaming with timestamp, level, component, message
+	 * - Display logs from runtimeStore (WebSocket-driven)
 	 * - Filter by log level (DEBUG, INFO, WARN, ERROR)
-	 * - Filter by component
+	 * - Filter by component/source
 	 * - Auto-scroll toggle
 	 * - Clear logs functionality
 	 * - Color-coded log levels using design system
-	 * - Graceful error handling for unavailable backend
 	 */
 
-	interface LogEntry {
-		timestamp: string;
-		level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
-		component: string;
-		message: string;
-	}
+	import {
+		runtimeStore,
+		type LogLevel,
+		type RuntimeStoreState
+	} from '$lib/stores/runtimeStore.svelte';
 
 	interface LogsTabProps {
 		flowId: string;
-		isActive: boolean; // Don't connect if tab isn't active
+		isActive: boolean;
 	}
 
-	let { flowId, isActive }: LogsTabProps = $props();
+	// Props passed from parent - may be used for future tab-specific logic
+	let { flowId: _flowId, isActive: _isActive }: LogsTabProps = $props();
 
-	// Reactive state
-	let logs = $state<LogEntry[]>([]);
-	let selectedLevel = $state<string>('all');
+	// Local UI state
+	let selectedLevel = $state<'all' | LogLevel>('all');
 	let selectedComponent = $state<string>('all');
 	let autoScroll = $state<boolean>(true);
-	let connectionStatus = $state<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
-	let errorMessage = $state<string | null>(null);
 
 	// Refs for DOM elements
 	let logContainerRef: HTMLDivElement | null = null;
 
-	// Extract unique components from logs
-	const uniqueComponents = $derived(
-		Array.from(new Set(logs.map((log) => log.component))).sort()
+	// Subscribe to store - get initial state synchronously
+	let storeState = $state<RuntimeStoreState>({
+		connected: false,
+		error: null,
+		flowId: null,
+		flowStatus: null,
+		healthOverall: null,
+		healthComponents: [],
+		logs: [],
+		metricsRaw: new Map(),
+		metricsRates: new Map(),
+		lastMetricsTimestamp: null
+	});
+
+	$effect(() => {
+		const unsubscribe = runtimeStore.subscribe((s) => {
+			storeState = s;
+		});
+		return unsubscribe;
+	});
+
+	// Filter out message-logger entries (those are shown in MessagesTab)
+	const logsExcludingMessages = $derived(
+		storeState.logs.filter((log) => log.source !== 'message-logger')
+	);
+
+	// Extract unique sources from logs (excluding message-logger)
+	const uniqueSources = $derived(
+		Array.from(new Set(logsExcludingMessages.map((log) => log.source))).sort()
 	);
 
 	// Filter logs based on selected level and component
-	const filteredLogs = $derived(
-		logs.filter((log) => {
-			const levelMatch = selectedLevel === 'all' || log.level === selectedLevel;
-			const componentMatch = selectedComponent === 'all' || log.component === selectedComponent;
-			return levelMatch && componentMatch;
-		})
-	);
+	const filteredLogs = $derived(() => {
+		const levelOrder: Record<LogLevel, number> = {
+			DEBUG: 0,
+			INFO: 1,
+			WARN: 2,
+			ERROR: 3
+		};
 
-	// SSE Connection lifecycle
-	let eventSource: EventSource | null = null;
-
-	// Max logs to keep in memory (prevent memory issues)
-	const MAX_LOGS = 1000;
-
-	/**
-	 * Add log entry to state
-	 * Limits stored logs to MAX_LOGS (drops oldest)
-	 */
-	function addLog(entry: LogEntry) {
-		logs = [...logs, entry].slice(-MAX_LOGS);
-
-		// Auto-scroll to bottom if enabled
-		if (autoScroll && logContainerRef) {
-			// Use requestAnimationFrame to ensure DOM has updated
-			requestAnimationFrame(() => {
-				if (logContainerRef) {
-					logContainerRef.scrollTop = logContainerRef.scrollHeight;
-				}
-			});
-		}
-	}
+		return logsExcludingMessages.filter((log) => {
+			// Filter by level
+			if (selectedLevel !== 'all' && levelOrder[log.level] < levelOrder[selectedLevel]) {
+				return false;
+			}
+			// Filter by source
+			if (selectedComponent !== 'all' && log.source !== selectedComponent) {
+				return false;
+			}
+			return true;
+		});
+	});
 
 	/**
 	 * Clear all logs
 	 */
 	function handleClearLogs() {
-		logs = [];
+		runtimeStore.clearLogs();
 		selectedLevel = 'all';
 		selectedComponent = 'all';
 	}
@@ -89,23 +99,23 @@
 	/**
 	 * Format timestamp for display (HH:MM:SS.mmm)
 	 */
-	function formatTimestamp(isoString: string): string {
+	function formatTimestamp(unixMs: number): string {
 		try {
-			const date = new Date(isoString);
+			const date = new Date(unixMs);
 			const hours = date.getHours().toString().padStart(2, '0');
 			const minutes = date.getMinutes().toString().padStart(2, '0');
 			const seconds = date.getSeconds().toString().padStart(2, '0');
 			const milliseconds = date.getMilliseconds().toString().padStart(3, '0');
 			return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 		} catch {
-			return isoString;
+			return String(unixMs);
 		}
 	}
 
 	/**
 	 * Get CSS color variable for log level
 	 */
-	function getLevelColor(level: LogEntry['level']): string {
+	function getLevelColor(level: LogLevel): string {
 		const colors = {
 			DEBUG: 'var(--ui-text-secondary)',
 			INFO: 'var(--status-info)',
@@ -115,85 +125,12 @@
 		return colors[level];
 	}
 
-	/**
-	 * Connect to SSE endpoint
-	 */
-	function connectSSE() {
-		if (!isActive || eventSource) {
-			return;
-		}
-
-		connectionStatus = 'connecting';
-		errorMessage = null;
-
-		try {
-			const url = `/flowbuilder/flows/${flowId}/runtime/logs`;
-			eventSource = new EventSource(url);
-
-			eventSource.addEventListener('open', () => {
-				connectionStatus = 'connected';
-				console.log('[LogsTab] SSE connection established');
-			});
-
-			eventSource.addEventListener('log', (event) => {
-				try {
-					const logEntry: LogEntry = JSON.parse(event.data);
-					addLog(logEntry);
-				} catch (err) {
-					console.error('[LogsTab] Failed to parse log entry:', err);
-				}
-			});
-
-			eventSource.addEventListener('error', (err) => {
-				console.warn('[LogsTab] SSE connection error:', err);
-				connectionStatus = 'error';
-				errorMessage = 'Log streaming unavailable - backend endpoint not ready';
-
-				// Clean up on error
-				if (eventSource) {
-					eventSource.close();
-					eventSource = null;
-				}
-			});
-		} catch (err) {
-			console.error('[LogsTab] Failed to create SSE connection:', err);
-			connectionStatus = 'error';
-			errorMessage = 'Failed to connect to log stream';
-		}
-	}
-
-	/**
-	 * Disconnect from SSE endpoint
-	 */
-	function disconnectSSE() {
-		if (eventSource) {
-			eventSource.close();
-			eventSource = null;
-			connectionStatus = 'disconnected';
-			console.log('[LogsTab] SSE connection closed');
-		}
-	}
-
-	// Effect: Manage SSE connection lifecycle
-	$effect(() => {
-		if (isActive) {
-			connectSSE();
-		} else {
-			disconnectSSE();
-		}
-
-		// Cleanup on unmount
-		return () => {
-			disconnectSSE();
-		};
-	});
-
 	// Effect: Scroll to bottom when filtered logs change (if auto-scroll enabled)
 	$effect(() => {
 		// Access filteredLogs to subscribe to changes
-		filteredLogs;
+		const logs = filteredLogs();
 
-		if (autoScroll && logContainerRef) {
+		if (autoScroll && logContainerRef && logs.length > 0) {
 			requestAnimationFrame(() => {
 				if (logContainerRef) {
 					logContainerRef.scrollTop = logContainerRef.scrollHeight;
@@ -219,11 +156,11 @@
 			</label>
 
 			<label for="component-filter">
-				<span class="filter-label">Component:</span>
+				<span class="filter-label">Source:</span>
 				<select id="component-filter" bind:value={selectedComponent} data-testid="component-filter">
-					<option value="all">All Components</option>
-					{#each uniqueComponents as component (component)}
-						<option value={component}>{component}</option>
+					<option value="all">All Sources</option>
+					{#each uniqueSources as source (source)}
+						<option value={source}>{source}</option>
 					{/each}
 				</select>
 			</label>
@@ -252,23 +189,23 @@
 	</div>
 
 	<!-- Connection Status -->
-	{#if connectionStatus === 'error'}
+	{#if storeState.error}
 		<div class="connection-status error" data-testid="connection-error">
 			<span class="status-icon">⚠</span>
-			<span>{errorMessage || 'Log streaming unavailable'}</span>
+			<span>{storeState.error}</span>
 		</div>
-	{:else if connectionStatus === 'connecting'}
+	{:else if !storeState.connected}
 		<div class="connection-status connecting" data-testid="connection-connecting">
 			<span class="status-icon">⋯</span>
-			<span>Connecting to log stream...</span>
+			<span>Connecting to runtime stream...</span>
 		</div>
 	{/if}
 
 	<!-- Log Display -->
 	<div class="log-container" bind:this={logContainerRef} data-testid="log-container">
-		{#if filteredLogs.length === 0}
+		{#if filteredLogs().length === 0}
 			<div class="empty-state">
-				{#if logs.length === 0}
+				{#if logsExcludingMessages.length === 0}
 					<p>No logs yet. Waiting for runtime events...</p>
 				{:else}
 					<p>No logs match current filters.</p>
@@ -276,11 +213,11 @@
 			</div>
 		{:else}
 			<div class="log-entries" role="log" aria-live="polite" aria-atomic="false">
-				{#each filteredLogs as log (log.timestamp + log.component + log.message)}
+				{#each filteredLogs() as log (log.id)}
 					<div class="log-entry" data-level={log.level} data-testid="log-entry">
 						<span class="log-timestamp">{formatTimestamp(log.timestamp)}</span>
 						<span class="log-level" style="color: {getLevelColor(log.level)}">{log.level}</span>
-						<span class="log-component">[{log.component}]</span>
+						<span class="log-component">[{log.source}]</span>
 						<span class="log-message">{log.message}</span>
 					</div>
 				{/each}

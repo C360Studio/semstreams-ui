@@ -1,96 +1,131 @@
 <script lang="ts">
-	import { SvelteSet } from "svelte/reactivity";
+	import { SvelteSet } from 'svelte/reactivity';
 	/**
 	 * MessagesTab Component - NATS message flow visualization
-	 * Phase 4 of Runtime Visualization Panel
+	 * Uses runtimeStore logs filtered by source="message-logger"
 	 *
 	 * Features:
-	 * - Poll backend messages endpoint at configurable interval (default: 2s)
-	 * - Display NATS message traffic (published, received, processed)
-	 * - Filter by component and direction
+	 * - Display NATS message traffic from filtered log entries
+	 * - Filter by direction (published, received, processed)
 	 * - Expandable metadata for each message
 	 * - Auto-scroll toggle
-	 * - Clear messages functionality
+	 * - Clear messages functionality (clears store logs)
 	 * - Color-coded direction indicators using design system
 	 * - Monospace font for NATS subjects
 	 * - Millisecond precision timestamps
 	 */
 
-	interface MessageLogEntry {
-		timestamp: string; // ISO 8601
-		subject: string; // NATS subject
-		message_id: string; // Unique message ID
-		component: string; // Component name
-		direction: 'published' | 'received' | 'processed';
-		summary: string; // Human-readable summary
-		metadata?: Record<string, any>; // Optional metadata
-	}
-
-	interface MessagesResponse {
-		timestamp: string;
-		messages: MessageLogEntry[];
-		total: number;
-		limit: number;
-	}
+	import {
+		runtimeStore,
+		type LogEntry,
+		type RuntimeStoreState
+	} from '$lib/stores/runtimeStore.svelte';
 
 	interface MessagesTabProps {
 		flowId: string;
-		isActive: boolean; // Don't poll if tab isn't active
+		isActive: boolean;
 	}
 
-	type PollRate = 1000 | 2000 | 5000 | 'manual';
+	// Props passed from parent - may be used for future tab-specific logic
+	let { flowId: _flowId, isActive: _isActive }: MessagesTabProps = $props();
 
-	let { flowId, isActive }: MessagesTabProps = $props();
-
-	// Reactive state
-	let messages = $state<MessageLogEntry[]>([]);
-	let componentFilter = $state<string>('all');
+	// Local UI state
 	let directionFilter = $state<'all' | 'published' | 'received' | 'processed'>('all');
 	let autoScroll = $state<boolean>(true);
-	let pollRate = $state<PollRate>(2000);
 	let expandedMessageIds = new SvelteSet<string>();
-	let errorMessage = $state<string | null>(null);
 
 	// Refs for DOM elements
 	let messagesContainerRef: HTMLDivElement | null = null;
 
-	// Max messages to keep in memory (prevent memory issues)
-	const MAX_MESSAGES = 500;
+	// Subscribe to store - get initial state synchronously
+	let storeState = $state<RuntimeStoreState>({
+		connected: false,
+		error: null,
+		flowId: null,
+		flowStatus: null,
+		healthOverall: null,
+		healthComponents: [],
+		logs: [],
+		metricsRaw: new Map(),
+		metricsRates: new Map(),
+		lastMetricsTimestamp: null
+	});
 
-	// Extract unique components from messages
-	const uniqueComponents = $derived(
-		Array.from(new Set(messages.map((msg) => msg.component))).sort()
+	$effect(() => {
+		const unsubscribe = runtimeStore.subscribe((s) => {
+			storeState = s;
+		});
+		return unsubscribe;
+	});
+
+	// Filter logs to only message-logger entries
+	const messageLoggerLogs = $derived(
+		storeState.logs.filter((log) => log.source === 'message-logger')
 	);
 
-	// Filter messages based on selected component and direction
-	const filteredMessages = $derived(
-		messages.filter((msg) => {
-			const componentMatch = componentFilter === 'all' || msg.component === componentFilter;
-			const directionMatch = directionFilter === 'all' || msg.direction === directionFilter;
-			return componentMatch && directionMatch;
-		})
-	);
+	// Extract message info from log fields
+	interface MessageInfo {
+		id: string;
+		timestamp: number;
+		subject: string;
+		direction: 'published' | 'received' | 'processed';
+		summary: string;
+		component: string;
+		metadata?: Record<string, unknown>;
+	}
+
+	function extractMessageInfo(log: LogEntry): MessageInfo | null {
+		const fields = log.fields || {};
+		const subject = (fields.subject as string) || 'unknown';
+		const direction = (fields.direction as 'published' | 'received' | 'processed') || 'processed';
+		const component = (fields.component as string) || log.source;
+
+		return {
+			id: log.id,
+			timestamp: log.timestamp,
+			subject,
+			direction,
+			summary: log.message,
+			component,
+			metadata: Object.keys(fields).length > 0 ? fields : undefined
+		};
+	}
+
+	// Convert logs to messages and apply filters
+	const filteredMessages = $derived(() => {
+		const messages: MessageInfo[] = [];
+		for (const log of messageLoggerLogs) {
+			const info = extractMessageInfo(log);
+			if (info) {
+				// Apply direction filter
+				if (directionFilter === 'all' || info.direction === directionFilter) {
+					messages.push(info);
+				}
+			}
+		}
+		return messages;
+	});
 
 	/**
 	 * Format timestamp for display (HH:MM:SS.mmm)
 	 */
-	function formatTime(isoString: string): string {
+	function formatTime(unixMs: number): string {
 		try {
-			const date = new Date(isoString);
+			const date = new Date(unixMs);
 			const hours = date.getHours().toString().padStart(2, '0');
 			const minutes = date.getMinutes().toString().padStart(2, '0');
 			const seconds = date.getSeconds().toString().padStart(2, '0');
 			const milliseconds = date.getMilliseconds().toString().padStart(3, '0');
 			return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 		} catch {
-			return isoString;
+			return String(unixMs);
 		}
 	}
 
 	/**
 	 * Get direction icon
 	 */
-	function getDirectionIcon(direction: MessageLogEntry['direction']): string {
+	function getDirectionIcon(direction: MessageInfo['direction']): string {
 		const icons = {
 			published: '→',
 			received: '←',
@@ -102,7 +137,7 @@
 	/**
 	 * Get direction color from design system
 	 */
-	function getDirectionColor(direction: MessageLogEntry['direction']): string {
+	function getDirectionColor(direction: MessageInfo['direction']): string {
 		const colors = {
 			published: 'var(--status-info)',
 			received: 'var(--status-success)',
@@ -123,79 +158,19 @@
 	}
 
 	/**
-	 * Clear all messages
+	 * Clear all messages (clears store logs)
 	 */
 	function clearMessages() {
-		messages = [];
-		componentFilter = 'all';
+		runtimeStore.clearLogs();
 		directionFilter = 'all';
 		expandedMessageIds.clear();
 	}
 
-	/**
-	 * Fetch messages from backend
-	 */
-	async function fetchMessages() {
-		try {
-			const response = await fetch(`/flowbuilder/flows/${flowId}/runtime/messages`);
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-			}
-			const data: MessagesResponse = await response.json();
-
-			// Add new messages (only those we don't have yet) and limit total stored
-			const existingIds = new Set(messages.map((m) => m.message_id));
-			const newMessages = data.messages.filter((m) => !existingIds.has(m.message_id));
-			messages = [...messages, ...newMessages].slice(-MAX_MESSAGES);
-
-			errorMessage = null; // Clear error on success
-
-			// Auto-scroll to bottom if enabled
-			if (autoScroll && messagesContainerRef) {
-				requestAnimationFrame(() => {
-					if (messagesContainerRef) {
-						messagesContainerRef.scrollTop = messagesContainerRef.scrollHeight;
-					}
-				});
-			}
-		} catch (error) {
-			errorMessage = 'Messages unavailable - backend endpoint not ready';
-			console.warn('[MessagesTab] Messages fetch failed:', error);
-		}
-	}
-
-	/**
-	 * Handle manual refresh button click
-	 */
-	function handleManualRefresh() {
-		fetchMessages();
-	}
-
-	// Effect: Manage polling lifecycle
-	$effect(() => {
-		// Only poll when tab is active and poll rate is not manual
-		if (!isActive || pollRate === 'manual') {
-			return;
-		}
-
-		// Initial fetch
-		fetchMessages();
-
-		// Set up polling interval
-		const intervalId = setInterval(fetchMessages, pollRate);
-
-		// Cleanup on unmount or when dependencies change
-		return () => {
-			clearInterval(intervalId);
-		};
-	});
-
 	// Effect: Auto-scroll when filtered messages change
 	$effect(() => {
-		// Access filteredMessages to subscribe to changes
-		filteredMessages;
+		const messages = filteredMessages();
 
-		if (autoScroll && messagesContainerRef) {
+		if (autoScroll && messagesContainerRef && messages.length > 0) {
 			requestAnimationFrame(() => {
 				if (messagesContainerRef) {
 					messagesContainerRef.scrollTop = messagesContainerRef.scrollHeight;
@@ -209,21 +184,6 @@
 	<!-- Control Bar -->
 	<div class="control-bar">
 		<div class="filter-controls">
-			<label for="component-filter">
-				<span class="filter-label">Component:</span>
-				<select
-					id="component-filter"
-					bind:value={componentFilter}
-					data-testid="component-filter"
-					aria-label="Filter by component"
-				>
-					<option value="all">All Components</option>
-					{#each uniqueComponents as component (component)}
-						<option value={component}>{component}</option>
-					{/each}
-				</select>
-			</label>
-
 			<label for="direction-filter">
 				<span class="filter-label">Direction:</span>
 				<select
@@ -238,32 +198,6 @@
 					<option value="processed">Processed</option>
 				</select>
 			</label>
-
-			<label for="poll-rate">
-				<span class="filter-label">Poll:</span>
-				<select
-					id="poll-rate"
-					bind:value={pollRate}
-					data-testid="poll-rate-selector"
-					aria-label="Poll rate"
-				>
-					<option value={1000}>Every 1s</option>
-					<option value={2000}>Every 2s</option>
-					<option value={5000}>Every 5s</option>
-					<option value="manual">Manual</option>
-				</select>
-			</label>
-
-			{#if pollRate === 'manual'}
-				<button
-					class="refresh-button"
-					onclick={handleManualRefresh}
-					data-testid="manual-refresh-button"
-					aria-label="Refresh messages now"
-				>
-					Refresh
-				</button>
-			{/if}
 
 			<button
 				class="clear-button"
@@ -288,19 +222,24 @@
 		</div>
 	</div>
 
-	<!-- Error Message -->
-	{#if errorMessage}
+	<!-- Connection Status -->
+	{#if storeState.error}
 		<div class="error-message" role="alert">
 			<span class="error-icon">⚠</span>
-			<span>{errorMessage}</span>
+			<span>{storeState.error}</span>
+		</div>
+	{:else if !storeState.connected}
+		<div class="connecting-message">
+			<span class="connecting-icon">⋯</span>
+			<span>Connecting to runtime stream...</span>
 		</div>
 	{/if}
 
 	<!-- Messages Container -->
 	<div class="messages-container" bind:this={messagesContainerRef} data-testid="messages-container">
-		{#if filteredMessages.length === 0}
+		{#if filteredMessages().length === 0}
 			<div class="empty-state">
-				{#if messages.length === 0}
+				{#if messageLoggerLogs.length === 0}
 					<p>No messages yet. Waiting for NATS traffic...</p>
 				{:else}
 					<p>No messages match current filters.</p>
@@ -308,7 +247,7 @@
 			</div>
 		{:else}
 			<div class="message-entries" role="log" aria-live="polite" aria-atomic="false">
-				{#each filteredMessages as message (message.message_id)}
+				{#each filteredMessages() as message (message.id)}
 					<div class="message-entry" data-testid="message-entry">
 						<span class="timestamp">{formatTime(message.timestamp)}</span>
 						<span
@@ -327,15 +266,15 @@
 						{#if message.metadata}
 							<button
 								class="metadata-toggle"
-								onclick={() => toggleMetadata(message.message_id)}
-								aria-expanded={expandedMessageIds.has(message.message_id)}
+								onclick={() => toggleMetadata(message.id)}
+								aria-expanded={expandedMessageIds.has(message.id)}
 								aria-label="Toggle metadata"
 							>
-								{expandedMessageIds.has(message.message_id) ? '▼' : '▶'}
+								{expandedMessageIds.has(message.id) ? '▼' : '▶'}
 							</button>
 						{/if}
 					</div>
-					{#if expandedMessageIds.has(message.message_id) && message.metadata}
+					{#if expandedMessageIds.has(message.id) && message.metadata}
 						<div class="metadata">
 							<pre>{JSON.stringify(message.metadata, null, 2)}</pre>
 						</div>
@@ -406,7 +345,6 @@
 		box-shadow: 0 0 0 2px rgba(15, 98, 254, 0.1);
 	}
 
-	.refresh-button,
 	.clear-button {
 		padding: 0.375rem 0.75rem;
 		border: 1px solid var(--ui-border-subtle);
@@ -419,14 +357,12 @@
 		font-weight: 500;
 	}
 
-	.refresh-button:hover,
 	.clear-button:hover {
 		background: var(--ui-surface-tertiary);
 		color: var(--ui-text-primary);
 		border-color: var(--ui-border-strong);
 	}
 
-	.refresh-button:active,
 	.clear-button:active {
 		transform: scale(0.98);
 	}
@@ -449,19 +385,29 @@
 		cursor: pointer;
 	}
 
-	/* Error Message */
-	.error-message {
+	/* Error/Connecting Messages */
+	.error-message,
+	.connecting-message {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
 		border-bottom: 1px solid var(--ui-border-subtle);
+	}
+
+	.error-message {
 		background: var(--status-error-container);
 		color: var(--status-error-on-container);
 	}
 
-	.error-icon {
+	.connecting-message {
+		background: var(--status-info-container);
+		color: var(--status-info-on-container);
+	}
+
+	.error-icon,
+	.connecting-icon {
 		font-size: 1rem;
 	}
 

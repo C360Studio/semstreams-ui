@@ -1,77 +1,104 @@
 <script lang="ts">
 	/**
-	 * MetricsTab Component - Real-time metrics polling with component performance data
-	 * Phase 3 of Runtime Visualization Panel
+	 * MetricsTab Component - Real-time metrics display with computed rates
+	 * Uses runtimeStore for WebSocket-driven data
 	 *
 	 * Features:
-	 * - Poll backend metrics endpoint at configurable interval (default: 2s)
-	 * - Display throughput table (msgs/sec per component)
+	 * - Display throughput rates (msgs/sec per component) from runtimeStore
 	 * - Show error rates for each component
 	 * - Status indicators (healthy, degraded, error) using design system colors
 	 * - CPU/Memory metrics when available from backend
-	 * - Refresh rate selector (1s, 2s, 5s, 10s, manual)
-	 * - Only poll when tab is active (performance optimization)
-	 * - Graceful error handling for unavailable backend
+	 * - Data persists across tab switches (no polling needed)
 	 */
 
-	interface ComponentMetrics {
-		name: string;
-		throughput: number; // messages/second
-		errorRate: number; // errors/second
-		status: 'healthy' | 'degraded' | 'error';
-		cpu?: number; // percentage (0-100)
-		memory?: number; // bytes
-	}
-
-	interface MetricsResponse {
-		timestamp: string;
-		components: ComponentMetrics[];
-	}
+	import { runtimeStore, type RuntimeStoreState } from '$lib/stores/runtimeStore.svelte';
 
 	interface MetricsTabProps {
 		flowId: string;
-		isActive: boolean; // Don't poll if tab isn't active
+		isActive: boolean;
 	}
 
-	type RefreshInterval = 1000 | 2000 | 5000 | 10000 | 'manual';
+	// Props passed from parent - may be used for future tab-specific logic
+	let { flowId: _flowId, isActive: _isActive }: MetricsTabProps = $props();
 
-	let { flowId, isActive }: MetricsTabProps = $props();
+	// Subscribe to store - get initial state synchronously
+	let storeState = $state<RuntimeStoreState>({
+		connected: false,
+		error: null,
+		flowId: null,
+		flowStatus: null,
+		healthOverall: null,
+		healthComponents: [],
+		logs: [],
+		metricsRaw: new Map(),
+		metricsRates: new Map(),
+		lastMetricsTimestamp: null
+	});
 
-	// Reactive state
-	let pollingInterval = $state<RefreshInterval>(2000);
-	let metrics = $state<MetricsResponse | null>(null);
-	let lastUpdated = $state<Date | null>(null);
-	let errorMessage = $state<string | null>(null);
+	$effect(() => {
+		const unsubscribe = runtimeStore.subscribe((s) => {
+			storeState = s;
+		});
+		return unsubscribe;
+	});
 
-	// Sorted components (alphabetically by name)
-	const sortedComponents = $derived(
-		metrics?.components.slice().sort((a, b) => a.name.localeCompare(b.name)) || []
+	// Get metrics array from store helper
+	const metricsArray = $derived(runtimeStore.getMetricsArray(storeState));
+
+	// Group metrics by component for display
+	const componentMetrics = $derived(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const grouped = new Map<
+			string,
+			{
+				name: string;
+				throughput: number;
+				errorRate: number;
+				status: 'healthy' | 'degraded' | 'error';
+			}
+		>();
+
+		for (const metric of metricsArray) {
+			if (!grouped.has(metric.component)) {
+				grouped.set(metric.component, {
+					name: metric.component,
+					throughput: 0,
+					errorRate: 0,
+					status: 'healthy'
+				});
+			}
+
+			const comp = grouped.get(metric.component)!;
+
+			// Map metric names to display values
+			if (metric.metricName.includes('received') || metric.metricName.includes('processed')) {
+				comp.throughput = metric.rate;
+			}
+			if (metric.metricName.includes('error')) {
+				comp.errorRate = metric.rate;
+				if (metric.rate > 0) {
+					comp.status = metric.rate > 1 ? 'error' : 'degraded';
+				}
+			}
+		}
+
+		return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name));
+	});
+
+	// Last updated timestamp
+	const lastUpdated = $derived(
+		storeState.lastMetricsTimestamp ? new Date(storeState.lastMetricsTimestamp) : null
 	);
 
 	/**
-	 * Format number with commas (1234 → "1,234")
+	 * Format number with commas (1234 -> "1,234")
 	 */
 	function formatNumber(num: number): string {
-		return num.toLocaleString('en-US');
+		return num.toLocaleString('en-US', { maximumFractionDigits: 1 });
 	}
 
 	/**
-	 * Format bytes to MB (12582912 → "12.00 MB")
-	 */
-	function formatMemory(bytes: number): string {
-		const mb = bytes / (1024 * 1024);
-		return `${mb.toFixed(2)} MB`;
-	}
-
-	/**
-	 * Format percentage (5.234 → "5.2%")
-	 */
-	function formatPercentage(num: number): string {
-		return `${num.toFixed(1)}%`;
-	}
-
-	/**
-	 * Format timestamp (Date → "14:23:05")
+	 * Format timestamp (Date -> "14:23:05")
 	 */
 	function formatTime(date: Date): string {
 		return date.toLocaleTimeString('en-US', {
@@ -84,7 +111,7 @@
 	/**
 	 * Get status color from design system
 	 */
-	function getStatusColor(status: ComponentMetrics['status']): string {
+	function getStatusColor(status: 'healthy' | 'degraded' | 'error'): string {
 		const colors = {
 			healthy: 'var(--status-success)',
 			degraded: 'var(--status-warning)',
@@ -96,7 +123,7 @@
 	/**
 	 * Get status label for accessibility
 	 */
-	function getStatusLabel(status: ComponentMetrics['status']): string {
+	function getStatusLabel(status: 'healthy' | 'degraded' | 'error'): string {
 		const labels = {
 			healthy: 'Healthy - No errors',
 			degraded: 'Degraded - Some errors detected',
@@ -104,83 +131,13 @@
 		};
 		return labels[status];
 	}
-
-	/**
-	 * Fetch metrics from backend
-	 */
-	async function fetchMetrics() {
-		try {
-			const response = await fetch(`/flowbuilder/flows/${flowId}/runtime/metrics`);
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-			}
-			const data = await response.json();
-			metrics = data;
-			lastUpdated = new Date();
-			errorMessage = null; // Clear error on success
-		} catch (error) {
-			errorMessage = 'Metrics unavailable - backend endpoint not ready';
-			console.warn('[MetricsTab] Metrics fetch failed:', error);
-		}
-	}
-
-	/**
-	 * Handle manual refresh button click
-	 */
-	function handleManualRefresh() {
-		fetchMetrics();
-	}
-
-	// Effect: Manage polling lifecycle
-	$effect(() => {
-		// Only poll when tab is active and interval is not manual
-		if (!isActive || pollingInterval === 'manual') {
-			return;
-		}
-
-		// Initial fetch
-		fetchMetrics();
-
-		// Set up polling interval
-		const intervalId = setInterval(fetchMetrics, pollingInterval);
-
-		// Cleanup on unmount or when dependencies change
-		return () => {
-			clearInterval(intervalId);
-		};
-	});
 </script>
 
 <div class="metrics-tab" data-testid="metrics-tab">
 	<!-- Control Bar -->
 	<div class="control-bar">
-		<div class="refresh-control">
-			<label for="refresh-rate">
-				<span class="control-label">Refresh:</span>
-				<select
-					id="refresh-rate"
-					bind:value={pollingInterval}
-					data-testid="refresh-rate-selector"
-					aria-label="Refresh rate"
-				>
-					<option value={1000}>Every 1s</option>
-					<option value={2000}>Every 2s</option>
-					<option value={5000}>Every 5s</option>
-					<option value={10000}>Every 10s</option>
-					<option value="manual">Manual</option>
-				</select>
-			</label>
-
-			{#if pollingInterval === 'manual'}
-				<button
-					class="refresh-button"
-					onclick={handleManualRefresh}
-					data-testid="manual-refresh-button"
-					aria-label="Refresh metrics now"
-				>
-					Refresh
-				</button>
-			{/if}
+		<div class="info-text">
+			<span class="info-label">Metrics updated via WebSocket</span>
 		</div>
 
 		{#if lastUpdated}
@@ -190,45 +147,42 @@
 		{/if}
 	</div>
 
-	<!-- Error Message -->
-	{#if errorMessage}
+	<!-- Connection Status -->
+	{#if storeState.error}
 		<div class="error-message" role="alert">
 			<span class="error-icon">⚠</span>
-			<span>{errorMessage}</span>
+			<span>{storeState.error}</span>
+		</div>
+	{:else if !storeState.connected}
+		<div class="connecting-message">
+			<span class="connecting-icon">⋯</span>
+			<span>Connecting to runtime stream...</span>
 		</div>
 	{/if}
 
 	<!-- Metrics Table -->
 	<div class="table-container">
-		{#if sortedComponents.length === 0 && !errorMessage}
+		{#if componentMetrics().length === 0 && !storeState.error}
 			<div class="empty-state">
 				<p>No metrics available</p>
 			</div>
-		{:else if sortedComponents.length > 0}
+		{:else if componentMetrics().length > 0}
 			<table aria-label="Component metrics">
 				<thead>
 					<tr>
 						<th scope="col">Component</th>
 						<th scope="col">Msg/sec</th>
 						<th scope="col">Errors/sec</th>
-						<th scope="col">CPU</th>
-						<th scope="col">Memory</th>
 						<th scope="col">Status</th>
 					</tr>
 				</thead>
 				<tbody>
-					{#each sortedComponents as component (component.name)}
+					{#each componentMetrics() as component (component.name)}
 						<tr data-testid="metrics-row">
 							<td class="component-name">{component.name}</td>
 							<td class="metric-value">{formatNumber(component.throughput)}</td>
 							<td class="metric-value" class:has-errors={component.errorRate > 0}>
 								{formatNumber(component.errorRate)}
-							</td>
-							<td class="metric-value">
-								{component.cpu !== undefined ? formatPercentage(component.cpu) : 'N/A'}
-							</td>
-							<td class="metric-value">
-								{component.memory !== undefined ? formatMemory(component.memory) : 'N/A'}
 							</td>
 							<td class="status-cell">
 								<span
@@ -268,65 +222,16 @@
 		flex-wrap: wrap;
 	}
 
-	.refresh-control {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.refresh-control label {
+	.info-text {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		font-size: 0.875rem;
 	}
 
-	.control-label {
+	.info-label {
+		font-size: 0.875rem;
 		color: var(--ui-text-secondary);
 		font-weight: 500;
-	}
-
-	.refresh-control select {
-		padding: 0.375rem 0.5rem;
-		border: 1px solid var(--ui-border-subtle);
-		border-radius: 4px;
-		background: var(--ui-surface-primary);
-		color: var(--ui-text-primary);
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.refresh-control select:hover {
-		border-color: var(--ui-border-interactive);
-	}
-
-	.refresh-control select:focus {
-		outline: none;
-		border-color: var(--ui-focus-ring);
-		box-shadow: 0 0 0 2px rgba(15, 98, 254, 0.1);
-	}
-
-	.refresh-button {
-		padding: 0.375rem 0.75rem;
-		border: 1px solid var(--ui-border-subtle);
-		border-radius: 4px;
-		background: var(--ui-surface-primary);
-		color: var(--ui-text-secondary);
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: all 0.2s;
-		font-weight: 500;
-	}
-
-	.refresh-button:hover {
-		background: var(--ui-surface-tertiary);
-		color: var(--ui-text-primary);
-		border-color: var(--ui-border-strong);
-	}
-
-	.refresh-button:active {
-		transform: scale(0.98);
 	}
 
 	.last-updated {
@@ -335,19 +240,29 @@
 		font-weight: 500;
 	}
 
-	/* Error Message */
-	.error-message {
+	/* Error/Connecting Messages */
+	.error-message,
+	.connecting-message {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
 		border-bottom: 1px solid var(--ui-border-subtle);
+	}
+
+	.error-message {
 		background: var(--status-error-container);
 		color: var(--status-error-on-container);
 	}
 
-	.error-icon {
+	.connecting-message {
+		background: var(--status-info-container);
+		color: var(--status-info-on-container);
+	}
+
+	.error-icon,
+	.connecting-icon {
 		font-size: 1rem;
 	}
 

@@ -1,549 +1,579 @@
 /**
  * MessagesTab Component Tests
- * Test suite for NATS message flow visualization
+ * Tests for store-based NATS message flow visualization
+ * Messages come from logs filtered by source="message-logger"
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
+import { writable, type Writable } from 'svelte/store';
 import MessagesTab from './MessagesTab.svelte';
+import type { RuntimeStoreState, LogEntry } from '$lib/stores/runtimeStore.svelte';
 
-interface MessageLogEntry {
-	timestamp: string;
-	subject: string;
-	message_id: string;
-	component: string;
-	direction: 'published' | 'received' | 'processed';
-	summary: string;
-	metadata?: Record<string, unknown>;
+// Create a mock store that we can control
+let mockStoreState: Writable<RuntimeStoreState>;
+let mockClearLogs: Mock;
+
+// Mock the runtimeStore module
+vi.mock('$lib/stores/runtimeStore.svelte', () => {
+	const clearLogsMock = vi.fn();
+
+	return {
+		runtimeStore: {
+			subscribe: (fn: (state: RuntimeStoreState) => void) => {
+				return mockStoreState.subscribe(fn);
+			},
+			clearLogs: clearLogsMock
+		},
+		get __mockClearLogs() {
+			return clearLogsMock;
+		}
+	};
+});
+
+function createDefaultState(): RuntimeStoreState {
+	return {
+		connected: false,
+		error: null,
+		flowId: null,
+		flowStatus: null,
+		healthOverall: null,
+		healthComponents: [],
+		logs: [],
+		metricsRaw: new Map(),
+		metricsRates: new Map(),
+		lastMetricsTimestamp: null
+	};
 }
 
-interface MessagesResponse {
-	timestamp: string;
-	messages: MessageLogEntry[];
-	total: number;
-	limit: number;
+function createMessageLog(overrides: Partial<LogEntry> & { fields?: Record<string, unknown> } = {}): LogEntry {
+	return {
+		id: `log-${Date.now()}-${Math.random()}`,
+		timestamp: Date.now(),
+		level: 'INFO',
+		source: 'message-logger', // Important: must be message-logger
+		message: 'Message logged',
+		fields: {
+			subject: 'test.subject',
+			direction: 'published',
+			component: 'test-component',
+			...overrides.fields
+		},
+		...overrides
+	};
 }
 
-// Mock data
-const mockMessages: MessageLogEntry[] = [
-	{
-		timestamp: '2024-01-15T14:23:05.123Z',
-		subject: 'sensors.camera.frame',
-		message_id: 'msg-001',
-		component: 'camera-sensor',
-		direction: 'published',
-		summary: 'Published camera frame data',
-		metadata: { frame_id: 1234, resolution: '1920x1080' }
-	},
-	{
-		timestamp: '2024-01-15T14:23:05.456Z',
-		subject: 'sensors.camera.frame',
-		message_id: 'msg-002',
-		component: 'image-processor',
-		direction: 'received',
-		summary: 'Received camera frame for processing'
-	},
-	{
-		timestamp: '2024-01-15T14:23:05.789Z',
-		subject: 'processors.vision.output',
-		message_id: 'msg-003',
-		component: 'image-processor',
-		direction: 'processed',
-		summary: 'Completed image processing',
-		metadata: { objects_detected: 3, processing_time_ms: 45 }
-	}
+// Sample message logs for tests
+const sampleMessageLogs: LogEntry[] = [
+	createMessageLog({
+		id: 'msg-001',
+		timestamp: 1705329785123,
+		message: 'Published camera frame data',
+		fields: {
+			subject: 'sensors.camera.frame',
+			direction: 'published',
+			component: 'camera-sensor',
+			frame_id: 1234,
+			resolution: '1920x1080'
+		}
+	}),
+	createMessageLog({
+		id: 'msg-002',
+		timestamp: 1705329785456,
+		message: 'Received camera frame for processing',
+		fields: {
+			subject: 'sensors.camera.frame',
+			direction: 'received',
+			component: 'image-processor'
+		}
+	}),
+	createMessageLog({
+		id: 'msg-003',
+		timestamp: 1705329785789,
+		message: 'Completed image processing',
+		fields: {
+			subject: 'processors.vision.output',
+			direction: 'processed',
+			component: 'image-processor',
+			objects_detected: 3,
+			processing_time_ms: 45
+		}
+	})
 ];
 
-const mockResponse: MessagesResponse = {
-	timestamp: '2024-01-15T14:23:05.789Z',
-	messages: mockMessages,
-	total: 3,
-	limit: 100
-};
-
-// Setup fetch mock
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
-
-describe('MessagesTab - Rendering', () => {
-	beforeEach(() => {
+describe('MessagesTab', () => {
+	beforeEach(async () => {
 		vi.clearAllMocks();
+		mockStoreState = writable<RuntimeStoreState>(createDefaultState());
+
+		const module = await import('$lib/stores/runtimeStore.svelte');
+		mockClearLogs = (module as unknown as { __mockClearLogs: Mock }).__mockClearLogs;
 	});
 
-	it('renders empty state when no messages', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => ({ timestamp: new Date().toISOString(), messages: [], total: 0, limit: 100 })
+	describe('Connection Status', () => {
+		it('should show connecting status when not connected', () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: false
+			});
+
+			render(MessagesTab, { flowId: 'test-flow', isActive: true });
+
+			expect(screen.getByText(/Connecting to runtime stream/)).toBeTruthy();
 		});
 
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		it('should hide connecting status when connected', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true
+			});
 
-		await waitFor(() => {
-			expect(screen.getByText(/no messages/i)).toBeInTheDocument();
-		});
-	});
+			render(MessagesTab, { flowId: 'test-flow', isActive: true });
 
-	it('renders messages list with all fields', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			const subjects = screen.getAllByText('sensors.camera.frame');
-			expect(subjects.length).toBeGreaterThan(0);
-			expect(screen.getByText('[camera-sensor]')).toBeInTheDocument();
-			expect(screen.getByText('Published camera frame data')).toBeInTheDocument();
-		});
-	});
-
-	it('shows direction indicators with correct symbols', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
+			await waitFor(() => {
+				expect(screen.queryByText(/Connecting to runtime stream/)).toBeNull();
+			});
 		});
 
-		const { container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		it('should show error message when store has error', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: false,
+				error: 'WebSocket connection failed'
+			});
 
-		await waitFor(() => {
-			const indicators = container.querySelectorAll('.direction');
-			expect(indicators.length).toBeGreaterThan(0);
-		});
-	});
+			render(MessagesTab, { flowId: 'test-flow', isActive: true });
 
-	it('displays NATS subjects in monospace font', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		const { container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			const subjectElements = container.querySelectorAll('.subject');
-			expect(subjectElements.length).toBeGreaterThan(0);
-			// Check that subject elements have the subject class which applies monospace font
-			const firstSubject = subjectElements[0] as HTMLElement;
-			expect(firstSubject.className).toContain('subject');
+			await waitFor(() => {
+				const errorElement = screen.getByRole('alert');
+				expect(errorElement).toBeTruthy();
+				expect(errorElement.textContent).toContain('WebSocket connection failed');
+			});
 		});
 	});
 
-	it('formats timestamps with millisecond precision', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
+	describe('Rendering', () => {
+		it('renders empty state when no messages', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [] // No message-logger logs
+			});
+
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			await waitFor(() => {
+				expect(screen.getByText(/no messages/i)).toBeTruthy();
+			});
 		});
 
-		const { container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		it('renders messages list with all fields', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		await waitFor(() => {
-			const timestamps = container.querySelectorAll('.timestamp');
-			expect(timestamps.length).toBeGreaterThan(0);
-			const firstTimestamp = timestamps[0] as HTMLElement;
-			// Should match HH:MM:SS.mmm format
-			expect(firstTimestamp.textContent).toMatch(/\d{2}:\d{2}:\d{2}\.\d{3}/);
-		});
-	});
-});
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-describe('MessagesTab - Filtering', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('filters messages by component', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
+			await waitFor(() => {
+				const subjects = screen.getAllByText('sensors.camera.frame');
+				expect(subjects.length).toBeGreaterThan(0);
+				expect(screen.getByText('[camera-sensor]')).toBeTruthy();
+				expect(screen.getByText('Published camera frame data')).toBeTruthy();
+			});
 		});
 
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		it('shows direction indicators with correct symbols', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		await waitFor(() => {
-			expect(screen.getByText('[camera-sensor]')).toBeInTheDocument();
+			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			await waitFor(() => {
+				const indicators = container.querySelectorAll('.direction');
+				expect(indicators.length).toBeGreaterThan(0);
+			});
 		});
 
-		const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
-		await fireEvent.change(componentFilter, { target: { value: 'camera-sensor' } });
+		it('displays NATS subjects in monospace font class', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		await waitFor(() => {
-			expect(screen.getByText('[camera-sensor]')).toBeInTheDocument();
-			const processorComponents = screen.queryAllByText('[image-processor]');
-			expect(processorComponents.length).toBe(0);
-		});
-	});
+			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-	it('filters messages by direction', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			expect(screen.getByText('Published camera frame data')).toBeInTheDocument();
+			await waitFor(() => {
+				const subjectElements = container.querySelectorAll('.subject');
+				expect(subjectElements.length).toBeGreaterThan(0);
+				const firstSubject = subjectElements[0] as HTMLElement;
+				expect(firstSubject.className).toContain('subject');
+			});
 		});
 
-		const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
-		await fireEvent.change(directionFilter, { target: { value: 'published' } });
+		it('formats timestamps with millisecond precision', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		await waitFor(() => {
-			expect(screen.getByText('Published camera frame data')).toBeInTheDocument();
-			const receivedMessages = screen.queryAllByText('Received camera frame for processing');
-			expect(receivedMessages.length).toBe(0);
-		});
-	});
+			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-	it('combines component and direction filters', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId('message-entry').length).toBe(3);
+			await waitFor(() => {
+				const timestamps = container.querySelectorAll('.timestamp');
+				expect(timestamps.length).toBeGreaterThan(0);
+				const firstTimestamp = timestamps[0] as HTMLElement;
+				// Should match HH:MM:SS.mmm format
+				expect(firstTimestamp.textContent).toMatch(/\d{2}:\d{2}:\d{2}\.\d{3}/);
+			});
 		});
 
-		const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
-		const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
+		it('only shows logs from message-logger source', async () => {
+			const mixedLogs: LogEntry[] = [
+				...sampleMessageLogs,
+				{
+					id: 'other-log',
+					timestamp: Date.now(),
+					level: 'INFO',
+					source: 'graph-processor', // Not message-logger
+					message: 'Processing entity'
+				}
+			];
 
-		await fireEvent.change(componentFilter, { target: { value: 'image-processor' } });
-		await fireEvent.change(directionFilter, { target: { value: 'received' } });
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: mixedLogs
+			});
 
-		await waitFor(() => {
-			expect(screen.getAllByTestId('message-entry').length).toBe(1);
-			expect(screen.getByText('Received camera frame for processing')).toBeInTheDocument();
-		});
-	});
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-	it('shows "All" options in filters', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
-		const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
-
-		expect(componentFilter.querySelector('option[value="all"]')).toBeInTheDocument();
-		expect(directionFilter.querySelector('option[value="all"]')).toBeInTheDocument();
-	});
-
-	it('updates filtered message count display', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		const { container: _container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId('message-entry').length).toBe(3);
-		});
-
-		const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
-		await fireEvent.change(directionFilter, { target: { value: 'published' } });
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId('message-entry').length).toBe(1);
-		});
-	});
-});
-
-describe('MessagesTab - Polling', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-		vi.useFakeTimers();
-	});
-
-	afterEach(() => {
-		vi.useRealTimers();
-	});
-
-	it('polls at configured interval', async () => {
-		mockFetch.mockResolvedValue({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		// Initial fetch
-		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledTimes(1);
-		});
-
-		// Advance timer by 2 seconds (default poll interval)
-		vi.advanceTimersByTime(2000);
-
-		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledTimes(2);
+			await waitFor(() => {
+				const entries = screen.getAllByTestId('message-entry');
+				// Should only show the 3 message-logger entries
+				expect(entries).toHaveLength(3);
+			});
 		});
 	});
 
-	it('manual refresh works', async () => {
-		mockFetch.mockResolvedValue({
-			ok: true,
-			json: async () => mockResponse
+	describe('Filtering', () => {
+		it('filters messages by direction', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
+
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			await waitFor(() => {
+				expect(screen.getByText('Published camera frame data')).toBeTruthy();
+			});
+
+			const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
+			await fireEvent.change(directionFilter, { target: { value: 'published' } });
+
+			await waitFor(() => {
+				expect(screen.getByText('Published camera frame data')).toBeTruthy();
+				const receivedMessages = screen.queryAllByText('Received camera frame for processing');
+				expect(receivedMessages.length).toBe(0);
+			});
 		});
 
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		it('shows "All" option in direction filter', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledTimes(1);
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
+			expect(directionFilter.querySelector('option[value="all"]')).toBeTruthy();
 		});
 
-		// Change to manual mode
-		const pollRateSelector = screen.getByTestId('poll-rate-selector') as HTMLSelectElement;
-		await fireEvent.change(pollRateSelector, { target: { value: 'manual' } });
+		it('updates filtered message count when filter changes', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		// Click manual refresh button
-		const refreshButton = screen.getByTestId('manual-refresh-button');
-		await fireEvent.click(refreshButton);
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledTimes(2);
-		});
-	});
+			await waitFor(() => {
+				expect(screen.getAllByTestId('message-entry').length).toBe(3);
+			});
 
-	it('stops polling when inactive', async () => {
-		mockFetch.mockResolvedValue({
-			ok: true,
-			json: async () => mockResponse
-		});
+			const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
+			await fireEvent.change(directionFilter, { target: { value: 'published' } });
 
-		const { unmount } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledTimes(1);
+			await waitFor(() => {
+				expect(screen.getAllByTestId('message-entry').length).toBe(1);
+			});
 		});
 
-		// Unmount and remount with isActive false
-		unmount();
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: false } });
+		it('shows empty state when filter matches no messages', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [
+					createMessageLog({
+						id: 'msg-1',
+						fields: { direction: 'published', subject: 'test', component: 'comp' }
+					})
+				]
+			});
 
-		vi.advanceTimersByTime(10000);
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-		// Should not poll again (still just 1 call from first mount)
-		expect(mockFetch).toHaveBeenCalledTimes(1);
-	});
+			const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
+			await fireEvent.change(directionFilter, { target: { value: 'received' } });
 
-	it('resumes polling when active', async () => {
-		mockFetch.mockResolvedValue({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		const { unmount } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: false } });
-
-		vi.advanceTimersByTime(5000);
-		expect(mockFetch).not.toHaveBeenCalled();
-
-		// Unmount and remount with isActive true
-		unmount();
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledTimes(1);
-		});
-	});
-});
-
-describe('MessagesTab - Controls', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('auto-scroll toggles correctly', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		const autoScrollToggle = screen.getByTestId('auto-scroll-toggle') as HTMLInputElement;
-
-		expect(autoScrollToggle.checked).toBe(true);
-
-		await fireEvent.click(autoScrollToggle);
-		expect(autoScrollToggle.checked).toBe(false);
-
-		await fireEvent.click(autoScrollToggle);
-		expect(autoScrollToggle.checked).toBe(true);
-	});
-
-	it('clear messages works', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId('message-entry').length).toBe(3);
-		});
-
-		const clearButton = screen.getByTestId('clear-messages-button');
-		await fireEvent.click(clearButton);
-
-		await waitFor(() => {
-			expect(screen.queryAllByTestId('message-entry').length).toBe(0);
+			await waitFor(() => {
+				expect(screen.getByText(/No messages match current filters/)).toBeTruthy();
+			});
 		});
 	});
 
-	it('poll rate selector works', async () => {
-		mockFetch.mockResolvedValue({
-			ok: true,
-			json: async () => mockResponse
+	describe('Controls', () => {
+		it('auto-scroll toggles correctly', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
+
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			const autoScrollToggle = screen.getByTestId('auto-scroll-toggle') as HTMLInputElement;
+
+			expect(autoScrollToggle.checked).toBe(true);
+
+			await fireEvent.click(autoScrollToggle);
+			expect(autoScrollToggle.checked).toBe(false);
+
+			await fireEvent.click(autoScrollToggle);
+			expect(autoScrollToggle.checked).toBe(true);
 		});
 
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		it('clear messages calls store clearLogs', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		const pollRateSelector = screen.getByTestId('poll-rate-selector') as HTMLSelectElement;
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-		expect(pollRateSelector.value).toBe('2000');
+			await waitFor(() => {
+				expect(screen.getAllByTestId('message-entry').length).toBe(3);
+			});
 
-		await fireEvent.change(pollRateSelector, { target: { value: '1000' } });
-		expect(pollRateSelector.value).toBe('1000');
+			const clearButton = screen.getByTestId('clear-messages-button');
+			await fireEvent.click(clearButton);
 
-		await fireEvent.change(pollRateSelector, { target: { value: 'manual' } });
-		expect(pollRateSelector.value).toBe('manual');
+			expect(mockClearLogs).toHaveBeenCalled();
+		});
+
+		it('clear messages resets direction filter', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
+
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			const directionFilter = screen.getByTestId('direction-filter') as HTMLSelectElement;
+			await fireEvent.change(directionFilter, { target: { value: 'published' } });
+
+			expect(directionFilter.value).toBe('published');
+
+			const clearButton = screen.getByTestId('clear-messages-button');
+			await fireEvent.click(clearButton);
+
+			await waitFor(() => {
+				expect(directionFilter.value).toBe('all');
+			});
+		});
+
+		it('metadata expands and collapses', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
+
+			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			await waitFor(() => {
+				const subjects = screen.getAllByText('sensors.camera.frame');
+				expect(subjects.length).toBeGreaterThan(0);
+			});
+
+			// Find first message with metadata
+			const expandButtons = container.querySelectorAll('.metadata-toggle');
+			const firstExpandButton = expandButtons[0] as HTMLElement;
+
+			// Initially metadata should be hidden
+			expect(container.querySelector('.metadata')).toBeNull();
+
+			// Click to expand
+			await fireEvent.click(firstExpandButton);
+
+			await waitFor(() => {
+				expect(container.querySelector('.metadata')).toBeTruthy();
+			});
+
+			// Click to collapse
+			await fireEvent.click(firstExpandButton);
+
+			await waitFor(() => {
+				expect(container.querySelector('.metadata')).toBeNull();
+			});
+		});
+
+		it('multiple metadata sections independent', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
+
+			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			await waitFor(() => {
+				const subjects = screen.getAllByText('sensors.camera.frame');
+				expect(subjects.length).toBeGreaterThan(0);
+			});
+
+			const expandButtons = container.querySelectorAll('.metadata-toggle');
+
+			// Expand first message metadata
+			await fireEvent.click(expandButtons[0] as HTMLElement);
+
+			await waitFor(() => {
+				const metadataSections = container.querySelectorAll('.metadata');
+				expect(metadataSections.length).toBe(1);
+			});
+
+			// Expand third message metadata (second button with metadata)
+			await fireEvent.click(expandButtons[1] as HTMLElement);
+
+			await waitFor(() => {
+				const metadataSections = container.querySelectorAll('.metadata');
+				expect(metadataSections.length).toBe(2);
+			});
+		});
 	});
 
-	it('metadata expands and collapses', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
+	describe('Store Updates', () => {
+		it('updates when new messages arrive in store', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [sampleMessageLogs[0]]
+			});
+
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId('message-entry')).toHaveLength(1);
+			});
+
+			// Add more messages
+			mockStoreState.update((state) => ({
+				...state,
+				logs: [...state.logs, sampleMessageLogs[1], sampleMessageLogs[2]]
+			}));
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId('message-entry')).toHaveLength(3);
+			});
 		});
 
-		const { container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+		it('handles empty messages gracefully', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		await waitFor(() => {
-			const subjects = screen.getAllByText('sensors.camera.frame');
-			expect(subjects.length).toBeGreaterThan(0);
-		});
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-		// Find first message with metadata
-		const expandButtons = container.querySelectorAll('.metadata-toggle');
-		const firstExpandButton = expandButtons[0] as HTMLElement;
+			await waitFor(() => {
+				expect(screen.getAllByTestId('message-entry')).toHaveLength(3);
+			});
 
-		// Initially metadata should be hidden
-		expect(container.querySelector('.metadata')).not.toBeInTheDocument();
+			// Clear all logs
+			mockStoreState.update((state) => ({
+				...state,
+				logs: []
+			}));
 
-		// Click to expand
-		await fireEvent.click(firstExpandButton);
-
-		await waitFor(() => {
-			expect(container.querySelector('.metadata')).toBeInTheDocument();
-			const metadata = screen.getAllByText(/"frame_id"/);
-			expect(metadata.length).toBeGreaterThan(0);
-		});
-
-		// Click to collapse
-		await fireEvent.click(firstExpandButton);
-
-		await waitFor(() => {
-			expect(container.querySelector('.metadata')).not.toBeInTheDocument();
-		});
-	});
-
-	it('multiple metadata sections independent', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		const { container } = render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
-
-		await waitFor(() => {
-			const subjects = screen.getAllByText('sensors.camera.frame');
-			expect(subjects.length).toBeGreaterThan(0);
-		});
-
-		const expandButtons = container.querySelectorAll('.metadata-toggle');
-
-		// Expand first message metadata
-		await fireEvent.click(expandButtons[0] as HTMLElement);
-
-		await waitFor(() => {
-			const metadata = screen.getAllByText(/"frame_id"/);
-			expect(metadata.length).toBeGreaterThan(0);
-		});
-
-		// Expand third message metadata (second button is for third message with metadata)
-		await fireEvent.click(expandButtons[1] as HTMLElement);
-
-		await waitFor(() => {
-			const metadata = screen.getAllByText(/"objects_detected"/);
-			expect(metadata.length).toBeGreaterThan(0);
-		});
-
-		// Both should be visible
-		expect(screen.getAllByText(/"frame_id"/).length).toBeGreaterThan(0);
-		expect(screen.getAllByText(/"objects_detected"/).length).toBeGreaterThan(0);
-	});
-});
-
-describe('MessagesTab - API Integration', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	it('fetches messages from correct endpoint', async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockResponse
-		});
-
-		render(MessagesTab, { props: { flowId: 'test-flow-456', isActive: true } });
-
-		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledWith(
-				'/flowbuilder/flows/test-flow-456/runtime/messages'
-			);
+			await waitFor(() => {
+				expect(screen.queryAllByTestId('message-entry')).toHaveLength(0);
+				expect(screen.getByText(/no messages/i)).toBeTruthy();
+			});
 		});
 	});
 
-	it('handles fetch errors gracefully', async () => {
-		mockFetch.mockRejectedValueOnce(new Error('Network error'));
+	describe('Accessibility', () => {
+		it('should have proper ARIA labels on controls', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-		await waitFor(() => {
-			expect(screen.getByText(/unavailable/i)).toBeInTheDocument();
+			const clearButton = screen.getByTestId('clear-messages-button');
+			expect(clearButton.getAttribute('aria-label')).toBe('Clear all messages');
+
+			const directionFilter = screen.getByTestId('direction-filter');
+			expect(directionFilter.getAttribute('aria-label')).toBe('Filter by direction');
 		});
-	});
 
-	it('shows loading state during fetch', async () => {
-		let resolvePromise: (value: Response) => void;
-		const promise = new Promise<Response>((resolve) => {
-			resolvePromise = resolve;
+		it('should use aria-live region for message entries', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
+
+			render(MessagesTab, { flowId: 'flow-123', isActive: true });
+
+			await waitFor(() => {
+				const logContainer = screen.getByRole('log');
+				expect(logContainer.getAttribute('aria-live')).toBe('polite');
+			});
 		});
 
-		mockFetch.mockReturnValueOnce(promise);
+		it('should have aria-expanded on metadata toggles', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: sampleMessageLogs
+			});
 
-		render(MessagesTab, { props: { flowId: 'flow-123', isActive: true } });
+			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
-		// Component should be in loading state
-		expect(screen.queryByTestId('message-entry')).not.toBeInTheDocument();
+			await waitFor(() => {
+				const expandButtons = container.querySelectorAll('.metadata-toggle');
+				expect(expandButtons.length).toBeGreaterThan(0);
 
-		// Resolve the promise
-		resolvePromise!({
-			ok: true,
-			json: async () => mockResponse
-		} as Response);
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId('message-entry').length).toBe(3);
+				const firstButton = expandButtons[0] as HTMLElement;
+				expect(firstButton.getAttribute('aria-expanded')).toBe('false');
+			});
 		});
 	});
 });

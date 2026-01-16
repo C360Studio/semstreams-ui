@@ -1,117 +1,69 @@
 <script lang="ts">
-	import { SvelteSet } from "svelte/reactivity";
+	import { SvelteSet } from 'svelte/reactivity';
 	/**
-	 * HealthTab Component - Component health monitoring with diagnostics
-	 * Phase 4 of Runtime Visualization Panel
+	 * HealthTab Component - Component health monitoring
+	 * Uses runtimeStore for WebSocket-driven data
 	 *
 	 * Features:
-	 * - Poll backend health endpoint at 5-second intervals
-	 * - Display component status (running, degraded, error)
-	 * - Show real-time uptime counters (HH:MM:SS)
-	 * - Display last activity timestamps (relative format)
-	 * - Expandable details for degraded/error components
+	 * - Display component status (healthy, degraded, error) from runtimeStore
 	 * - Connection health summary (X/Y components healthy)
+	 * - Expandable details for components with messages
 	 * - Status indicators using design system colors
-	 * - Only poll when tab is active (performance optimization)
-	 * - Graceful error handling for unavailable backend
+	 * - Data persists across tab switches (no polling needed)
 	 */
 
-	interface ComponentHealth {
-		name: string;
-		status: 'running' | 'degraded' | 'error';
-		startTime: string; // ISO timestamp
-		lastActivity: string; // ISO timestamp
-		details: {
-			message: string;
-			timestamp: string;
-			severity: 'warning' | 'error';
-		} | null;
-	}
-
-	interface OverallHealth {
-		status: 'healthy' | 'degraded' | 'error';
-		healthyCount: number;
-		totalCount: number;
-	}
-
-	interface HealthResponse {
-		timestamp: string;
-		overall: OverallHealth;
-		components: ComponentHealth[];
-	}
+	import {
+		runtimeStore,
+		type ComponentHealth,
+		type RuntimeStoreState
+	} from '$lib/stores/runtimeStore.svelte';
 
 	interface HealthTabProps {
 		flowId: string;
-		isActive: boolean; // Don't poll if tab isn't active
+		isActive: boolean;
 	}
 
-	let { flowId, isActive }: HealthTabProps = $props();
+	// Props passed from parent - may be used for future tab-specific logic
+	let { flowId: _flowId, isActive: _isActive }: HealthTabProps = $props();
 
-	// Reactive state
-	let health = $state<HealthResponse | null>(null);
-	let currentTime = $state(new Date());
+	// Local UI state
 	let expandedComponents = new SvelteSet<string>();
-	let errorMessage = $state<string | null>(null);
+
+	// Subscribe to store - get initial state synchronously
+	let storeState = $state<RuntimeStoreState>({
+		connected: false,
+		error: null,
+		flowId: null,
+		flowStatus: null,
+		healthOverall: null,
+		healthComponents: [],
+		logs: [],
+		metricsRaw: new Map(),
+		metricsRates: new Map(),
+		lastMetricsTimestamp: null
+	});
+
+	$effect(() => {
+		const unsubscribe = runtimeStore.subscribe((s) => {
+			storeState = s;
+		});
+		return unsubscribe;
+	});
 
 	// Sorted components (alphabetically by name)
 	const sortedComponents = $derived(
-		health?.components.slice().sort((a, b) => a.name.localeCompare(b.name)) || []
+		storeState.healthComponents.slice().sort((a, b) => a.name.localeCompare(b.name))
 	);
 
 	// Check if component is expanded
 	const isExpanded = $derived((name: string) => expandedComponents.has(name));
 
 	/**
-	 * Calculate uptime from start time
-	 * Returns formatted string: "HH:MM:SS"
-	 */
-	function calculateUptime(startTime: string, now: Date): string {
-		const start = new Date(startTime);
-		const elapsed = Math.floor((now.getTime() - start.getTime()) / 1000);
-
-		const hours = Math.floor(elapsed / 3600);
-		const minutes = Math.floor((elapsed % 3600) / 60);
-		const seconds = elapsed % 60;
-
-		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-	}
-
-	/**
-	 * Format relative time for last activity
-	 * Returns human-readable string: "X seconds ago", "X minutes ago"
-	 */
-	function formatRelativeTime(timestamp: string, now: Date): string {
-		const then = new Date(timestamp);
-		const elapsed = Math.floor((now.getTime() - then.getTime()) / 1000);
-
-		if (elapsed < 60) return `${elapsed} ${elapsed === 1 ? 'second' : 'seconds'} ago`;
-		if (elapsed < 3600) {
-			const minutes = Math.floor(elapsed / 60);
-			return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
-		}
-		if (elapsed < 86400) {
-			const hours = Math.floor(elapsed / 3600);
-			return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
-		}
-		const days = Math.floor(elapsed / 86400);
-		return `${days} ${days === 1 ? 'day' : 'days'} ago`;
-	}
-
-	/**
-	 * Check if component is stale (no activity > 30s)
-	 */
-	function isStale(lastActivity: string, now: Date): boolean {
-		const then = new Date(lastActivity);
-		const elapsed = Math.floor((now.getTime() - then.getTime()) / 1000);
-		return elapsed > 30;
-	}
-
-	/**
 	 * Get status color from design system
 	 */
 	function getStatusColor(status: ComponentHealth['status']): string {
 		const colors = {
-			running: 'var(--status-success)',
+			healthy: 'var(--status-success)',
 			degraded: 'var(--status-warning)',
 			error: 'var(--status-error)'
 		};
@@ -123,7 +75,7 @@
 	 */
 	function getStatusIcon(status: ComponentHealth['status']): string {
 		const icons = {
-			running: '●',
+			healthy: '●',
 			degraded: '⚠',
 			error: '●'
 		};
@@ -135,7 +87,7 @@
 	 */
 	function getStatusLabel(status: ComponentHealth['status']): string {
 		const labels = {
-			running: 'Running - Component is healthy',
+			healthy: 'Healthy - Component is operating normally',
 			degraded: 'Degraded - Component has warnings',
 			error: 'Error - Component has critical issues'
 		};
@@ -145,7 +97,7 @@
 	/**
 	 * Get overall health status color
 	 */
-	function getOverallStatusColor(status: OverallHealth['status']): string {
+	function getOverallStatusColor(status: ComponentHealth['status']): string {
 		const colors = {
 			healthy: 'var(--status-success)',
 			degraded: 'var(--status-warning)',
@@ -157,7 +109,7 @@
 	/**
 	 * Get overall health status icon
 	 */
-	function getOverallStatusIcon(status: OverallHealth['status']): string {
+	function getOverallStatusIcon(status: ComponentHealth['status']): string {
 		const icons = {
 			healthy: '🟢',
 			degraded: '🟡',
@@ -176,108 +128,44 @@
 			expandedComponents.add(componentName);
 		}
 	}
-
-	/**
-	 * Format timestamp for detail display
-	 */
-	function formatDetailTimestamp(isoString: string): string {
-		try {
-			const date = new Date(isoString);
-			return date.toLocaleString('en-US', {
-				month: 'short',
-				day: 'numeric',
-				hour: '2-digit',
-				minute: '2-digit',
-				second: '2-digit'
-			});
-		} catch {
-			return isoString;
-		}
-	}
-
-	/**
-	 * Fetch health data from backend
-	 */
-	async function fetchHealth() {
-		try {
-			const response = await fetch(`/flowbuilder/flows/${flowId}/runtime/health`);
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-			}
-			const data = await response.json();
-			health = data;
-			errorMessage = null; // Clear error on success
-		} catch (error) {
-			errorMessage = 'Health monitoring unavailable - backend endpoint not ready';
-			console.warn('[HealthTab] Health fetch failed:', error);
-		}
-	}
-
-	// Effect: Manage health polling lifecycle (5 seconds)
-	$effect(() => {
-		if (!isActive) {
-			return;
-		}
-
-		// Initial fetch
-		fetchHealth();
-
-		// Set up polling interval (5 seconds)
-		const intervalId = setInterval(fetchHealth, 5000);
-
-		// Cleanup on unmount or when dependencies change
-		return () => {
-			clearInterval(intervalId);
-		};
-	});
-
-	// Effect: Manage uptime update lifecycle (1 second)
-	$effect(() => {
-		if (!isActive) {
-			return;
-		}
-
-		// Set up uptime update interval (1 second)
-		const intervalId = setInterval(() => {
-			currentTime = new Date();
-		}, 1000);
-
-		// Cleanup on unmount or when dependencies change
-		return () => {
-			clearInterval(intervalId);
-		};
-	});
 </script>
 
 <div class="health-tab" data-testid="health-tab">
-	<!-- Error Message -->
-	{#if errorMessage}
+	<!-- Connection Status -->
+	{#if storeState.error}
 		<div class="error-message" role="alert" data-testid="health-error">
 			<span class="error-icon">⚠</span>
-			<span>{errorMessage}</span>
+			<span>{storeState.error}</span>
+		</div>
+	{:else if !storeState.connected}
+		<div class="connecting-message">
+			<span class="connecting-icon">⋯</span>
+			<span>Connecting to runtime stream...</span>
 		</div>
 	{/if}
 
 	<!-- Health Summary -->
-	{#if health?.overall}
+	{#if storeState.healthOverall}
 		<div class="health-summary" data-testid="health-summary">
 			<span
 				class="overall-status"
-				style="color: {getOverallStatusColor(health.overall.status)}"
-				aria-label="Overall system health: {health.overall.status}"
+				style="color: {getOverallStatusColor(storeState.healthOverall.status)}"
+				aria-label="Overall system health: {storeState.healthOverall.status}"
 			>
-				<span class="status-icon">{getOverallStatusIcon(health.overall.status)}</span>
+				<span class="status-icon">{getOverallStatusIcon(storeState.healthOverall.status)}</span>
 				<span class="status-text">System Health:</span>
-				<span class="health-count"
-					>{health.overall.healthyCount}/{health.overall.totalCount} components healthy</span
-				>
+				<span class="health-count">
+					{storeState.healthOverall.counts.healthy}/{storeState.healthOverall.counts.healthy +
+						storeState.healthOverall.counts.degraded +
+						storeState.healthOverall.counts.error} components healthy
+				</span>
 			</span>
 		</div>
 	{/if}
 
 	<!-- Health Table -->
 	<div class="table-container">
-		{#if sortedComponents.length === 0 && !errorMessage}
+		{#if sortedComponents.length === 0 && !storeState.error}
 			<div class="empty-state">
 				<p>No health data available</p>
 			</div>
@@ -286,16 +174,15 @@
 				<thead>
 					<tr>
 						<th scope="col" class="col-component">Component</th>
+						<th scope="col" class="col-type">Type</th>
 						<th scope="col" class="col-status">Status</th>
-						<th scope="col" class="col-uptime">Uptime</th>
-						<th scope="col" class="col-activity">Last Activity</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each sortedComponents as component (component.name)}
-						<tr data-testid="health-row" class:has-details={component.details !== null}>
+						<tr data-testid="health-row" class:has-details={component.message !== null}>
 							<td class="component-name">
-								{#if component.details}
+								{#if component.message}
 									<button
 										class="expand-button"
 										onclick={() => toggleDetails(component.name)}
@@ -310,6 +197,9 @@
 								{/if}
 								<span class="name-text">{component.name}</span>
 							</td>
+							<td class="type-cell">
+								<span class="type-label">{component.type}</span>
+							</td>
 							<td class="status-cell">
 								<span
 									class="status-indicator"
@@ -321,27 +211,18 @@
 								</span>
 								<span class="status-label">{component.status}</span>
 							</td>
-							<td class="uptime-cell">
-								<span class="uptime-value">{calculateUptime(component.startTime, currentTime)}</span>
-							</td>
-							<td class="activity-cell" class:stale={isStale(component.lastActivity, currentTime)}>
-								<span class="activity-value"
-									>{formatRelativeTime(component.lastActivity, currentTime)}</span
-								>
-							</td>
 						</tr>
 
 						<!-- Expandable Details Row -->
-						{#if component.details && isExpanded(component.name)}
+						{#if component.message && isExpanded(component.name)}
 							<tr class="details-row" data-testid="details-row">
-								<td colspan="4">
+								<td colspan="3">
 									<div class="details-content">
-										<div class="detail-severity" class:is-error={component.details.severity === 'error'}>
-											<span class="severity-label">{component.details.severity.toUpperCase()}:</span>
-											<span class="severity-message">{component.details.message}</span>
-										</div>
-										<div class="detail-timestamp">
-											Occurred: {formatDetailTimestamp(component.details.timestamp)}
+										<div class="detail-message" class:is-error={component.status === 'error'}>
+											<span class="message-label"
+												>{component.status === 'error' ? 'ERROR' : 'WARNING'}:</span
+											>
+											<span class="message-text">{component.message}</span>
 										</div>
 									</div>
 								</td>
@@ -362,19 +243,29 @@
 		background: var(--ui-surface-primary);
 	}
 
-	/* Error Message */
-	.error-message {
+	/* Error/Connecting Messages */
+	.error-message,
+	.connecting-message {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
 		border-bottom: 1px solid var(--ui-border-subtle);
+	}
+
+	.error-message {
 		background: var(--status-error-container);
 		color: var(--status-error-on-container);
 	}
 
-	.error-icon {
+	.connecting-message {
+		background: var(--status-info-container);
+		color: var(--status-info-on-container);
+	}
+
+	.error-icon,
+	.connecting-icon {
 		font-size: 1rem;
 	}
 
@@ -460,19 +351,15 @@
 	}
 
 	.col-component {
-		width: 30%;
+		width: 50%;
+	}
+
+	.col-type {
+		width: 25%;
 	}
 
 	.col-status {
-		width: 20%;
-	}
-
-	.col-uptime {
-		width: 20%;
-	}
-
-	.col-activity {
-		width: 30%;
+		width: 25%;
 	}
 
 	tbody tr {
@@ -532,6 +419,16 @@
 		white-space: nowrap;
 	}
 
+	/* Type Column */
+	.type-cell {
+		color: var(--ui-text-secondary);
+	}
+
+	.type-label {
+		text-transform: capitalize;
+		font-weight: 500;
+	}
+
 	/* Status Column */
 	.status-cell {
 		display: flex;
@@ -548,34 +445,6 @@
 	.status-label {
 		color: var(--ui-text-secondary);
 		text-transform: capitalize;
-		font-weight: 500;
-	}
-
-	/* Uptime Column */
-	.uptime-cell {
-		font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
-		font-size: 0.875rem;
-		color: var(--ui-text-secondary);
-		white-space: nowrap;
-	}
-
-	.uptime-value {
-		font-weight: 500;
-	}
-
-	/* Activity Column */
-	.activity-cell {
-		font-size: 0.875rem;
-		color: var(--ui-text-secondary);
-		white-space: nowrap;
-	}
-
-	.activity-cell.stale {
-		color: var(--status-warning);
-		font-weight: 600;
-	}
-
-	.activity-value {
 		font-weight: 500;
 	}
 
@@ -598,13 +467,13 @@
 		font-size: 0.875rem;
 	}
 
-	.detail-severity {
+	.detail-message {
 		display: flex;
 		gap: 0.5rem;
 		align-items: baseline;
 	}
 
-	.severity-label {
+	.message-label {
 		font-weight: 700;
 		color: var(--status-warning);
 		text-transform: uppercase;
@@ -612,19 +481,13 @@
 		letter-spacing: 0.5px;
 	}
 
-	.detail-severity.is-error .severity-label {
+	.detail-message.is-error .message-label {
 		color: var(--status-error);
 	}
 
-	.severity-message {
+	.message-text {
 		color: var(--ui-text-primary);
 		font-weight: 500;
-	}
-
-	.detail-timestamp {
-		color: var(--ui-text-tertiary);
-		font-size: 0.75rem;
-		font-style: italic;
 	}
 
 	/* Scrollbar styling (optional, for better UX) */

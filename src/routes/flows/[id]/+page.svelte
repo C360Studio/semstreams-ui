@@ -22,7 +22,9 @@
 	import { saveFlow, deployFlow, startFlow, stopFlow, isValidationError } from '$lib/api/flows';
 	import { flowHistory } from '$lib/stores/flowHistory.svelte';
 	import { createPanelLayoutStore } from '$lib/stores/panelLayoutStore.svelte';
-	import { onMount } from 'svelte';
+	import { runtimeWS } from '$lib/services/runtimeWebSocket';
+	import { runtimeStore } from '$lib/stores/runtimeStore.svelte';
+	import { onMount, onDestroy } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -127,6 +129,9 @@
 		// Initialize responsive layout based on current viewport
 		panelLayout.handleViewportResize(window.innerWidth);
 
+		// Connect to WebSocket for runtime data
+		runtimeWS.connect(backendFlow.id);
+
 		// Fetch component types
 		try {
 			const response = await fetch('/components/types');
@@ -136,6 +141,12 @@
 		} catch (error) {
 			console.error('Failed to fetch component types:', error);
 		}
+	});
+
+	// Cleanup WebSocket connection and reset store on unmount
+	onDestroy(() => {
+		runtimeWS.disconnect();
+		runtimeStore.reset();
 	});
 
 	// Handle viewport resize for responsive panel behavior

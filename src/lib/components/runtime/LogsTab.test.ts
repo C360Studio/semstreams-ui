@@ -1,74 +1,97 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
+import { writable, type Writable } from 'svelte/store';
 import LogsTab from './LogsTab.svelte';
+import type { RuntimeStoreState, LogEntry } from '$lib/stores/runtimeStore.svelte';
 
 /**
  * LogsTab Component Tests
- * Tests for Phase 2: Real-time log streaming with filtering
+ * Tests for store-based log display with filtering
  */
 
-interface MockEventSource {
-	addEventListener: (event: string, handler: (e: Event) => void) => void;
-	close: () => void;
-	readyState: number;
+// Create a mock store that we can control
+let mockStoreState: Writable<RuntimeStoreState>;
+let mockClearLogs: Mock;
+
+// Mock the runtimeStore module
+vi.mock('$lib/stores/runtimeStore.svelte', () => {
+	// Create mock functions that will be controlled by the test
+	const clearLogsMock = vi.fn();
+
+	return {
+		runtimeStore: {
+			subscribe: (fn: (state: RuntimeStoreState) => void) => {
+				// This will be replaced in beforeEach
+				return mockStoreState.subscribe(fn);
+			},
+			clearLogs: clearLogsMock
+		},
+		// Export the mock for test access
+		get __mockClearLogs() {
+			return clearLogsMock;
+		}
+	};
+});
+
+function createDefaultState(): RuntimeStoreState {
+	return {
+		connected: false,
+		error: null,
+		flowId: null,
+		flowStatus: null,
+		healthOverall: null,
+		healthComponents: [],
+		logs: [],
+		metricsRaw: new Map(),
+		metricsRates: new Map(),
+		lastMetricsTimestamp: null
+	};
+}
+
+function createLogEntry(overrides: Partial<LogEntry> = {}): LogEntry {
+	return {
+		id: `log-${Date.now()}-${Math.random()}`,
+		timestamp: Date.now(),
+		level: 'INFO',
+		source: 'test-source',
+		message: 'Test message',
+		...overrides
+	};
 }
 
 describe('LogsTab', () => {
-	// Mock EventSource
-	let mockEventSource: MockEventSource;
-	let eventListeners: Record<string, ((e: Event) => void)[]> = {};
-	let mockEventSourceConstructor: ReturnType<typeof vi.fn>;
+	beforeEach(async () => {
+		vi.clearAllMocks();
 
-	beforeEach(() => {
-		// Reset event listeners
-		eventListeners = {};
+		// Create a fresh mock store for each test
+		mockStoreState = writable<RuntimeStoreState>(createDefaultState());
 
-		// Mock EventSource
-		mockEventSource = {
-			addEventListener: vi.fn((event: string, handler: (e: Event) => void) => {
-				if (!eventListeners[event]) {
-					eventListeners[event] = [];
-				}
-				eventListeners[event].push(handler);
-			}),
-			close: vi.fn(),
-			readyState: 0
-		};
-
-		// Create mock EventSource constructor
-		mockEventSourceConstructor = vi.fn(() => mockEventSource);
-
-		// @ts-expect-error - Assigning mock to global EventSource
-		globalThis.EventSource = mockEventSourceConstructor;
+		// Get reference to mock clearLogs function
+		const module = await import('$lib/stores/runtimeStore.svelte');
+		mockClearLogs = (module as unknown as { __mockClearLogs: Mock }).__mockClearLogs;
 	});
 
-	describe('Connection Lifecycle', () => {
-		it('should not connect when isActive is false', () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: false });
+	describe('Connection Status', () => {
+		it('should show connecting status when not connected', () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: false
+			});
 
-			expect(mockEventSourceConstructor).not.toHaveBeenCalled();
-		});
-
-		it('should connect to SSE endpoint when isActive is true', () => {
-			render(LogsTab, { flowId: 'test-flow-123', isActive: true });
-
-			expect(mockEventSourceConstructor).toHaveBeenCalledWith('/flowbuilder/flows/test-flow-123/runtime/logs');
-		});
-
-		it('should show connecting status initially', () => {
 			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			const connectingStatus = screen.getByTestId('connection-connecting');
 			expect(connectingStatus).toBeTruthy();
-			expect(connectingStatus.textContent).toContain('Connecting to log stream');
+			expect(connectingStatus.textContent).toContain('Connecting to runtime stream');
 		});
 
-		it('should handle connection open event', async () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: true });
+		it('should hide connecting status when connected', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true
+			});
 
-			// Simulate connection open
-			const openHandler = eventListeners['open']?.[0];
-			openHandler?.(new Event('open'));
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const connectingStatus = screen.queryByTestId('connection-connecting');
@@ -76,47 +99,42 @@ describe('LogsTab', () => {
 			});
 		});
 
-		it('should show error message on connection failure', async () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: true });
+		it('should show error message when store has error', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: false,
+				error: 'Connection failed'
+			});
 
-			// Simulate connection error
-			const errorHandler = eventListeners['error']?.[0];
-			errorHandler?.(new Event('error'));
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const errorStatus = screen.getByTestId('connection-error');
 				expect(errorStatus).toBeTruthy();
-				expect(errorStatus.textContent).toContain('Log streaming unavailable');
+				expect(errorStatus.textContent).toContain('Connection failed');
 			});
-		});
-
-		it('should close connection when component unmounts', () => {
-			const { unmount } = render(LogsTab, { flowId: 'test-flow', isActive: true });
-
-			unmount();
-
-			expect(mockEventSource.close).toHaveBeenCalled();
 		});
 	});
 
-	describe('Log Streaming', () => {
-		it('should display received log entries', async () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: true });
-
-			// Simulate connection open
-			eventListeners['open']?.[0](new Event('open'));
-
-			// Simulate log event
-			const logHandler = eventListeners['log']?.[0];
-			const logEvent = new MessageEvent('log', {
-				data: JSON.stringify({
-					timestamp: '2025-11-17T14:23:01.234Z',
+	describe('Log Display', () => {
+		it('should display logs from store', async () => {
+			const logs: LogEntry[] = [
+				createLogEntry({
+					id: 'log-1',
+					timestamp: 1705412345234,
 					level: 'INFO',
-					component: 'udp-source',
+					source: 'udp-source',
 					message: 'Listening on port 8080'
 				})
+			];
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs
 			});
-			logHandler?.(logEvent);
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const logEntries = screen.getAllByTestId('log-entry');
@@ -128,20 +146,24 @@ describe('LogsTab', () => {
 		});
 
 		it('should format timestamps correctly', async () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: true });
+			// Use a timestamp that creates predictable local time
+			const timestamp = new Date(2025, 10, 17, 14, 23, 45, 678).getTime();
 
-			eventListeners['open']?.[0](new Event('open'));
-
-			const logHandler = eventListeners['log']?.[0];
-			const logEvent = new MessageEvent('log', {
-				data: JSON.stringify({
-					timestamp: '2025-11-17T14:23:45.678Z',
-					level: 'DEBUG',
-					component: 'processor',
-					message: 'Test message'
-				})
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [
+					createLogEntry({
+						id: 'log-1',
+						timestamp,
+						level: 'DEBUG',
+						source: 'processor',
+						message: 'Test message'
+					})
+				]
 			});
-			logHandler?.(logEvent);
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const logEntry = screen.getByTestId('log-entry');
@@ -151,20 +173,20 @@ describe('LogsTab', () => {
 		});
 
 		it('should handle multi-line log messages', async () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: true });
-
-			eventListeners['open']?.[0](new Event('open'));
-
-			const logHandler = eventListeners['log']?.[0];
-			const logEvent = new MessageEvent('log', {
-				data: JSON.stringify({
-					timestamp: '2025-11-17T14:23:02.456Z',
-					level: 'ERROR',
-					component: 'processor',
-					message: 'Failed to process message\n  at processor.go:45\n  invalid JSON syntax'
-				})
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [
+					createLogEntry({
+						id: 'log-1',
+						level: 'ERROR',
+						source: 'processor',
+						message: 'Failed to process message\n  at processor.go:45\n  invalid JSON syntax'
+					})
+				]
 			});
-			logHandler?.(logEvent);
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const logEntry = screen.getByTestId('log-entry');
@@ -175,22 +197,19 @@ describe('LogsTab', () => {
 		});
 
 		it('should display multiple log entries in order', async () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: true });
-
-			eventListeners['open']?.[0](new Event('open'));
-
-			const logHandler = eventListeners['log']?.[0];
-
-			// Send multiple logs
-			const logs = [
-				{ timestamp: '2025-11-17T14:23:01.000Z', level: 'INFO', component: 'source', message: 'First' },
-				{ timestamp: '2025-11-17T14:23:02.000Z', level: 'WARN', component: 'processor', message: 'Second' },
-				{ timestamp: '2025-11-17T14:23:03.000Z', level: 'DEBUG', component: 'sink', message: 'Third' }
+			const logs: LogEntry[] = [
+				createLogEntry({ id: 'log-1', level: 'INFO', source: 'source', message: 'First' }),
+				createLogEntry({ id: 'log-2', level: 'WARN', source: 'processor', message: 'Second' }),
+				createLogEntry({ id: 'log-3', level: 'DEBUG', source: 'sink', message: 'Third' })
 			];
 
-			for (const log of logs) {
-				logHandler?.(new MessageEvent('log', { data: JSON.stringify(log) }));
-			}
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs
+			});
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				const logEntries = screen.getAllByTestId('log-entry');
@@ -200,36 +219,62 @@ describe('LogsTab', () => {
 				expect(logEntries[2].textContent).toContain('Third');
 			});
 		});
+
+		it('should update when store changes', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [createLogEntry({ id: 'log-1', message: 'First log' })]
+			});
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId('log-entry')).toHaveLength(1);
+			});
+
+			// Update store with additional log
+			mockStoreState.update((state) => ({
+				...state,
+				logs: [
+					...state.logs,
+					createLogEntry({ id: 'log-2', message: 'Second log' })
+				]
+			}));
+
+			await waitFor(() => {
+				const logEntries = screen.getAllByTestId('log-entry');
+				expect(logEntries).toHaveLength(2);
+				expect(logEntries[1].textContent).toContain('Second log');
+			});
+		});
 	});
 
 	describe('Filtering', () => {
-		beforeEach(async () => {
-			render(LogsTab, { flowId: 'test-flow', isActive: true });
-
-			eventListeners['open']?.[0](new Event('open'));
-
-			const logHandler = eventListeners['log']?.[0];
-
-			// Add test logs
-			const logs = [
-				{ timestamp: '2025-11-17T14:23:01.000Z', level: 'DEBUG', component: 'source', message: 'Debug message' },
-				{ timestamp: '2025-11-17T14:23:02.000Z', level: 'INFO', component: 'processor', message: 'Info message' },
-				{ timestamp: '2025-11-17T14:23:03.000Z', level: 'WARN', component: 'source', message: 'Warning message' },
-				{ timestamp: '2025-11-17T14:23:04.000Z', level: 'ERROR', component: 'sink', message: 'Error message' }
+		const setupLogsForFiltering = () => {
+			const logs: LogEntry[] = [
+				createLogEntry({ id: 'log-1', level: 'DEBUG', source: 'source', message: 'Debug message' }),
+				createLogEntry({ id: 'log-2', level: 'INFO', source: 'processor', message: 'Info message' }),
+				createLogEntry({ id: 'log-3', level: 'WARN', source: 'source', message: 'Warning message' }),
+				createLogEntry({ id: 'log-4', level: 'ERROR', source: 'sink', message: 'Error message' })
 			];
 
-			for (const log of logs) {
-				logHandler?.(new MessageEvent('log', { data: JSON.stringify(log) }));
-			}
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs
+			});
+		};
+
+		it('should filter logs by level', async () => {
+			setupLogsForFiltering();
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			await waitFor(() => {
 				expect(screen.getAllByTestId('log-entry')).toHaveLength(4);
 			});
-		});
 
-		it('should filter logs by level', async () => {
 			const levelFilter = screen.getByTestId('level-filter') as HTMLSelectElement;
-
 			await fireEvent.change(levelFilter, { target: { value: 'ERROR' } });
 
 			await waitFor(() => {
@@ -240,9 +285,15 @@ describe('LogsTab', () => {
 			});
 		});
 
-		it('should filter logs by component', async () => {
-			const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
+		it('should filter logs by source/component', async () => {
+			setupLogsForFiltering();
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
+			await waitFor(() => {
+				expect(screen.getAllByTestId('log-entry')).toHaveLength(4);
+			});
+
+			const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
 			await fireEvent.change(componentFilter, { target: { value: 'source' } });
 
 			await waitFor(() => {
@@ -253,9 +304,16 @@ describe('LogsTab', () => {
 			});
 		});
 
-		it('should populate component filter with unique components', async () => {
+		it('should populate component filter with unique sources', async () => {
+			setupLogsForFiltering();
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId('log-entry')).toHaveLength(4);
+			});
+
 			const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
-			const options = Array.from(componentFilter.options).map(o => o.value);
+			const options = Array.from(componentFilter.options).map((o) => o.value);
 
 			expect(options).toContain('all');
 			expect(options).toContain('source');
@@ -264,6 +322,13 @@ describe('LogsTab', () => {
 		});
 
 		it('should combine level and component filters', async () => {
+			setupLogsForFiltering();
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId('log-entry')).toHaveLength(4);
+			});
+
 			const levelFilter = screen.getByTestId('level-filter') as HTMLSelectElement;
 			const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
 
@@ -279,12 +344,20 @@ describe('LogsTab', () => {
 		});
 
 		it('should show empty state when no logs match filters', async () => {
-			const levelFilter = screen.getByTestId('level-filter') as HTMLSelectElement;
+			setupLogsForFiltering();
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
-			await fireEvent.change(levelFilter, { target: { value: 'DEBUG' } });
+			await waitFor(() => {
+				expect(screen.getAllByTestId('log-entry')).toHaveLength(4);
+			});
+
+			// Filter by ERROR level (only ERROR log exists) and source "processor"
+			// (which has INFO level, not ERROR), so no logs match
+			const levelFilter = screen.getByTestId('level-filter') as HTMLSelectElement;
+			await fireEvent.change(levelFilter, { target: { value: 'ERROR' } });
 
 			const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
-			await fireEvent.change(componentFilter, { target: { value: 'sink' } });
+			await fireEvent.change(componentFilter, { target: { value: 'processor' } });
 
 			await waitFor(() => {
 				const logEntries = screen.queryAllByTestId('log-entry');
@@ -292,23 +365,38 @@ describe('LogsTab', () => {
 				expect(screen.getByText(/No logs match current filters/)).toBeTruthy();
 			});
 		});
+
+		it('should use minimum level filtering (WARN shows WARN and ERROR)', async () => {
+			setupLogsForFiltering();
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId('log-entry')).toHaveLength(4);
+			});
+
+			const levelFilter = screen.getByTestId('level-filter') as HTMLSelectElement;
+			await fireEvent.change(levelFilter, { target: { value: 'WARN' } });
+
+			await waitFor(() => {
+				const logEntries = screen.getAllByTestId('log-entry');
+				expect(logEntries).toHaveLength(2);
+				// Should show WARN and ERROR (both >= WARN level)
+				const levels = logEntries.map((e) => e.textContent);
+				expect(levels.some((l) => l?.includes('WARN'))).toBe(true);
+				expect(levels.some((l) => l?.includes('ERROR'))).toBe(true);
+			});
+		});
 	});
 
 	describe('Controls', () => {
-		it('should clear all logs when Clear button is clicked', async () => {
+		it('should call store clearLogs when Clear button is clicked', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [createLogEntry({ id: 'log-1', message: 'Test message' })]
+			});
+
 			render(LogsTab, { flowId: 'test-flow', isActive: true });
-
-			eventListeners['open']?.[0](new Event('open'));
-
-			const logHandler = eventListeners['log']?.[0];
-			logHandler?.(new MessageEvent('log', {
-				data: JSON.stringify({
-					timestamp: '2025-11-17T14:23:01.000Z',
-					level: 'INFO',
-					component: 'test',
-					message: 'Test message'
-				})
-			}));
 
 			await waitFor(() => {
 				expect(screen.getAllByTestId('log-entry')).toHaveLength(1);
@@ -317,17 +405,22 @@ describe('LogsTab', () => {
 			const clearButton = screen.getByTestId('clear-logs-button');
 			await fireEvent.click(clearButton);
 
-			await waitFor(() => {
-				const logEntries = screen.queryAllByTestId('log-entry');
-				expect(logEntries).toHaveLength(0);
-			});
+			expect(mockClearLogs).toHaveBeenCalled();
 		});
 
 		it('should reset filters when clearing logs', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [createLogEntry({ id: 'log-1', level: 'ERROR', message: 'Test' })]
+			});
+
 			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			const levelFilter = screen.getByTestId('level-filter') as HTMLSelectElement;
 			await fireEvent.change(levelFilter, { target: { value: 'ERROR' } });
+
+			expect(levelFilter.value).toBe('ERROR');
 
 			const clearButton = screen.getByTestId('clear-logs-button');
 			await fireEvent.click(clearButton);
@@ -338,6 +431,11 @@ describe('LogsTab', () => {
 		});
 
 		it('should toggle auto-scroll checkbox', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true
+			});
+
 			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			const autoScrollToggle = screen.getByTestId('auto-scroll-toggle') as HTMLInputElement;
@@ -353,6 +451,80 @@ describe('LogsTab', () => {
 
 	describe('Empty States', () => {
 		it('should show empty state when no logs received yet', () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: []
+			});
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
+
+			expect(screen.getByText(/No logs yet. Waiting for runtime events/)).toBeTruthy();
+		});
+	});
+
+	describe('Message Logger Exclusion', () => {
+		it('should exclude message-logger entries from logs display', async () => {
+			const logs: LogEntry[] = [
+				createLogEntry({ id: 'log-1', source: 'udp-source', message: 'Regular log' }),
+				createLogEntry({ id: 'log-2', source: 'message-logger', message: 'NATS message' }),
+				createLogEntry({ id: 'log-3', source: 'processor', message: 'Another log' })
+			];
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs
+			});
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
+
+			await waitFor(() => {
+				const logEntries = screen.getAllByTestId('log-entry');
+				// Should only show 2 logs (excluding message-logger)
+				expect(logEntries).toHaveLength(2);
+				expect(logEntries[0].textContent).toContain('Regular log');
+				expect(logEntries[1].textContent).toContain('Another log');
+			});
+		});
+
+		it('should not include message-logger in source filter options', async () => {
+			const logs: LogEntry[] = [
+				createLogEntry({ id: 'log-1', source: 'udp-source', message: 'Log 1' }),
+				createLogEntry({ id: 'log-2', source: 'message-logger', message: 'NATS message' }),
+				createLogEntry({ id: 'log-3', source: 'processor', message: 'Log 2' })
+			];
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs
+			});
+
+			render(LogsTab, { flowId: 'test-flow', isActive: true });
+
+			await waitFor(() => {
+				const componentFilter = screen.getByTestId('component-filter') as HTMLSelectElement;
+				const options = Array.from(componentFilter.options).map((o) => o.value);
+
+				expect(options).toContain('udp-source');
+				expect(options).toContain('processor');
+				expect(options).not.toContain('message-logger');
+			});
+		});
+
+		it('should show empty state when only message-logger logs exist', async () => {
+			const logs: LogEntry[] = [
+				createLogEntry({ id: 'log-1', source: 'message-logger', message: 'NATS message 1' }),
+				createLogEntry({ id: 'log-2', source: 'message-logger', message: 'NATS message 2' })
+			];
+
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs
+			});
+
 			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			expect(screen.getByText(/No logs yet. Waiting for runtime events/)).toBeTruthy();
@@ -361,6 +533,11 @@ describe('LogsTab', () => {
 
 	describe('Accessibility', () => {
 		it('should have proper ARIA labels on controls', () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true
+			});
+
 			render(LogsTab, { flowId: 'test-flow', isActive: true });
 
 			const clearButton = screen.getByTestId('clear-logs-button');
@@ -368,20 +545,13 @@ describe('LogsTab', () => {
 		});
 
 		it('should use aria-live region for log entries when logs exist', async () => {
+			mockStoreState.set({
+				...createDefaultState(),
+				connected: true,
+				logs: [createLogEntry({ id: 'log-1', message: 'Test message' })]
+			});
+
 			render(LogsTab, { flowId: 'test-flow', isActive: true });
-
-			eventListeners['open']?.[0](new Event('open'));
-
-			// Add a log entry first
-			const logHandler = eventListeners['log']?.[0];
-			logHandler?.(new MessageEvent('log', {
-				data: JSON.stringify({
-					timestamp: '2025-11-17T14:23:01.000Z',
-					level: 'INFO',
-					component: 'test',
-					message: 'Test message'
-				})
-			}));
 
 			await waitFor(() => {
 				const logContainer = screen.getByRole('log');
