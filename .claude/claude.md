@@ -34,6 +34,77 @@ npm run check       # svelte-check (TypeScript)
 npm run build       # Production build
 ```
 
+## Running the Application
+
+To test UI changes interactively, start the full development stack:
+
+```bash
+# Start everything (NATS + backend + UI)
+task dev:full
+# Access at http://localhost:3001
+```
+
+This starts:
+- **Caddy** at `localhost:3001` (unified access point)
+- **NATS** (internal Docker network)
+- **Backend** (internal Docker network)
+- **Vite** at `localhost:5173` (dev server)
+
+**Manage backend separately:**
+```bash
+task dev:backend:start   # Start NATS + backend in background
+task dev                 # Start frontend (in another terminal)
+task dev:backend:logs    # View backend logs
+task dev:backend:stop    # Stop backend when done
+```
+
+**Custom ports if needed (avoid collisions):**
+```bash
+DEV_UI_PORT=3002 DEV_VITE_PORT=5174 task dev:full
+```
+
+> Requires Docker and the semstreams backend at `../semstreams`.
+
+## Infrastructure & API Access
+
+**Architecture:**
+```
+localhost:3001 (Caddy) ─┬─► /components/* ──► backend:8080 (Docker internal)
+                        ├─► /flowbuilder/* ─► backend:8080
+                        ├─► /health ────────► backend:8080
+                        └─► /* ─────────────► host.docker.internal:5173 (Vite)
+```
+
+**To query the backend API directly:**
+```bash
+# Component types (returns id, name, type, protocol, category, description, schema)
+curl -s http://localhost:3001/components/types | jq
+
+# Health check
+curl http://localhost:3001/health
+
+# Flow operations
+curl http://localhost:3001/flowbuilder/flows
+```
+
+**Backend returns for `/components/types`:**
+```json
+{
+  "id": "udp-input",
+  "name": "UDP Input",
+  "type": "input",           // "input", "processor", "output", "storage", "gateway"
+  "protocol": "udp",
+  "category": "input",       // Same as type - used for color coding
+  "description": "...",
+  "schema": { ... }
+}
+```
+
+**Key files:**
+- `docker-compose.dev.yml` - Docker services config
+- `Caddyfile.dev` - Reverse proxy routing
+- `src/hooks.server.ts` - SSR fetch transformations
+
 ## Core Rule
 
 When any agent claims "tests pass":

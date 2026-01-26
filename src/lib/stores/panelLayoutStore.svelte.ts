@@ -26,9 +26,11 @@
  * ```
  */
 
+import * as store from 'svelte/store';
 import {
 	type PanelLayoutState,
 	type ExplorerTab,
+	type ViewMode,
 	DEFAULT_PANEL_LAYOUT,
 	PANEL_BREAKPOINTS
 } from '$lib/types/ui-state';
@@ -36,11 +38,9 @@ import {
 const STORAGE_KEY = 'semstreams-panel-layout';
 
 /**
- * Panel layout store interface
+ * Panel layout store interface - uses Svelte writable store for module-level reactivity
  */
-export interface PanelLayoutStore {
-	/** Current layout state */
-	readonly state: PanelLayoutState;
+export interface PanelLayoutStore extends store.Readable<PanelLayoutState> {
 
 	/** Toggle left panel visibility */
 	toggleLeft: () => void;
@@ -62,6 +62,15 @@ export interface PanelLayoutStore {
 
 	/** Handle viewport resize for responsive behavior */
 	handleViewportResize: (viewportWidth: number) => void;
+
+	/** Toggle monitor mode (full-screen runtime panel) */
+	toggleMonitorMode: () => void;
+
+	/** Set monitor mode explicitly */
+	setMonitorMode: (enabled: boolean) => void;
+
+	/** Set view mode (flow editor or data view) */
+	setViewMode: (mode: ViewMode) => void;
 
 	/** Reset to defaults */
 	reset: () => void;
@@ -118,192 +127,208 @@ function clamp(value: number, min: number, max: number): number {
 /**
  * Create panel layout store
  *
+ * Uses Svelte writable store for proper module-level reactivity.
+ *
  * @returns Panel layout store instance
  */
 export function createPanelLayoutStore(): PanelLayoutStore {
 	// Initialize state from localStorage or defaults
-	let currentState: PanelLayoutState = loadFromStorage();
+	const initialState = loadFromStorage();
+	const { subscribe, update, set } = store.writable<PanelLayoutState>(initialState);
 
 	// Track the stored state before auto-collapse for restoration
-	let storedLeftOpen = currentState.leftPanelOpen;
-	let storedRightOpen = currentState.rightPanelOpen;
+	let storedLeftOpen = initialState.leftPanelOpen;
+	let storedRightOpen = initialState.rightPanelOpen;
+
+	// Helper to save state (strips auto-collapse flags)
+	const saveState = (state: PanelLayoutState) => {
+		const toSave: PanelLayoutState = {
+			...state,
+			autoCollapsedLeft: false,
+			autoCollapsedRight: false
+		};
+		saveToStorage(toSave);
+	};
 
 	return {
-		get state() {
-			return currentState;
-		},
+		subscribe,
 
-		/**
-		 * Toggle left panel visibility
-		 * If user manually toggles, clear auto-collapse flag
-		 */
 		toggleLeft() {
-			currentState = {
-				...currentState,
-				leftPanelOpen: !currentState.leftPanelOpen,
-				autoCollapsedLeft: false
-			};
-			storedLeftOpen = currentState.leftPanelOpen;
-			this.save();
+			update((state) => {
+				const newState = {
+					...state,
+					leftPanelOpen: !state.leftPanelOpen,
+					autoCollapsedLeft: false
+				};
+				storedLeftOpen = newState.leftPanelOpen;
+				saveState(newState);
+				return newState;
+			});
 		},
 
-		/**
-		 * Toggle right panel visibility
-		 * If user manually toggles, clear auto-collapse flag
-		 */
 		toggleRight() {
-			currentState = {
-				...currentState,
-				rightPanelOpen: !currentState.rightPanelOpen,
-				autoCollapsedRight: false
-			};
-			storedRightOpen = currentState.rightPanelOpen;
-			this.save();
+			update((state) => {
+				const newState = {
+					...state,
+					rightPanelOpen: !state.rightPanelOpen,
+					autoCollapsedRight: false
+				};
+				storedRightOpen = newState.rightPanelOpen;
+				saveState(newState);
+				return newState;
+			});
 		},
 
-		/**
-		 * Toggle both panels (focus mode)
-		 */
 		toggleBoth() {
-			const bothOpen = currentState.leftPanelOpen && currentState.rightPanelOpen;
-			currentState = {
-				...currentState,
-				leftPanelOpen: !bothOpen,
-				rightPanelOpen: !bothOpen,
-				autoCollapsedLeft: false,
-				autoCollapsedRight: false
-			};
-			storedLeftOpen = currentState.leftPanelOpen;
-			storedRightOpen = currentState.rightPanelOpen;
-			this.save();
+			update((state) => {
+				const bothOpen = state.leftPanelOpen && state.rightPanelOpen;
+				const newState = {
+					...state,
+					leftPanelOpen: !bothOpen,
+					rightPanelOpen: !bothOpen,
+					autoCollapsedLeft: false,
+					autoCollapsedRight: false
+				};
+				storedLeftOpen = newState.leftPanelOpen;
+				storedRightOpen = newState.rightPanelOpen;
+				saveState(newState);
+				return newState;
+			});
 		},
 
-		/**
-		 * Set left panel width with constraints
-		 */
 		setLeftWidth(width: number) {
-			const clampedWidth = clamp(width, 200, 400); // min/max from CSS vars
-			currentState = {
-				...currentState,
-				leftPanelWidth: clampedWidth
-			};
-			this.save();
+			update((state) => {
+				const newState = {
+					...state,
+					leftPanelWidth: clamp(width, 200, 400)
+				};
+				saveState(newState);
+				return newState;
+			});
 		},
 
-		/**
-		 * Set right panel width with constraints
-		 */
 		setRightWidth(width: number) {
-			const clampedWidth = clamp(width, 240, 480); // min/max from CSS vars
-			currentState = {
-				...currentState,
-				rightPanelWidth: clampedWidth
-			};
-			this.save();
+			update((state) => {
+				const newState = {
+					...state,
+					rightPanelWidth: clamp(width, 240, 480)
+				};
+				saveState(newState);
+				return newState;
+			});
 		},
 
-		/**
-		 * Set the active explorer tab
-		 */
 		setExplorerTab(tab: ExplorerTab) {
-			currentState = {
-				...currentState,
+			update((state) => ({
+				...state,
 				explorerTab: tab
-			};
+			}));
 			// Don't save tab state - it's transient
 		},
 
-		/**
-		 * Handle viewport resize for responsive auto-collapse
-		 *
-		 * Breakpoints:
-		 * - >= 1200px: Full three-panel layout
-		 * - 900-1199px: Right panel auto-collapses
-		 * - 600-899px: Both panels auto-collapse
-		 * - < 600px: Both panels hidden
-		 *
-		 * Auto-collapse is restored when viewport grows, unless user manually collapsed
-		 */
 		handleViewportResize(viewportWidth: number) {
-			let newState = { ...currentState };
+			update((state) => {
+				const newState = { ...state };
 
-			if (viewportWidth >= PANEL_BREAKPOINTS.FULL) {
-				// Full layout - restore panels if they were auto-collapsed
-				if (currentState.autoCollapsedLeft && storedLeftOpen) {
-					newState.leftPanelOpen = true;
-					newState.autoCollapsedLeft = false;
+				if (viewportWidth >= PANEL_BREAKPOINTS.FULL) {
+					// Full layout - restore panels if they were auto-collapsed
+					if (state.autoCollapsedLeft && storedLeftOpen) {
+						newState.leftPanelOpen = true;
+						newState.autoCollapsedLeft = false;
+					}
+					if (state.autoCollapsedRight && storedRightOpen) {
+						newState.rightPanelOpen = true;
+						newState.autoCollapsedRight = false;
+					}
+				} else if (viewportWidth >= PANEL_BREAKPOINTS.MEDIUM) {
+					// Medium - auto-collapse right only
+					if (state.rightPanelOpen && !state.autoCollapsedRight) {
+						newState.rightPanelOpen = false;
+						newState.autoCollapsedRight = true;
+					}
+					// Restore left if it was auto-collapsed
+					if (state.autoCollapsedLeft && storedLeftOpen) {
+						newState.leftPanelOpen = true;
+						newState.autoCollapsedLeft = false;
+					}
+				} else if (viewportWidth >= PANEL_BREAKPOINTS.SMALL) {
+					// Small - auto-collapse both
+					if (state.leftPanelOpen && !state.autoCollapsedLeft) {
+						newState.leftPanelOpen = false;
+						newState.autoCollapsedLeft = true;
+					}
+					if (state.rightPanelOpen && !state.autoCollapsedRight) {
+						newState.rightPanelOpen = false;
+						newState.autoCollapsedRight = true;
+					}
+				} else {
+					// Very small - force both collapsed
+					if (state.leftPanelOpen) {
+						newState.leftPanelOpen = false;
+						newState.autoCollapsedLeft = true;
+					}
+					if (state.rightPanelOpen) {
+						newState.rightPanelOpen = false;
+						newState.autoCollapsedRight = true;
+					}
 				}
-				if (currentState.autoCollapsedRight && storedRightOpen) {
-					newState.rightPanelOpen = true;
-					newState.autoCollapsedRight = false;
-				}
-			} else if (viewportWidth >= PANEL_BREAKPOINTS.MEDIUM) {
-				// Medium - auto-collapse right only
-				if (currentState.rightPanelOpen && !currentState.autoCollapsedRight) {
-					newState.rightPanelOpen = false;
-					newState.autoCollapsedRight = true;
-				}
-				// Restore left if it was auto-collapsed
-				if (currentState.autoCollapsedLeft && storedLeftOpen) {
-					newState.leftPanelOpen = true;
-					newState.autoCollapsedLeft = false;
-				}
-			} else if (viewportWidth >= PANEL_BREAKPOINTS.SMALL) {
-				// Small - auto-collapse both
-				if (currentState.leftPanelOpen && !currentState.autoCollapsedLeft) {
-					newState.leftPanelOpen = false;
-					newState.autoCollapsedLeft = true;
-				}
-				if (currentState.rightPanelOpen && !currentState.autoCollapsedRight) {
-					newState.rightPanelOpen = false;
-					newState.autoCollapsedRight = true;
-				}
-			} else {
-				// Very small - force both collapsed
-				if (currentState.leftPanelOpen) {
-					newState.leftPanelOpen = false;
-					newState.autoCollapsedLeft = true;
-				}
-				if (currentState.rightPanelOpen) {
-					newState.rightPanelOpen = false;
-					newState.autoCollapsedRight = true;
-				}
-			}
 
-			currentState = newState;
-			// Note: We don't save auto-collapse state to localStorage
+				// Note: We don't save auto-collapse state to localStorage
+				return newState;
+			});
 		},
 
-		/**
-		 * Reset to default layout
-		 */
+		toggleMonitorMode() {
+			update((state) => {
+				const newState = {
+					...state,
+					monitorMode: !state.monitorMode
+				};
+				saveState(newState);
+				return newState;
+			});
+		},
+
+		setMonitorMode(enabled: boolean) {
+			update((state) => {
+				const newState = {
+					...state,
+					monitorMode: enabled
+				};
+				saveState(newState);
+				return newState;
+			});
+		},
+
+		setViewMode(mode: ViewMode) {
+			update((state) => {
+				const newState = {
+					...state,
+					viewMode: mode
+				};
+				// Don't persist viewMode - it should reset to 'flow' on page reload
+				return newState;
+			});
+		},
+
 		reset() {
-			currentState = { ...DEFAULT_PANEL_LAYOUT };
-			storedLeftOpen = currentState.leftPanelOpen;
-			storedRightOpen = currentState.rightPanelOpen;
-			this.save();
+			const newState = { ...DEFAULT_PANEL_LAYOUT };
+			storedLeftOpen = newState.leftPanelOpen;
+			storedRightOpen = newState.rightPanelOpen;
+			saveState(newState);
+			set(newState);
 		},
 
-		/**
-		 * Save current state to localStorage
-		 */
 		save() {
-			// Don't save auto-collapse flags - they're viewport-dependent
-			const toSave: PanelLayoutState = {
-				...currentState,
-				autoCollapsedLeft: false,
-				autoCollapsedRight: false
-			};
-			saveToStorage(toSave);
+			// Not needed externally - save happens in each mutation
+			// Kept for interface compatibility
 		},
 
-		/**
-		 * Load state from localStorage
-		 */
 		load() {
-			currentState = loadFromStorage();
-			storedLeftOpen = currentState.leftPanelOpen;
-			storedRightOpen = currentState.rightPanelOpen;
+			const newState = loadFromStorage();
+			storedLeftOpen = newState.leftPanelOpen;
+			storedRightOpen = newState.rightPanelOpen;
+			set(newState);
 		}
 	};
 }

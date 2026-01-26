@@ -11,9 +11,20 @@
 		height?: number;
 		flowId: string;
 		onClose?: () => void;
+		/** Whether in full-screen monitor mode */
+		isMonitorMode?: boolean;
+		/** Toggle monitor mode callback */
+		onToggleMonitorMode?: () => void;
 	}
 
-	let { isOpen = false, height = 300, flowId, onClose }: RuntimePanelProps = $props();
+	let {
+		isOpen = false,
+		height = 300,
+		flowId,
+		onClose,
+		isMonitorMode = false,
+		onToggleMonitorMode
+	}: RuntimePanelProps = $props();
 
 	// Tab state
 	let activeTab = $state<TabId>('logs');
@@ -35,7 +46,12 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if isOpen}
-	<div class="runtime-panel" style="height: {height}px;" data-testid="runtime-panel">
+	<div
+		class="runtime-panel"
+		class:monitor-mode={isMonitorMode}
+		style={isMonitorMode ? '' : `height: ${height}px;`}
+		data-testid="runtime-panel"
+	>
 		<header>
 			<div class="header-content">
 				<h3>Runtime Debugging</h3>
@@ -90,7 +106,24 @@
 					</button>
 				</div>
 			</div>
-			<button class="close-button" onclick={onClose} aria-label="Close runtime panel">✕</button>
+			<div class="header-actions">
+				<button
+					class="action-button"
+					onclick={onToggleMonitorMode}
+					aria-label={isMonitorMode ? 'Exit monitor mode' : 'Enter monitor mode'}
+					title={isMonitorMode ? 'Exit full screen' : 'Full screen'}
+					data-testid="monitor-mode-toggle"
+				>
+					{#if isMonitorMode}
+						<span class="icon">⊖</span>
+					{:else}
+						<span class="icon">⊕</span>
+					{/if}
+				</button>
+				<button class="action-button close-button" onclick={onClose} aria-label="Close runtime panel">
+					✕
+				</button>
+			</div>
 		</header>
 
 		<div class="panel-body">
@@ -147,6 +180,12 @@
 		border-top: 2px solid var(--ui-border-emphasis);
 		animation: slideUp 300ms ease-out;
 		overflow: hidden;
+	}
+
+	.runtime-panel.monitor-mode {
+		height: 100% !important;
+		border-top: none;
+		animation: none;
 	}
 
 	/* Slide up animation */
@@ -218,7 +257,13 @@
 		outline-offset: 2px;
 	}
 
-	.close-button {
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.action-button {
 		background: none;
 		border: none;
 		font-size: 1.25rem;
@@ -234,9 +279,13 @@
 		transition: all 0.2s;
 	}
 
-	.close-button:hover {
+	.action-button:hover {
 		background: var(--ui-surface-secondary);
 		color: var(--ui-text-primary);
+	}
+
+	.action-button .icon {
+		font-size: 1rem;
 	}
 
 	.panel-body {

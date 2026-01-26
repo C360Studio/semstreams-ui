@@ -13,9 +13,11 @@
 	import ValidationStatusModal from '$lib/components/ValidationStatusModal.svelte';
 	import AIPromptInput from '$lib/components/AIPromptInput.svelte';
 	import AIFlowPreview from '$lib/components/AIFlowPreview.svelte';
+	import ViewSwitcher from '$lib/components/ViewSwitcher.svelte';
+	import DataView from '$lib/components/DataView.svelte';
 	import type { PageData } from './$types';
 	import type { ComponentInstance, FlowNode, FlowConnection, Flow } from '$lib/types/flow';
-	import type { SaveState, RuntimeStateInfo, ExplorerTab, PropertiesPanelMode } from '$lib/types/ui-state';
+	import type { SaveState, RuntimeStateInfo, ExplorerTab, PropertiesPanelMode, ViewMode } from '$lib/types/ui-state';
 	import type { ValidationResult as PortValidationResult, ValidatedPort } from '$lib/types/port';
 	import type { ValidationResult as SimpleValidationResult } from '$lib/types/validation';
 	import type { ComponentType } from '$lib/types/component';
@@ -111,6 +113,21 @@
 	let showRuntimePanel = $state(false);
 	let runtimePanelHeight = $state(300);
 
+	// View mode: flow editor or data visualization
+	// Only allow data view when flow is running
+	const isFlowRunning = $derived(runtimeState.state === 'running');
+
+	// Reset to flow view when flow stops running
+	$effect(() => {
+		if (!isFlowRunning && $panelLayout.viewMode === 'data') {
+			panelLayout.setViewMode('flow');
+		}
+	});
+
+	function handleViewModeChange(mode: ViewMode) {
+		panelLayout.setViewMode(mode);
+	}
+
 	// Flow state - work directly with domain model
 	let flowNodes = $state<FlowNode[]>(backendFlow.nodes);
 	let flowConnections = $state<FlowConnection[]>(backendFlow.connections);
@@ -129,8 +146,11 @@
 		// Initialize responsive layout based on current viewport
 		panelLayout.handleViewportResize(window.innerWidth);
 
-		// Connect to WebSocket for runtime data
+		// Connect to WebSocket for runtime data and subscribe to all message types
 		runtimeWS.connect(backendFlow.id);
+		runtimeWS.subscribe({
+			messageTypes: ['flow_status', 'component_health', 'component_metrics', 'log_entry']
+		});
 
 		// Fetch component types
 		try {
@@ -175,7 +195,7 @@
 		if (isMod && event.shiftKey && event.key === 'E') {
 			event.preventDefault();
 			explorerTab = 'components';
-			if (!panelLayout.state.leftPanelOpen) {
+			if (!$panelLayout.leftPanelOpen) {
 				panelLayout.toggleLeft();
 			}
 			return;
@@ -185,7 +205,7 @@
 		if (isMod && event.shiftKey && event.key === 'P') {
 			event.preventDefault();
 			explorerTab = 'palette';
-			if (!panelLayout.state.leftPanelOpen) {
+			if (!$panelLayout.leftPanelOpen) {
 				panelLayout.toggleLeft();
 			}
 			return;
@@ -838,6 +858,20 @@
 
 	function handleCloseRuntimePanel() {
 		showRuntimePanel = false;
+		// Also exit monitor mode when closing
+		if ($panelLayout.monitorMode) {
+			panelLayout.setMonitorMode(false);
+		}
+	}
+
+	function handleToggleMonitorMode() {
+		// Check current state BEFORE toggling
+		const enteringMonitorMode = !$panelLayout.monitorMode;
+		panelLayout.toggleMonitorMode();
+		// Ensure runtime panel is open when entering monitor mode
+		if (enteringMonitorMode && !showRuntimePanel) {
+			showRuntimePanel = true;
+		}
 	}
 
 	// Calculate dynamic canvas height based on panel state
@@ -919,6 +953,12 @@
 					<p>{backendFlow.description}</p>
 				{/if}
 			</div>
+			{#if isFlowRunning}
+				<ViewSwitcher
+					currentView={$panelLayout.viewMode}
+					onViewChange={handleViewModeChange}
+				/>
+			{/if}
 			<SaveStatusIndicator
 				{saveState}
 				onSave={handleSave}
@@ -928,83 +968,93 @@
 		</div>
 	</header>
 
-	<!-- Three-Panel Layout -->
+	<!-- View Content: Flow Editor or Data Visualization -->
 	<div class="panel-area">
-		<ThreePanelLayout
-			leftPanelOpen={panelLayout.state.leftPanelOpen}
-			rightPanelOpen={panelLayout.state.rightPanelOpen}
-			leftPanelWidth={panelLayout.state.leftPanelWidth}
-			rightPanelWidth={panelLayout.state.rightPanelWidth}
-			onLeftWidthChange={handleLeftWidthChange}
-			onRightWidthChange={handleRightWidthChange}
-			onToggleLeft={handleToggleLeftPanel}
-			onToggleRight={handleToggleRightPanel}
-		>
-			{#snippet leftPanel()}
-				<ExplorerPanel
-					nodes={flowNodes}
-					selectedNodeId={selectedComponent?.id || null}
-					activeTab={explorerTab}
-					hoveredType={hoveredComponentType}
-					onSelectNode={handleSelectNode}
-					onAddComponent={handleAddComponentFromPalette}
-					onHoverType={handleHoverType}
-					onTabChange={handleExplorerTabChange}
-				>
-					{#snippet aiAssistant()}
-						<div class="ai-section-content">
-							<AIPromptInput
-								loading={aiLoading}
-								disabled={aiLoading}
-								onSubmit={handleAISubmit}
-							/>
-						</div>
-					{/snippet}
-				</ExplorerPanel>
-			{/snippet}
+		{#if $panelLayout.viewMode === 'data' && isFlowRunning}
+			<!-- Data View: Knowledge Graph Visualization -->
+			<DataView flowId={backendFlow.id} />
+		{:else}
+			<!-- Flow View: Three-Panel Editor Layout -->
+			<ThreePanelLayout
+				leftPanelOpen={$panelLayout.monitorMode ? false : $panelLayout.leftPanelOpen}
+				rightPanelOpen={$panelLayout.monitorMode ? false : $panelLayout.rightPanelOpen}
+				leftPanelWidth={$panelLayout.leftPanelWidth}
+				rightPanelWidth={$panelLayout.rightPanelWidth}
+				onLeftWidthChange={handleLeftWidthChange}
+				onRightWidthChange={handleRightWidthChange}
+				onToggleLeft={handleToggleLeftPanel}
+				onToggleRight={handleToggleRightPanel}
+			>
+				{#snippet leftPanel()}
+					<ExplorerPanel
+						nodes={flowNodes}
+						selectedNodeId={selectedComponent?.id || null}
+						activeTab={explorerTab}
+						hoveredType={hoveredComponentType}
+						onSelectNode={handleSelectNode}
+						onAddComponent={handleAddComponentFromPalette}
+						onHoverType={handleHoverType}
+						onTabChange={handleExplorerTabChange}
+					>
+						{#snippet aiAssistant()}
+							<div class="ai-section-content">
+								<AIPromptInput
+									loading={aiLoading}
+									disabled={aiLoading}
+									onSubmit={handleAISubmit}
+								/>
+							</div>
+						{/snippet}
+					</ExplorerPanel>
+				{/snippet}
 
-			{#snippet centerPanel()}
-				<div class="center-content">
-					<div class="canvas-container" style="height: {canvasHeight};">
-						<FlowCanvas
-							nodes={flowNodes}
-							connections={flowConnections}
-							{portsMap}
-							selectedNodeId={selectedComponent?.id || null}
-							onNodeClick={handleNodeClick}
+				{#snippet centerPanel()}
+					<div class="center-content" class:monitor-mode={$panelLayout.monitorMode}>
+						{#if !$panelLayout.monitorMode}
+							<div class="canvas-container" style="height: {canvasHeight};">
+								<FlowCanvas
+									nodes={flowNodes}
+									connections={flowConnections}
+									{portsMap}
+									selectedNodeId={selectedComponent?.id || null}
+									onNodeClick={handleNodeClick}
+								/>
+							</div>
+
+							<StatusBar
+								{runtimeState}
+								{isFlowValid}
+								{showRuntimePanel}
+								onDeploy={handleDeploy}
+								onStart={handleStart}
+								onStop={handleStop}
+								onToggleRuntimePanel={handleToggleRuntimePanel}
+							/>
+						{/if}
+
+						<RuntimePanel
+							isOpen={showRuntimePanel || $panelLayout.monitorMode}
+							height={runtimePanelHeight}
+							flowId={backendFlow.id}
+							onClose={handleCloseRuntimePanel}
+							isMonitorMode={$panelLayout.monitorMode}
+							onToggleMonitorMode={handleToggleMonitorMode}
 						/>
 					</div>
+				{/snippet}
 
-					<StatusBar
-						{runtimeState}
-						{isFlowValid}
-						{showRuntimePanel}
-						onDeploy={handleDeploy}
-						onStart={handleStart}
-						onStop={handleStop}
-						onToggleRuntimePanel={handleToggleRuntimePanel}
+				{#snippet rightPanel()}
+					<PropertiesPanel
+						mode={propertiesPanelMode}
+						componentType={hoveredComponentType}
+						node={selectedComponent}
+						nodeComponentType={selectedNodeComponentType}
+						onSave={handlePropertiesSave}
+						onDelete={handlePropertiesDelete}
 					/>
-
-					<RuntimePanel
-						isOpen={showRuntimePanel}
-						height={runtimePanelHeight}
-						flowId={backendFlow.id}
-						onClose={handleCloseRuntimePanel}
-					/>
-				</div>
 			{/snippet}
-
-			{#snippet rightPanel()}
-				<PropertiesPanel
-					mode={propertiesPanelMode}
-					componentType={hoveredComponentType}
-					node={selectedComponent}
-					nodeComponentType={selectedNodeComponentType}
-					onSave={handlePropertiesSave}
-					onDelete={handlePropertiesDelete}
-				/>
-			{/snippet}
-		</ThreePanelLayout>
+			</ThreePanelLayout>
+		{/if}
 	</div>
 </div>
 

@@ -41,8 +41,7 @@ export interface HealthOverall {
 export interface FlowStatus {
 	state: FlowState;
 	prevState: FlowState | null;
-	deployedAt: number | null;
-	startedAt: number | null;
+	timestamp: number | null;
 	error: string | null;
 }
 
@@ -133,8 +132,7 @@ function createRuntimeStore() {
 		updateFlowStatus(payload: {
 			state: FlowState;
 			prev_state?: FlowState;
-			deployed_at?: number;
-			started_at?: number;
+			timestamp?: number;
 			error?: string;
 		}) {
 			update((state) => ({
@@ -142,8 +140,7 @@ function createRuntimeStore() {
 				flowStatus: {
 					state: payload.state,
 					prevState: payload.prev_state ?? null,
-					deployedAt: payload.deployed_at ?? null,
-					startedAt: payload.started_at ?? null,
+					timestamp: payload.timestamp ?? null,
 					error: payload.error ?? null
 				}
 			}));
@@ -169,6 +166,62 @@ function createRuntimeStore() {
 				healthOverall: payload.overall,
 				healthComponents: payload.components
 			}));
+		},
+
+		/**
+		 * Update a single component's health (streaming per-component updates)
+		 */
+		updateComponentHealth(payload: {
+			name: string;
+			status: ComponentStatus;
+			message: string | null;
+		}) {
+			update((state) => {
+				// Find existing component or create new entry
+				const existingIndex = state.healthComponents.findIndex(c => c.name === payload.name);
+				let newComponents: ComponentHealth[];
+
+				if (existingIndex >= 0) {
+					// Update existing
+					newComponents = [...state.healthComponents];
+					newComponents[existingIndex] = {
+						...newComponents[existingIndex],
+						status: payload.status,
+						healthy: payload.status === 'healthy',
+						message: payload.message
+					};
+				} else {
+					// Add new component
+					newComponents = [...state.healthComponents, {
+						name: payload.name,
+						component: payload.name, // Use name as component ID
+						type: 'unknown',
+						status: payload.status,
+						healthy: payload.status === 'healthy',
+						message: payload.message
+					}];
+				}
+
+				// Recalculate overall health
+				const counts = {
+					healthy: newComponents.filter(c => c.status === 'healthy').length,
+					degraded: newComponents.filter(c => c.status === 'degraded').length,
+					error: newComponents.filter(c => c.status === 'error').length
+				};
+
+				const overallStatus: ComponentStatus =
+					counts.error > 0 ? 'error' :
+					counts.degraded > 0 ? 'degraded' : 'healthy';
+
+				return {
+					...state,
+					healthComponents: newComponents,
+					healthOverall: {
+						status: overallStatus,
+						counts
+					}
+				};
+			});
 		},
 
 		// ========================================================================
@@ -295,28 +348,30 @@ function createRuntimeStore() {
 		},
 
 		/**
-		 * Get all metrics rates as an array for display
+		 * Get all metrics as an array for display
+		 * Shows metrics immediately, rate is null until second data point
 		 */
 		getMetricsArray(state: RuntimeStoreState): Array<{
 			component: string;
 			metricName: string;
-			rate: number;
-			raw: MetricValue | undefined;
+			rate: number | null;
+			raw: MetricValue;
 		}> {
 			const result: Array<{
 				component: string;
 				metricName: string;
-				rate: number;
-				raw: MetricValue | undefined;
+				rate: number | null;
+				raw: MetricValue;
 			}> = [];
 
-			for (const [key, rate] of state.metricsRates) {
+			// Iterate over raw metrics so they show immediately
+			for (const [key, raw] of state.metricsRaw) {
 				const [component, metricName] = key.split(':');
 				result.push({
 					component,
 					metricName,
-					rate,
-					raw: state.metricsRaw.get(key)
+					rate: state.metricsRates.get(key) ?? null,
+					raw
 				});
 			}
 

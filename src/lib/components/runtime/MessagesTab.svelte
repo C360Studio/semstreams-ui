@@ -58,6 +58,12 @@
 		return unsubscribe;
 	});
 
+	// Check if message-logger service is available in health components
+	// Service name is just 'message-logger' (not 'message-logger-service')
+	const messageLoggerAvailable = $derived(
+		storeState.healthComponents.some((c) => c.name === 'message-logger')
+	);
+
 	// Filter logs to only message-logger entries
 	const messageLoggerLogs = $derived(
 		storeState.logs.filter((log) => log.source === 'message-logger')
@@ -237,7 +243,14 @@
 
 	<!-- Messages Container -->
 	<div class="messages-container" bind:this={messagesContainerRef} data-testid="messages-container">
-		{#if filteredMessages().length === 0}
+		{#if !messageLoggerAvailable}
+			<div class="service-unavailable" data-testid="service-unavailable">
+				<p class="unavailable-title">Message Logger service not enabled</p>
+				<p class="unavailable-hint">
+					Enable the message-logger service in your backend configuration to capture NATS messages.
+				</p>
+			</div>
+		{:else if filteredMessages().length === 0}
 			<div class="empty-state">
 				{#if messageLoggerLogs.length === 0}
 					<p>No messages yet. Waiting for NATS traffic...</p>
@@ -420,18 +433,40 @@
 		background: var(--ui-surface-primary);
 	}
 
-	.empty-state {
+	.empty-state,
+	.service-unavailable {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		height: 100%;
 		min-height: 150px;
+		gap: 0.5rem;
 	}
 
 	.empty-state p {
 		margin: 0;
 		color: var(--ui-text-secondary);
 		font-size: 0.875rem;
+	}
+
+	.service-unavailable {
+		text-align: center;
+		padding: 2rem;
+	}
+
+	.unavailable-title {
+		margin: 0;
+		color: var(--ui-text-secondary);
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.unavailable-hint {
+		margin: 0;
+		color: var(--ui-text-tertiary);
+		font-size: 0.875rem;
+		max-width: 400px;
 	}
 
 	/* Message Entries */

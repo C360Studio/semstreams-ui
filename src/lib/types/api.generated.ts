@@ -1275,19 +1275,55 @@ export interface paths {
         };
         /**
          * WebSocket status stream
-         * @description Real-time flow status updates via WebSocket
+         * @description Real-time flow status updates via WebSocket.
+         *
+         *     ## Connection
+         *     Connect with: ws://host/flowbuilder/status/stream?flowId={flowId}
+         *
+         *     ## Message Types (Server → Client)
+         *     All messages are wrapped in StatusStreamEnvelope:
+         *     - **flow_status**: Flow state changes (deployed, running, stopped, failed)
+         *     - **component_health**: Component health updates (every 5s)
+         *     - **component_metrics**: Real-time metrics from MetricsForwarder
+         *     - **log_entry**: Log messages from LogForwarder
+         *
+         *     ## Filtering (Client → Server)
+         *     Send SubscribeCommand JSON to filter messages:
+         *     - message_types: Array of message types to receive
+         *     - log_level: Minimum log level (DEBUG < INFO < WARN < ERROR)
+         *     - sources: Array of component names to filter by
+         *
+         *     ## Example Subscribe Command
+         *     {"command":"subscribe","message_types":["flow_status","log_entry"],"log_level":"WARN"}
          */
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    /** @description Flow ID to subscribe to for status updates */
+                    flowId: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Switching to WebSocket */
+                /** @description Switching to WebSocket protocol */
                 101: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid flowId parameter */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Flow not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1533,6 +1569,20 @@ export interface components {
             updated_at: string;
             version: number;
         };
+        FlowStatusPayload: {
+            error?: string;
+            prev_state: string;
+            state: string;
+            timestamp: number;
+        };
+        LogEntryPayload: {
+            fields: {
+                [key: string]: unknown;
+            };
+            level: string;
+            message: string;
+            source: string;
+        };
         MessageLogEntry: {
             message_id?: string;
             message_type?: string;
@@ -1545,6 +1595,25 @@ export interface components {
             summary: string;
             /** Format: date-time */
             timestamp: string;
+        };
+        MetricEntry: {
+            labels: {
+                [key: string]: string;
+            };
+            name: string;
+            type: string;
+            value: number;
+        };
+        MetricsPayload: {
+            component: string;
+            metrics: {
+                labels: {
+                    [key: string]: string;
+                };
+                name: string;
+                type: string;
+                value: number;
+            }[];
         };
         RuntimeHealthResponse: {
             components: {
@@ -1615,6 +1684,14 @@ export interface components {
             pending_review: number;
             total_detected: number;
         };
+        StatusStreamEnvelope: {
+            flow_id: string;
+            id: string;
+            /** Format: byte */
+            payload?: string;
+            timestamp: number;
+            type: string;
+        };
         StructuralAnomaly: {
             confidence: number;
             /** Format: date-time */
@@ -1656,6 +1733,12 @@ export interface components {
                 to_entity: string;
             } | null;
             type: string;
+        };
+        SubscribeCommand: {
+            command: string;
+            log_level?: string;
+            message_types?: string[];
+            sources?: string[];
         };
         /**
          * document_processor Configuration

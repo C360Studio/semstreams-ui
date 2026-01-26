@@ -97,6 +97,13 @@ export type ExplorerTab = 'components' | 'palette';
 export type PropertiesPanelMode = 'empty' | 'type-preview' | 'edit';
 
 /**
+ * View mode for the flow page
+ * - flow: Flow editor canvas (default)
+ * - data: Knowledge graph visualization (only when flow is running)
+ */
+export type ViewMode = 'flow' | 'data';
+
+/**
  * Panel layout state for three-panel VS Code-style layout
  * Manages panel visibility, widths, and responsive behavior
  */
@@ -121,6 +128,12 @@ export interface PanelLayoutState {
 
 	/** Currently active Explorer tab */
 	explorerTab: ExplorerTab;
+
+	/** Monitor mode - full-screen runtime panel view */
+	monitorMode: boolean;
+
+	/** Current view mode (flow editor or data visualization) */
+	viewMode: ViewMode;
 }
 
 /**
@@ -133,7 +146,9 @@ export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {
 	rightPanelWidth: 320,
 	autoCollapsedLeft: false,
 	autoCollapsedRight: false,
-	explorerTab: 'components'
+	explorerTab: 'components',
+	monitorMode: false,
+	viewMode: 'flow'
 };
 
 /**

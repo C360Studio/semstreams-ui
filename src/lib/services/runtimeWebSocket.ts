@@ -2,28 +2,25 @@
 // Connects to /flowbuilder/status/stream and routes messages to runtimeStore
 
 import { runtimeStore, type LogLevel } from '$lib/stores/runtimeStore.svelte';
+import type { components } from '$lib/types/api.generated';
 
 // ============================================================================
-// Types
+// Types from OpenAPI spec
 // ============================================================================
 
 export type MessageType = 'flow_status' | 'component_health' | 'component_metrics' | 'log_entry';
 
-interface WebSocketMessage {
-	type: MessageType;
-	id: string;
-	timestamp: number; // Unix ms
-	flow_id: string;
-	payload: unknown;
-}
+// Use generated types (note: some runtime formats differ from OpenAPI spec)
+type StatusStreamEnvelope = components['schemas']['StatusStreamEnvelope'];
+type LogEntryPayload = components['schemas']['LogEntryPayload'];
+type FlowStatusPayload = components['schemas']['FlowStatusPayload'];
+type RuntimeHealthResponse = components['schemas']['RuntimeHealthResponse'];
 
 interface SubscribeCommand {
 	command: 'subscribe';
-	payload: {
-		message_types?: MessageType[];
-		log_level?: LogLevel;
-		sources?: string[];
-	};
+	message_types?: MessageType[];
+	log_level?: LogLevel;
+	sources?: string[];
 }
 
 export interface SubscribeOptions {
@@ -44,6 +41,7 @@ class RuntimeWebSocketService {
 	private reconnectDelay = 1000; // Start with 1s, exponential backoff
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private intentionalClose = false;
+	private pendingSubscription: SubscribeOptions | null = null;
 
 	/**
 	 * Connect to the WebSocket endpoint for a specific flow
@@ -83,6 +81,12 @@ class RuntimeWebSocketService {
 				this.reconnectAttempts = 0;
 				this.reconnectDelay = 1000;
 				runtimeStore.setConnected(true, this.flowId);
+
+				// Send any pending subscription
+				if (this.pendingSubscription) {
+					this.sendSubscribe(this.pendingSubscription);
+					this.pendingSubscription = null;
+				}
 			};
 
 			this.ws.onmessage = (event) => {
@@ -149,20 +153,29 @@ class RuntimeWebSocketService {
 
 	/**
 	 * Send subscribe command to filter messages
+	 * If not connected yet, queues the subscription to send on connect
 	 */
 	subscribe(options: SubscribeOptions): void {
+		// Queue subscription if not connected yet
 		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-			console.warn('[RuntimeWS] Cannot subscribe - not connected');
+			console.log('[RuntimeWS] Queueing subscription until connected');
+			this.pendingSubscription = options;
+			return;
+		}
+		this.sendSubscribe(options);
+	}
+
+	private sendSubscribe(options: SubscribeOptions): void {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+			console.warn('[RuntimeWS] Cannot send subscribe - not connected');
 			return;
 		}
 
 		const command: SubscribeCommand = {
 			command: 'subscribe',
-			payload: {
-				message_types: options.messageTypes,
-				log_level: options.logLevel,
-				sources: options.sources
-			}
+			message_types: options.messageTypes,
+			log_level: options.logLevel,
+			sources: options.sources
 		};
 
 		console.log('[RuntimeWS] Sending subscribe:', command);
@@ -189,88 +202,126 @@ class RuntimeWebSocketService {
 
 	private handleMessage(data: string): void {
 		try {
-			const message = JSON.parse(data) as WebSocketMessage;
+			const envelope = JSON.parse(data) as StatusStreamEnvelope;
 
-			// Validate message structure
-			if (!message.type || !message.id || !message.timestamp) {
-				console.warn('[RuntimeWS] Invalid message format:', message);
+			// Validate envelope structure
+			if (!envelope.type || !envelope.id || !envelope.timestamp) {
+				console.warn('[RuntimeWS] Invalid envelope format:', envelope);
 				return;
 			}
 
+			// Parse payload - backend may send as JSON string or object
+			let payload: unknown;
+			if (typeof envelope.payload === 'string') {
+				try {
+					// Try to decode base64 first (OpenAPI spec says "byte" format)
+					const decoded = atob(envelope.payload);
+					payload = JSON.parse(decoded);
+				} catch {
+					// Not base64, try direct JSON parse
+					try {
+						payload = JSON.parse(envelope.payload);
+					} catch {
+						// Use as-is if not JSON
+						payload = envelope.payload;
+					}
+				}
+			} else {
+				payload = envelope.payload;
+			}
+
 			// Route to appropriate handler
-			switch (message.type) {
+			switch (envelope.type) {
 				case 'flow_status':
-					this.handleFlowStatus(message);
+					this.handleFlowStatus(envelope, payload as FlowStatusPayload);
 					break;
 
 				case 'component_health':
-					this.handleComponentHealth(message);
+					this.handleComponentHealth(envelope, payload);
 					break;
 
 				case 'component_metrics':
-					this.handleComponentMetrics(message);
+					this.handleComponentMetrics(envelope, payload);
 					break;
 
 				case 'log_entry':
-					this.handleLogEntry(message);
+					this.handleLogEntry(envelope, payload);
+					break;
+
+				case 'subscribe_ack':
+					// Control message acknowledging subscription - log for debugging
+					console.log('[RuntimeWS] Subscription acknowledged:', payload);
 					break;
 
 				default:
-					console.warn('[RuntimeWS] Unknown message type:', message.type);
+					console.warn('[RuntimeWS] Unknown message type:', envelope.type);
 			}
 		} catch (error) {
 			console.error('[RuntimeWS] Failed to parse message:', error, data);
 		}
 	}
 
-	private handleFlowStatus(message: WebSocketMessage): void {
-		const payload = message.payload as {
-			state: string;
-			prev_state?: string;
-			deployed_at?: number;
-			started_at?: number;
-			error?: string;
-		};
-
+	private handleFlowStatus(envelope: StatusStreamEnvelope, payload: FlowStatusPayload): void {
 		runtimeStore.updateFlowStatus({
 			state: payload.state as 'running' | 'stopped' | 'error' | 'deploying' | 'not_deployed',
 			prev_state: payload.prev_state as 'running' | 'stopped' | 'error' | 'deploying' | 'not_deployed' | undefined,
-			deployed_at: payload.deployed_at,
-			started_at: payload.started_at,
+			timestamp: payload.timestamp,
 			error: payload.error
 		});
 	}
 
-	private handleComponentHealth(message: WebSocketMessage): void {
-		const payload = message.payload as {
-			overall: {
-				status: string;
-				counts: { healthy: number; degraded: number; error: number };
+	private handleComponentHealth(envelope: StatusStreamEnvelope, payload: unknown): void {
+		// Backend sends per-component health updates: { name, health: { status, message }, timestamp }
+		const update = payload as {
+			name: string;
+			health?: {
+				status?: string;
+				message?: string;
 			};
-			components: Array<{
-				name: string;
-				component: string;
-				type: string;
-				status: string;
-				healthy: boolean;
-				message: string | null;
-			}>;
+			timestamp?: number;
 		};
 
-		runtimeStore.updateHealth({
-			overall: {
-				status: payload.overall.status as 'healthy' | 'degraded' | 'error',
-				counts: payload.overall.counts
-			},
-			components: payload.components.map((c) => ({
-				...c,
-				status: c.status as 'healthy' | 'degraded' | 'error'
-			}))
-		});
+		// Handle per-component update format
+		if (update?.name && update?.health) {
+			runtimeStore.updateComponentHealth({
+				name: update.name,
+				status: (update.health.status as 'healthy' | 'degraded' | 'error') || 'healthy',
+				message: update.health.message || null
+			});
+			return;
+		}
+
+		// Fallback: Handle aggregated format (overall + components array)
+		const health = payload as RuntimeHealthResponse;
+		if (health?.overall && health?.components) {
+			runtimeStore.updateHealth({
+				overall: {
+					status: health.overall.status as 'healthy' | 'degraded' | 'error',
+					counts: {
+						healthy: health.overall.running_count,
+						degraded: health.overall.degraded_count,
+						error: health.overall.error_count
+					}
+				},
+				components: health.components.map((c) => ({
+					name: c.name,
+					component: c.component,
+					type: c.type,
+					status: c.status as 'healthy' | 'degraded' | 'error',
+					healthy: c.healthy,
+					message: c.message
+				}))
+			});
+			return;
+		}
+
+		console.warn('[RuntimeWS] Unexpected health payload format:', payload);
 	}
 
-	private handleComponentMetrics(message: WebSocketMessage): void {
-		const payload = message.payload as {
+	private handleComponentMetrics(envelope: StatusStreamEnvelope, payload: unknown): void {
+		// Actual backend sends single metric per message: {component, name, type, value, labels}
+		// (OpenAPI spec shows array format, but runtime uses single metric)
+		const metric = payload as {
 			component: string;
 			name: string;
 			type: string;
@@ -278,26 +329,36 @@ class RuntimeWebSocketService {
 			labels: Record<string, string>;
 		};
 
-		runtimeStore.updateMetrics(payload, message.timestamp);
+		runtimeStore.updateMetrics(
+			{
+				component: metric.component,
+				name: metric.name,
+				type: metric.type,
+				value: metric.value,
+				labels: metric.labels
+			},
+			envelope.timestamp
+		);
 	}
 
-	private handleLogEntry(message: WebSocketMessage): void {
-		const payload = message.payload as {
-			level: string;
-			source: string;
-			message: string;
-			fields?: Record<string, unknown>;
-		};
+	private handleLogEntry(envelope: StatusStreamEnvelope, payload: unknown): void {
+		const log = payload as LogEntryPayload;
+
+		// Validate expected fields
+		if (!log?.level || !log?.source || !log?.message) {
+			console.warn('[RuntimeWS] Unexpected log entry format:', payload);
+			return;
+		}
 
 		runtimeStore.addLog(
 			{
-				level: payload.level as LogLevel,
-				source: payload.source,
-				message: payload.message,
-				fields: payload.fields
+				level: log.level as LogLevel,
+				source: log.source,
+				message: log.message,
+				fields: log.fields
 			},
-			message.id,
-			message.timestamp
+			envelope.id,
+			envelope.timestamp
 		);
 	}
 }
