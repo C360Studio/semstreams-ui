@@ -15,6 +15,7 @@ build/
 .eggs/
 .next/
 out/
+.svelte-kit/
 
 # IDE
 .vscode/
