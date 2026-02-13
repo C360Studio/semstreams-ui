@@ -46,6 +46,26 @@ function createDefaultState(): RuntimeStoreState {
 	};
 }
 
+// Create state with message-logger service available (required for rendering messages)
+function createStateWithMessageLogger(
+	overrides: Partial<RuntimeStoreState> = {}
+): RuntimeStoreState {
+	return {
+		...createDefaultState(),
+		healthComponents: [
+			{
+				name: 'message-logger',
+				component: 'message-logger',
+				type: 'service',
+				status: 'healthy',
+				healthy: true,
+				message: null
+			}
+		],
+		...overrides
+	};
+}
+
 function createMessageLog(overrides: Partial<LogEntry> & { fields?: Record<string, unknown> } = {}): LogEntry {
 	return {
 		id: `log-${Date.now()}-${Math.random()}`,
@@ -154,11 +174,12 @@ describe('MessagesTab', () => {
 
 	describe('Rendering', () => {
 		it('renders empty state when no messages', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: [] // No message-logger logs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: [] // No message-logger logs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -168,11 +189,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('renders messages list with all fields', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -185,11 +207,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('shows direction indicators with correct symbols', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -200,11 +223,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('displays NATS subjects in monospace font class', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -217,11 +241,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('formats timestamps with millisecond precision', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -246,11 +271,12 @@ describe('MessagesTab', () => {
 				}
 			];
 
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: mixedLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: mixedLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -264,11 +290,12 @@ describe('MessagesTab', () => {
 
 	describe('Filtering', () => {
 		it('filters messages by direction', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -287,11 +314,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('shows "All" option in direction filter', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -300,11 +328,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('updates filtered message count when filter changes', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -321,16 +350,17 @@ describe('MessagesTab', () => {
 		});
 
 		it('shows empty state when filter matches no messages', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: [
-					createMessageLog({
-						id: 'msg-1',
-						fields: { direction: 'published', subject: 'test', component: 'comp' }
-					})
-				]
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: [
+						createMessageLog({
+							id: 'msg-1',
+							fields: { direction: 'published', subject: 'test', component: 'comp' }
+						})
+					]
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -345,11 +375,12 @@ describe('MessagesTab', () => {
 
 	describe('Controls', () => {
 		it('auto-scroll toggles correctly', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -365,11 +396,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('clear messages calls store clearLogs', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -384,11 +416,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('clear messages resets direction filter', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -406,11 +439,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('metadata expands and collapses', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -442,11 +476,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('multiple metadata sections independent', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -477,11 +512,12 @@ describe('MessagesTab', () => {
 
 	describe('Store Updates', () => {
 		it('updates when new messages arrive in store', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: [sampleMessageLogs[0]]
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: [sampleMessageLogs[0]]
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -501,11 +537,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('handles empty messages gracefully', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -528,11 +565,12 @@ describe('MessagesTab', () => {
 
 	describe('Accessibility', () => {
 		it('should have proper ARIA labels on controls', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -544,11 +582,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('should use aria-live region for message entries', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
@@ -559,11 +598,12 @@ describe('MessagesTab', () => {
 		});
 
 		it('should have aria-expanded on metadata toggles', async () => {
-			mockStoreState.set({
-				...createDefaultState(),
-				connected: true,
-				logs: sampleMessageLogs
-			});
+			mockStoreState.set(
+				createStateWithMessageLogger({
+					connected: true,
+					logs: sampleMessageLogs
+				})
+			);
 
 			const { container } = render(MessagesTab, { flowId: 'flow-123', isActive: true });
 
