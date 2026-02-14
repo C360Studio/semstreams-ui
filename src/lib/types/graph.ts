@@ -189,6 +189,40 @@ export const DEFAULT_GRAPH_STORE_STATE: GraphStoreState = {
 // =============================================================================
 
 /**
+ * Backend triple structure (raw from GraphQL API).
+ */
+export interface BackendTriple {
+  subject: string;
+  predicate: string;
+  object: unknown;
+}
+
+/**
+ * Backend entity structure (raw from GraphQL API).
+ */
+export interface BackendEntity {
+  id: string;
+  triples: BackendTriple[];
+}
+
+/**
+ * Backend edge structure (raw from GraphQL API).
+ */
+export interface BackendEdge {
+  subject: string;
+  predicate: string;
+  object: string;
+}
+
+/**
+ * GraphQL pathSearch query result.
+ */
+export interface PathSearchResult {
+  entities: BackendEntity[];
+  edges: BackendEdge[];
+}
+
+/**
  * GraphQL response for entity query.
  */
 export interface EntityQueryResponse {

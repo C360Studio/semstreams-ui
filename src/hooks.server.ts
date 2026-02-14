@@ -25,7 +25,8 @@ export async function handleFetch({ request, fetch }) {
   if (
     url.pathname.startsWith("/flowbuilder") ||
     url.pathname.startsWith("/components") ||
-    url.pathname.startsWith("/health")
+    url.pathname.startsWith("/health") ||
+    url.pathname.startsWith("/graphql")
   ) {
     // BACKEND_HOST is set in docker-compose.dev.yml (e.g., "backend:8080")
     // If not set, we're probably in E2E tests (which disable SSR anyway)

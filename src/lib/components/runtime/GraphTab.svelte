@@ -11,7 +11,9 @@
 	 */
 
 	import { onMount, onDestroy } from 'svelte';
-	import { graphStore, buildGraphEntity } from '$lib/stores/graphStore.svelte';
+	import { graphStore } from '$lib/stores/graphStore.svelte';
+	import { graphApi, GraphApiError } from '$lib/services/graphApi';
+	import { transformPathSearchResult } from '$lib/services/graphTransform';
 	import type { GraphEntity, GraphRelationship, GraphFilters as GraphFiltersType, GraphStoreState } from '$lib/types/graph';
 
 	import GraphFiltersPanel from './GraphFilters.svelte';
@@ -50,8 +52,8 @@
 			storeState = state;
 		});
 
-		// Load initial data (mock for now, will be GraphQL in Phase 2)
-		loadMockData();
+		// Load initial graph data from GraphQL API
+		loadGraphData();
 
 		return () => {
 			if (unsubscribe) {
@@ -66,156 +68,36 @@
 		}
 	});
 
-	// Load mock data for Phase 1 testing
-	function loadMockData() {
+	/**
+	 * Load graph data from the GraphQL API.
+	 * Uses pathSearch with a wildcard to get initial entities.
+	 */
+	async function loadGraphData() {
 		graphStore.setLoading(true);
+		graphStore.setError(null);
 
-		// Simulate network delay
-		setTimeout(() => {
-			const mockEntities = generateMockEntities();
-			graphStore.upsertEntities(mockEntities);
+		try {
+			const result = await graphApi.pathSearch('*', 2, 50);
+			const entities = transformPathSearchResult(result);
+			graphStore.upsertEntities(entities);
 			graphStore.setConnected(true);
-			graphStore.setLoading(false);
-		}, 500);
-	}
-
-	// Generate realistic mock entities
-	function generateMockEntities(): GraphEntity[] {
-		const entities: GraphEntity[] = [];
-
-		// Create a vehicle fleet scenario
-		const fleetId = 'acme.cloud.fleet.management.fleet.west-coast';
-		const fleet = buildGraphEntity({
-			id: fleetId,
-			properties: [
-				{ predicate: 'fleet.name', object: 'West Coast Fleet', confidence: 1.0, timestamp: Date.now() - 86400000 },
-				{ predicate: 'fleet.region', object: 'US-West', confidence: 1.0, timestamp: Date.now() - 86400000 },
-				{ predicate: 'fleet.size', object: 47, confidence: 0.95, timestamp: Date.now() - 3600000 }
-			],
-			outgoing: [],
-			incoming: [],
-			community: { id: 'fleet-ops', label: 'Fleet Operations' }
-		});
-		entities.push(fleet);
-
-		// Create vehicles
-		const vehicleIds = ['VH-001', 'VH-002', 'VH-003', 'VH-004', 'VH-005'];
-		const vehicleTypes = ['truck', 'van', 'truck', 'sedan', 'van'];
-		const statuses = ['active', 'active', 'maintenance', 'active', 'idle'];
-
-		vehicleIds.forEach((vid, idx) => {
-			const vehicleId = `acme.cloud.fleet.management.vehicle.${vid}`;
-			const vehicle = buildGraphEntity({
-				id: vehicleId,
-				properties: [
-					{ predicate: 'vehicle.type', object: vehicleTypes[idx], confidence: 1.0, timestamp: Date.now() - 3600000 },
-					{ predicate: 'vehicle.status', object: statuses[idx], confidence: 0.98, timestamp: Date.now() - 300000 },
-					{ predicate: 'vehicle.mileage', object: 45000 + idx * 12000, confidence: 0.9, timestamp: Date.now() - 600000 },
-					{ predicate: 'vehicle.fuelLevel', object: 0.3 + Math.random() * 0.6, confidence: 0.85, timestamp: Date.now() - 60000 }
-				],
-				outgoing: [
-					{ predicate: 'fleet.membership.current', targetId: fleetId, confidence: 1.0, timestamp: Date.now() - 86400000 }
-				],
-				incoming: [],
-				community: { id: 'fleet-ops', label: 'Fleet Operations' }
-			});
-			entities.push(vehicle);
-
-			// Add incoming relationship to fleet
-			fleet.incoming.push({
-				id: `${vehicleId}->fleet.membership.current->${fleetId}`,
-				sourceId: vehicleId,
-				targetId: fleetId,
-				predicate: 'fleet.membership.current',
-				confidence: 1.0,
-				timestamp: Date.now() - 86400000
-			});
-		});
-
-		// Create drivers
-		const driverNames = ['Alice Chen', 'Bob Smith', 'Carol Davis', 'Dan Wilson'];
-		driverNames.forEach((name, idx) => {
-			const driverId = `acme.cloud.fleet.hr.driver.drv-${100 + idx}`;
-			const assignedVehicle = vehicleIds[idx];
-			const assignedVehicleId = `acme.cloud.fleet.management.vehicle.${assignedVehicle}`;
-
-			const driver = buildGraphEntity({
-				id: driverId,
-				properties: [
-					{ predicate: 'driver.name', object: name, confidence: 1.0, timestamp: Date.now() - 86400000 * 30 },
-					{ predicate: 'driver.license', object: 'Class A CDL', confidence: 1.0, timestamp: Date.now() - 86400000 * 365 },
-					{ predicate: 'driver.rating', object: 4.2 + Math.random() * 0.7, confidence: 0.9, timestamp: Date.now() - 86400000 }
-				],
-				outgoing: [
-					{ predicate: 'assignment.vehicle', targetId: assignedVehicleId, confidence: 0.95, timestamp: Date.now() - 3600000 }
-				],
-				incoming: [],
-				community: { id: 'personnel', label: 'Personnel' }
-			});
-			entities.push(driver);
-
-			// Add incoming to vehicle
-			const vehicle = entities.find(e => e.id === assignedVehicleId);
-			if (vehicle) {
-				vehicle.incoming.push({
-					id: `${driverId}->assignment.vehicle->${assignedVehicleId}`,
-					sourceId: driverId,
-					targetId: assignedVehicleId,
-					predicate: 'assignment.vehicle',
-					confidence: 0.95,
-					timestamp: Date.now() - 3600000
-				});
-			}
-		});
-
-		// Create some locations
-		const locations = [
-			{ name: 'Warehouse A', lat: 37.7749, lng: -122.4194 },
-			{ name: 'Distribution Center', lat: 34.0522, lng: -118.2437 },
-			{ name: 'Customer Site 1', lat: 36.7783, lng: -119.4179 }
-		];
-
-		locations.forEach((loc, idx) => {
-			const locationId = `acme.cloud.fleet.logistics.location.loc-${200 + idx}`;
-			const location = buildGraphEntity({
-				id: locationId,
-				properties: [
-					{ predicate: 'location.name', object: loc.name, confidence: 1.0, timestamp: Date.now() - 86400000 * 7 },
-					{ predicate: 'location.lat', object: loc.lat, confidence: 1.0, timestamp: Date.now() - 86400000 * 7 },
-					{ predicate: 'location.lng', object: loc.lng, confidence: 1.0, timestamp: Date.now() - 86400000 * 7 }
-				],
-				outgoing: [],
-				incoming: [],
-				community: { id: 'logistics', label: 'Logistics' }
-			});
-			entities.push(location);
-
-			// Connect some vehicles to locations
-			if (idx < 2) {
-				const vehicleId = `acme.cloud.fleet.management.vehicle.${vehicleIds[idx]}`;
-				const vehicle = entities.find(e => e.id === vehicleId);
-				if (vehicle) {
-					vehicle.outgoing.push({
-						id: `${vehicleId}->location.current->${locationId}`,
-						sourceId: vehicleId,
-						targetId: locationId,
-						predicate: 'location.current',
-						confidence: 0.92,
-						timestamp: Date.now() - 300000
-					});
-					location.incoming.push({
-						id: `${vehicleId}->location.current->${locationId}`,
-						sourceId: vehicleId,
-						targetId: locationId,
-						predicate: 'location.current',
-						confidence: 0.92,
-						timestamp: Date.now() - 300000
-					});
+		} catch (err) {
+			if (err instanceof GraphApiError) {
+				// Map error codes to user-friendly messages
+				if (err.statusCode === 504 || err.message.includes('timeout')) {
+					graphStore.setError('Query timed out');
+				} else if (err.statusCode === 0) {
+					graphStore.setError('Unable to connect to graph service');
+				} else {
+					graphStore.setError(err.message);
 				}
+			} else {
+				graphStore.setError('An unexpected error occurred');
 			}
-		});
-
-		return entities;
+			graphStore.setConnected(false);
+		} finally {
+			graphStore.setLoading(false);
+		}
 	}
 
 	// Event handlers
@@ -223,10 +105,24 @@
 		graphStore.selectEntity(entityId);
 	}
 
-	function handleEntityExpand(entityId: string) {
-		// In Phase 2, this will trigger a GraphQL query for neighbors
-		// For now, just mark as expanded
-		graphStore.markExpanded(entityId);
+	/**
+	 * Expand an entity by loading its neighbors from the GraphQL API.
+	 */
+	async function handleEntityExpand(entityId: string) {
+		// Skip if already expanded
+		if (storeState && graphStore.isExpanded(storeState, entityId)) {
+			return;
+		}
+
+		try {
+			const result = await graphApi.pathSearch(entityId, 1, 20);
+			const entities = transformPathSearchResult(result);
+			graphStore.upsertEntities(entities);
+			graphStore.markExpanded(entityId);
+		} catch (err) {
+			// Log error but don't show error banner for expansion failures
+			console.error('Failed to expand entity:', err);
+		}
 	}
 
 	function handleEntityHover(entityId: string | null) {
@@ -252,7 +148,7 @@
 	// Refresh data
 	function handleRefresh() {
 		graphStore.clearEntities();
-		loadMockData();
+		loadGraphData();
 	}
 </script>
 
