@@ -8,13 +8,13 @@ on:
   workflow_dispatch:
     inputs:
       backend_repo:
-        description: 'Backend repository (org/repo)'
+        description: "Backend repository (org/repo)"
         required: true
-        default: 'c360/semstreams'
+        default: "c360/semstreams"
       backend_ref:
-        description: 'Backend branch/tag/commit'
+        description: "Backend branch/tag/commit"
         required: false
-        default: 'main'
+        default: "main"
 
 jobs:
   e2e:
@@ -38,8 +38,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
           cache-dependency-path: semstreams-ui/package-lock.json
 
       - name: Install UI dependencies

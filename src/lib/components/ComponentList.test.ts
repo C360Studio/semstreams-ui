@@ -41,7 +41,9 @@ describe("ComponentList", () => {
     });
 
     it("should render single node", () => {
-      const nodes = [createMockNode("node-1", "UDP Input", "udp-input", "input")];
+      const nodes = [
+        createMockNode("node-1", "UDP Input", "udp-input", "input"),
+      ];
 
       render(ComponentList, { props: { nodes } });
 
@@ -318,7 +320,6 @@ describe("ComponentList", () => {
       // Should not throw error
       await expect(fireEvent.click(addButton)).resolves.not.toThrow();
     });
-
   });
 
   describe("accessibility", () => {
@@ -407,7 +408,9 @@ describe("ComponentList", () => {
     });
 
     it("should handle single node", () => {
-      const nodes = [createMockNode("node-1", "Single Node", "udp-input", "input")];
+      const nodes = [
+        createMockNode("node-1", "Single Node", "udp-input", "input"),
+      ];
 
       render(ComponentList, { props: { nodes } });
 

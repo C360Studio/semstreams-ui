@@ -8,6 +8,7 @@
 ### 1. SvelteFlow Uses Svelte Bindings, Not React Flow Callbacks
 
 **React Flow pattern** (callback-based):
+
 ```typescript
 <ReactFlow
   nodes={nodes}
@@ -16,6 +17,7 @@
 ```
 
 **SvelteFlow pattern** (binding-based):
+
 ```typescript
 <SvelteFlow
   bind:nodes={nodes}  // Two-way binding
@@ -25,6 +27,7 @@
 ```
 
 **Source**: `node_modules/@xyflow/svelte/dist/lib/container/SvelteFlow/SvelteFlow.svelte.d.ts:102`
+
 ```typescript
 bindings(): "nodes" | "edges" | "viewport";
 ```
@@ -34,6 +37,7 @@ bindings(): "nodes" | "edges" | "viewport";
 From `node_modules/@xyflow/svelte/dist/lib/types/events.d.ts`:
 
 **Node Events**:
+
 - `onnodeclick` - User clicks a node
 - `onnodecontextmenu` - User right-clicks a node
 - `onnodedrag` - User drags a node
@@ -42,10 +46,12 @@ From `node_modules/@xyflow/svelte/dist/lib/types/events.d.ts`:
 - `onnodepointerenter/leave/move` - Pointer interactions
 
 **Edge Events**:
+
 - `onedgeclick`, `onedgecontextmenu`
 - `onedgepointerenter/leave`
 
 **Connection Events** (for visual wiring):
+
 - `onconnect` - Connection created
 - `onconnectstart` - Connection drag started
 - `onconnectend` - Connection drag ended
@@ -53,6 +59,7 @@ From `node_modules/@xyflow/svelte/dist/lib/types/events.d.ts`:
 - `onreconnect` - Connection moved to different handle
 
 **Other Events**:
+
 - `onselectionchange` - Selection changes
 - `ondelete` - Nodes/edges deleted
 - `onbeforedelete` - Before deletion (can prevent)
@@ -63,6 +70,7 @@ From `node_modules/@xyflow/svelte/dist/lib/types/events.d.ts`:
 ### 3. Our Current Architecture Issue
 
 **FlowCanvas.svelte:24-41** - `nodes` is `$derived`:
+
 ```typescript
 const nodes = $derived<Node[]>(
   flow?.nodes?.map((node) => ({
@@ -77,6 +85,7 @@ const nodes = $derived<Node[]>(
 **Problem**: `$derived` creates **read-only computed state**. Cannot use `bind:nodes` on it because SvelteFlow would need to write to it.
 
 **FlowCanvas.svelte:138** - One-way prop:
+
 ```svelte
 <SvelteFlow
   {nodes}  <!-- One-way prop, not bound -->
@@ -86,11 +95,12 @@ const nodes = $derived<Node[]>(
 ```
 
 **FlowCanvas.svelte:56-66** - Manual position updates:
+
 ```typescript
 function handleNodeDragStop(event: any) {
   const { id, position } = event.detail;
-  const updatedNodes = flow.nodes.map(node =>
-    node.id === id ? { ...node, position } : node
+  const updatedNodes = flow.nodes.map((node) =>
+    node.id === id ? { ...node, position } : node,
   );
   onNodesChange?.(updatedNodes);
 }
@@ -99,12 +109,14 @@ function handleNodeDragStop(event: any) {
 ### 4. Why E2E Tests Fail But Manual Testing Works
 
 **The drag-and-drop flow**:
+
 1. User drags from ComponentPalette → fires HTML5 drag events
 2. `handleDrop` in FlowCanvas catches the HTML5 `drop` event
 3. Creates new FlowNode, calls `onNodesChange`
 4. Parent updates `flow.nodes`, save succeeds
 
 **Playwright's dragTo() behavior**:
+
 1. Playwright fires **mouse events** (mousedown/mousemove/mouseup)
 2. XYFlow's internal handlers respond to mouse events
 3. XYFlow adds node to its **internal DOM state** (visual only)
@@ -114,6 +126,7 @@ function handleNodeDragStop(event: any) {
 7. Save sends empty array to backend
 
 **Why config panel tests pass**:
+
 1. XYFlow creates DOM element for the visual node
 2. Test clicks the DOM element → `onnodeclick` fires
 3. Config panel opens successfully
@@ -124,6 +137,7 @@ function handleNodeDragStop(event: any) {
 **Current**: Drag-and-drop is the ONLY way to add components.
 
 **WCAG 2.1 Level A violation**:
+
 - Keyboard-only users cannot add components
 - Screen reader users cannot navigate/add components
 - Motor impairment users struggle with precise drag
@@ -135,6 +149,7 @@ function handleNodeDragStop(event: any) {
 ### Approach: Add Keyboard + Double-Click Alternatives
 
 **Benefits**:
+
 1. ✅ Fixes WCAG 2.1 Level A violation
 2. ✅ Makes E2E tests work (use keyboard/click instead of drag)
 3. ✅ Simpler than managing bidirectional binding conversions
@@ -143,6 +158,7 @@ function handleNodeDragStop(event: any) {
 **Implementation**:
 
 #### Option 1: Double-Click on Palette Item
+
 ```svelte
 <!-- ComponentPalette.svelte -->
 <button
@@ -156,6 +172,7 @@ function handleNodeDragStop(event: any) {
 Adds component to **canvas center** (or last clicked position).
 
 #### Option 2: Keyboard Support
+
 ```svelte
 <button
   onkeydown={(e) => {
@@ -171,6 +188,7 @@ Adds component to **canvas center** (or last clicked position).
 ```
 
 #### Option 3: Context Menu
+
 ```svelte
 <button
   oncontextmenu={(e) => {
@@ -187,12 +205,13 @@ Context menu shows: "Add to Canvas", "View Documentation"
 ### E2E Test Pattern
 
 **After fix**, tests can use:
+
 ```typescript
 // Option 1: Double-click
 await page.locator('[data-component="UDP Input"]').dblclick();
 
 // Option 2: Keyboard
-await page.locator('[data-component="UDP Input"]').press('Enter');
+await page.locator('[data-component="UDP Input"]').press("Enter");
 
 // Both add to canvas center, no drag needed!
 ```
@@ -202,6 +221,7 @@ await page.locator('[data-component="UDP Input"]').press('Enter');
 ### Connection Events to Use
 
 **onconnect** - When user creates edge:
+
 ```typescript
 onconnect={(params) => {
   const newConnection = {
@@ -216,6 +236,7 @@ onconnect={(params) => {
 ```
 
 **onbeforeconnect** - Validate before allowing:
+
 ```typescript
 onbeforeconnect={(params) => {
   // Validate connection is valid per FlowGraph rules
@@ -224,6 +245,7 @@ onbeforeconnect={(params) => {
 ```
 
 **ondelete** - When user deletes edges:
+
 ```typescript
 ondelete={({ nodes, edges }) => {
   // Update flow.connections
@@ -239,6 +261,7 @@ ondelete={({ nodes, edges }) => {
 Since we need to sync between FlowConnection[] and XYFlow Edge[]:
 
 **Option A: Keep $derived + manual event handlers** (current approach)
+
 ```typescript
 const edges = $derived<Edge[]>(
   flow.connections.map(conn => ({ ... }))
@@ -252,6 +275,7 @@ const edges = $derived<Edge[]>(
 ```
 
 **Option B: Use $state with bidirectional sync**
+
 ```typescript
 let xyflowEdges = $state<Edge[]>([]);
 
@@ -270,6 +294,7 @@ $effect(() => {
 ```
 
 **Recommendation**: Stick with **Option A** (manual event handlers) because:
+
 1. Clearer data flow (easier to debug)
 2. Avoids circular update issues with $effect
 3. More explicit about when state changes
@@ -278,16 +303,19 @@ $effect(() => {
 ## Summary
 
 **For Node Persistence**:
+
 - Add multi-modal component addition (double-click + keyboard)
 - Fixes accessibility, E2E tests, and UX simultaneously
 - Keep current event-driven architecture
 
 **For Visual Wiring**:
+
 - Use `onconnect`, `onbeforeconnect`, `ondelete` events
 - Keep $derived edges with manual event handlers
 - Validate connections with FlowGraph patterns
 
 **No Need for**:
+
 - Switching to `bind:` directive (causes circular dependency issues)
 - Complex bidirectional state sync
 - Changing fundamental architecture

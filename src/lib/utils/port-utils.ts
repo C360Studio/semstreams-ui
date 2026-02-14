@@ -1,12 +1,12 @@
 import type {
-	PortVisualization,
-	PortGroup,
-	Position,
-	ValidatedPort,
-	PortVisualStyle,
-	PortTooltipContent,
-	CompatibilityFeedback
-} from '$lib/types/port';
+  PortVisualization,
+  PortGroup,
+  Position,
+  ValidatedPort,
+  PortVisualStyle,
+  PortTooltipContent,
+  CompatibilityFeedback,
+} from "$lib/types/port";
 
 /**
  * Port visualization utilities
@@ -16,15 +16,21 @@ import type {
  */
 
 import {
-	PORT_COLORS as PORT_TYPE_COLORS,
-	SEMANTIC_COLORS as VALIDATION_COLORS,
-	BORDER_PATTERNS,
-	CONNECTION_PATTERNS,
-	PORT_ICONS as PORT_TYPE_ICONS
-} from '$lib/theme/colors';
+  PORT_COLORS as PORT_TYPE_COLORS,
+  SEMANTIC_COLORS as VALIDATION_COLORS,
+  BORDER_PATTERNS,
+  CONNECTION_PATTERNS,
+  PORT_ICONS as PORT_TYPE_ICONS,
+} from "$lib/theme/colors";
 
 // Re-export theme constants for backward compatibility
-export { PORT_TYPE_COLORS, VALIDATION_COLORS, BORDER_PATTERNS, CONNECTION_PATTERNS, PORT_TYPE_ICONS };
+export {
+  PORT_TYPE_COLORS,
+  VALIDATION_COLORS,
+  BORDER_PATTERNS,
+  CONNECTION_PATTERNS,
+  PORT_TYPE_ICONS,
+};
 
 /**
  * Groups ports by direction (inputs vs outputs)
@@ -32,34 +38,34 @@ export { PORT_TYPE_COLORS, VALIDATION_COLORS, BORDER_PATTERNS, CONNECTION_PATTER
  * Filters out empty groups
  */
 export function groupPorts(ports: ValidatedPort[]): PortGroup[] {
-	const inputPorts = ports.filter((p) => p.direction === 'input');
-	const outputPorts = ports.filter((p) => p.direction === 'output');
+  const inputPorts = ports.filter((p) => p.direction === "input");
+  const outputPorts = ports.filter((p) => p.direction === "output");
 
-	const groups: PortGroup[] = [];
+  const groups: PortGroup[] = [];
 
-	// Create input group if there are input ports
-	if (inputPorts.length > 0) {
-		groups.push({
-			id: 'inputs',
-			label: `Input Ports (${inputPorts.length})`,
-			ports: inputPorts,
-			collapsed: false, // Default to expanded
-			position: 'left' as Position
-		});
-	}
+  // Create input group if there are input ports
+  if (inputPorts.length > 0) {
+    groups.push({
+      id: "inputs",
+      label: `Input Ports (${inputPorts.length})`,
+      ports: inputPorts,
+      collapsed: false, // Default to expanded
+      position: "left" as Position,
+    });
+  }
 
-	// Create output group if there are output ports
-	if (outputPorts.length > 0) {
-		groups.push({
-			id: 'outputs',
-			label: `Output Ports (${outputPorts.length})`,
-			ports: outputPorts,
-			collapsed: false, // Default to expanded
-			position: 'right' as Position
-		});
-	}
+  // Create output group if there are output ports
+  if (outputPorts.length > 0) {
+    groups.push({
+      id: "outputs",
+      label: `Output Ports (${outputPorts.length})`,
+      ports: outputPorts,
+      collapsed: false, // Default to expanded
+      position: "right" as Position,
+    });
+  }
 
-	return groups;
+  return groups;
 }
 
 /**
@@ -67,20 +73,20 @@ export function groupPorts(ports: ValidatedPort[]): PortGroup[] {
  * Priority: error > warning > unknown > valid
  */
 export function getPortValidationState(
-	ports: PortVisualization[]
-): 'valid' | 'warning' | 'error' | 'unknown' {
-	if (ports.length === 0) return 'unknown';
+  ports: PortVisualization[],
+): "valid" | "warning" | "error" | "unknown" {
+  if (ports.length === 0) return "unknown";
 
-	const hasError = ports.some((p) => p.validationState === 'error');
-	if (hasError) return 'error';
+  const hasError = ports.some((p) => p.validationState === "error");
+  if (hasError) return "error";
 
-	const hasWarning = ports.some((p) => p.validationState === 'warning');
-	if (hasWarning) return 'warning';
+  const hasWarning = ports.some((p) => p.validationState === "warning");
+  if (hasWarning) return "warning";
 
-	const hasUnknown = ports.some((p) => p.validationState === 'unknown');
-	if (hasUnknown) return 'unknown';
+  const hasUnknown = ports.some((p) => p.validationState === "unknown");
+  if (hasUnknown) return "unknown";
 
-	return 'valid';
+  return "valid";
 }
 
 // ============================================================================
@@ -97,53 +103,59 @@ export function getPortValidationState(
  * @returns PortVisualStyle with computed styling properties
  */
 export function computePortVisualStyle(port: ValidatedPort): PortVisualStyle {
-	// Map backend pattern to spec 014 port type
-	// Backend patterns: "stream", "request", "watch", "api"
-	// Spec 014 types: nats_stream, nats_request, kv_watch, network, file
-	let portType: keyof typeof PORT_TYPE_COLORS;
+  // Map backend pattern to spec 014 port type
+  // Backend patterns: "stream", "request", "watch", "api"
+  // Spec 014 types: nats_stream, nats_request, kv_watch, network, file
+  let portType: keyof typeof PORT_TYPE_COLORS;
 
-	switch (port.pattern) {
-		case 'stream':
-			portType = 'nats_stream';
-			break;
-		case 'request':
-			portType = 'nats_request';
-			break;
-		case 'watch':
-			portType = 'kv_watch';
-			break;
-		case 'api':
-			portType = 'network';
-			break;
-		default:
-			// Check connection_id for file:// prefix
-			if (port.connection_id?.startsWith('file://')) {
-				portType = 'file';
-			} else {
-				portType = 'network'; // Default to network for unknown patterns
-			}
-	}
+  switch (port.pattern) {
+    case "stream":
+      portType = "nats_stream";
+      break;
+    case "request":
+      portType = "nats_request";
+      break;
+    case "watch":
+      portType = "kv_watch";
+      break;
+    case "api":
+      portType = "network";
+      break;
+    default:
+      // Check connection_id for file:// prefix
+      if (port.connection_id?.startsWith("file://")) {
+        portType = "file";
+      } else {
+        portType = "network"; // Default to network for unknown patterns
+      }
+  }
 
-	const color = PORT_TYPE_COLORS[portType];
-	const borderPattern = port.required ? BORDER_PATTERNS.required : BORDER_PATTERNS.optional;
-	const iconName = PORT_TYPE_ICONS[portType];
+  const color = PORT_TYPE_COLORS[portType];
+  const borderPattern = port.required
+    ? BORDER_PATTERNS.required
+    : BORDER_PATTERNS.optional;
+  const iconName = PORT_TYPE_ICONS[portType];
 
-	// Generate ARIA label for screen readers
-	const typeLabel = portType.replace('_', ' ');
-	const directionLabel = port.direction === 'input' ? 'Input' : 'Output';
-	const requirementText = port.required ? 'required' : 'optional';
-	const ariaLabel = `${typeLabel} ${directionLabel}: ${port.name} (${requirementText})`;
+  // Generate ARIA label for screen readers
+  const typeLabel = portType.replace("_", " ");
+  const directionLabel = port.direction === "input" ? "Input" : "Output";
+  const requirementText = port.required ? "required" : "optional";
+  const ariaLabel = `${typeLabel} ${directionLabel}: ${port.name} (${requirementText})`;
 
-	// CSS classes for styling
-	const cssClasses = ['port-handle', `port-${portType}`, `port-${borderPattern}`];
+  // CSS classes for styling
+  const cssClasses = [
+    "port-handle",
+    `port-${portType}`,
+    `port-${borderPattern}`,
+  ];
 
-	return {
-		color,
-		borderPattern,
-		iconName,
-		ariaLabel,
-		cssClasses
-	};
+  return {
+    color,
+    borderPattern,
+    iconName,
+    ariaLabel,
+    cssClasses,
+  };
 }
 
 /**
@@ -156,34 +168,36 @@ export function computePortVisualStyle(port: ValidatedPort): PortVisualStyle {
  * @returns PortTooltipContent for tooltip display
  */
 export function extractTooltipContent(port: ValidatedPort): PortTooltipContent {
-	// Map pattern to display type name
-	let displayType: string;
-	switch (port.pattern) {
-		case 'stream':
-			displayType = 'NATS Stream';
-			break;
-		case 'request':
-			displayType = 'NATS Request';
-			break;
-		case 'watch':
-			displayType = 'KV Watch';
-			break;
-		case 'api':
-			displayType = 'Network';
-			break;
-		default:
-			displayType = port.connection_id?.startsWith('file://') ? 'File' : 'Network';
-	}
+  // Map pattern to display type name
+  let displayType: string;
+  switch (port.pattern) {
+    case "stream":
+      displayType = "NATS Stream";
+      break;
+    case "request":
+      displayType = "NATS Request";
+      break;
+    case "watch":
+      displayType = "KV Watch";
+      break;
+    case "api":
+      displayType = "Network";
+      break;
+    default:
+      displayType = port.connection_id?.startsWith("file://")
+        ? "File"
+        : "Network";
+  }
 
-	return {
-		name: port.name,
-		type: displayType,
-		pattern: port.connection_id, // Show the actual connection ID (NATS subject, etc.)
-		requirement: port.required ? 'required' : 'optional',
-		description: port.description,
-		validationState: undefined, // Will be populated from validation results
-		validationMessage: undefined // Will be populated from validation results
-	};
+  return {
+    name: port.name,
+    type: displayType,
+    pattern: port.connection_id, // Show the actual connection ID (NATS subject, etc.)
+    requirement: port.required ? "required" : "optional",
+    description: port.description,
+    validationState: undefined, // Will be populated from validation results
+    validationMessage: undefined, // Will be populated from validation results
+  };
 }
 
 /**
@@ -200,42 +214,42 @@ export function extractTooltipContent(port: ValidatedPort): PortTooltipContent {
  * @returns CompatibilityFeedback with visual indicator
  */
 export function checkPortCompatibility(
-	sourcePort: ValidatedPort,
-	targetPort: ValidatedPort
+  sourcePort: ValidatedPort,
+  targetPort: ValidatedPort,
 ): CompatibilityFeedback {
-	const feedbackClasses: string[] = ['connection-feedback'];
+  const feedbackClasses: string[] = ["connection-feedback"];
 
-	// Check direction compatibility (output → input only)
-	if (sourcePort.direction === targetPort.direction) {
-		return {
-			sourcePortId: sourcePort.name,
-			targetPortId: targetPort.name,
-			compatibility: 'incompatible',
-			indicator: 'red-indicator',
-			incompatibilityReason: 'Cannot connect ports with same direction',
-			feedbackClasses: [...feedbackClasses, 'feedback-incompatible']
-		};
-	}
+  // Check direction compatibility (output → input only)
+  if (sourcePort.direction === targetPort.direction) {
+    return {
+      sourcePortId: sourcePort.name,
+      targetPortId: targetPort.name,
+      compatibility: "incompatible",
+      indicator: "red-indicator",
+      incompatibilityReason: "Cannot connect ports with same direction",
+      feedbackClasses: [...feedbackClasses, "feedback-incompatible"],
+    };
+  }
 
-	// Check type compatibility (same type required)
-	if (sourcePort.type !== targetPort.type) {
-		return {
-			sourcePortId: sourcePort.name,
-			targetPortId: targetPort.name,
-			compatibility: 'incompatible',
-			indicator: 'red-indicator',
-			incompatibilityReason: 'Port types do not match',
-			feedbackClasses: [...feedbackClasses, 'feedback-incompatible']
-		};
-	}
+  // Check type compatibility (same type required)
+  if (sourcePort.type !== targetPort.type) {
+    return {
+      sourcePortId: sourcePort.name,
+      targetPortId: targetPort.name,
+      compatibility: "incompatible",
+      indicator: "red-indicator",
+      incompatibilityReason: "Port types do not match",
+      feedbackClasses: [...feedbackClasses, "feedback-incompatible"],
+    };
+  }
 
-	// Ports are compatible
-	return {
-		sourcePortId: sourcePort.name,
-		targetPortId: targetPort.name,
-		compatibility: 'compatible',
-		indicator: 'green-highlight',
-		incompatibilityReason: undefined,
-		feedbackClasses: [...feedbackClasses, 'feedback-compatible']
-	};
+  // Ports are compatible
+  return {
+    sourcePortId: sourcePort.name,
+    targetPortId: targetPort.name,
+    compatibility: "compatible",
+    indicator: "green-highlight",
+    incompatibilityReason: undefined,
+    feedbackClasses: [...feedbackClasses, "feedback-compatible"],
+  };
 }

@@ -24,13 +24,13 @@ Your job is to find issues, document them with severity, and provide actionable 
 
 ## Audit Scope Types
 
-| Scope | What To Audit |
-|-------|---------------|
-| Component | Single `.svelte` file + its tests |
-| Page | SvelteKit page + layout + associated components |
-| Feature | Multiple related components/pages |
-| Package | `src/lib/[package]` directory |
-| Full | Entire codebase |
+| Scope     | What To Audit                                   |
+| --------- | ----------------------------------------------- |
+| Component | Single `.svelte` file + its tests               |
+| Page      | SvelteKit page + layout + associated components |
+| Feature   | Multiple related components/pages               |
+| Package   | `src/lib/[package]` directory                   |
+| Full      | Entire codebase                                 |
 
 ---
 
@@ -100,30 +100,31 @@ Your job is to find issues, document them with severity, and provide actionable 
 
 ## Severity Levels
 
-| Level | Meaning | Action Required |
-|-------|---------|-----------------|
-| **Critical** | Security vulnerability, data loss risk, crashes | Fix immediately |
-| **High** | Accessibility violations, significant bugs | Fix before release |
-| **Medium** | Code quality, maintainability issues | Fix in next sprint |
-| **Low** | Style, minor improvements | Fix when convenient |
+| Level        | Meaning                                         | Action Required     |
+| ------------ | ----------------------------------------------- | ------------------- |
+| **Critical** | Security vulnerability, data loss risk, crashes | Fix immediately     |
+| **High**     | Accessibility violations, significant bugs      | Fix before release  |
+| **Medium**   | Code quality, maintainability issues            | Fix in next sprint  |
+| **Low**      | Style, minor improvements                       | Fix when convenient |
 
 ---
 
 ## Output Format
 
-```markdown
+````markdown
 ## Audit Report: [Scope]
 
 ### Summary
 
 | Severity | Count |
-|----------|-------|
-| Critical | X |
-| High | X |
-| Medium | X |
-| Low | X |
+| -------- | ----- |
+| Critical | X     |
+| High     | X     |
+| Medium   | X     |
+| Low      | X     |
 
 ### Audit Scope
+
 - Files reviewed: [list]
 - Lines of code: X
 - Test coverage: X%
@@ -133,13 +134,18 @@ Your job is to find issues, document them with severity, and provide actionable 
 ### Critical Issues
 
 #### CRIT-001: [Title]
+
 **Location:** `src/lib/components/Form.svelte:45`
 **Description:** Using {@html} with user-provided content creates XSS vulnerability.
 **Code:**
+
 ```svelte
 {@html userInput}
 ```
+````
+
 **Fix:** Sanitize input or use text interpolation:
+
 ```svelte
 {userInput}
 ```
@@ -149,15 +155,19 @@ Your job is to find issues, document them with severity, and provide actionable 
 ### High Issues
 
 #### HIGH-001: [Title]
+
 **Location:** `src/lib/components/Button.svelte:12`
 **Description:** Button has no accessible name for screen readers.
 **Code:**
+
 ```svelte
 <button onclick={handleClick}>
   <Icon name="close" />
 </button>
 ```
+
 **Fix:** Add aria-label:
+
 ```svelte
 <button onclick={handleClick} aria-label="Close">
   <Icon name="close" />
@@ -169,16 +179,20 @@ Your job is to find issues, document them with severity, and provide actionable 
 ### Medium Issues
 
 #### MED-001: [Title]
+
 **Location:** `src/lib/components/List.svelte:78`
 **Description:** Using $effect to set derived state instead of $derived.
 **Code:**
+
 ```svelte
 let filtered = $state([]);
 $effect(() => {
   filtered = items.filter(i => i.active);
 });
 ```
+
 **Fix:** Use $derived:
+
 ```svelte
 let filtered = $derived(items.filter(i => i.active));
 ```
@@ -188,6 +202,7 @@ let filtered = $derived(items.filter(i => i.active));
 ### Low Issues
 
 #### LOW-001: [Title]
+
 **Location:** `src/lib/utils/format.ts:23`
 **Description:** Function could use more descriptive name.
 **Current:** `fmt()`
@@ -206,7 +221,8 @@ let filtered = $derived(items.filter(i => i.active));
 - Good use of TypeScript throughout
 - Consistent component structure
 - Well-documented API types
-```
+
+````
 
 ---
 
@@ -240,7 +256,7 @@ let filtered = $derived(items.filter(i => i.active));
 ### Test Coverage
 - Unit tests: 80%
 - Missing: error state, loading state
-```
+````
 
 ---
 

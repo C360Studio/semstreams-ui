@@ -705,7 +705,9 @@ describe("aiApi", () => {
           return new Promise((_, reject) => {
             if (options?.signal) {
               options.signal.addEventListener("abort", () => {
-                reject(new DOMException("The operation was aborted.", "AbortError"));
+                reject(
+                  new DOMException("The operation was aborted.", "AbortError"),
+                );
               });
             }
           });
@@ -790,20 +792,29 @@ describe("aiApi", () => {
           return new Promise((_, reject) => {
             if (options?.signal) {
               if (options.signal.aborted) {
-                reject(new DOMException("The operation was aborted.", "AbortError"));
+                reject(
+                  new DOMException("The operation was aborted.", "AbortError"),
+                );
                 return;
               }
               options.signal.addEventListener("abort", () => {
-                reject(new DOMException("The operation was aborted.", "AbortError"));
+                reject(
+                  new DOMException("The operation was aborted.", "AbortError"),
+                );
               });
             }
           });
         },
       );
 
-      const promise = aiApi.streamGenerateFlow("Test prompt", undefined, undefined, {
-        signal: abortController.signal,
-      });
+      const promise = aiApi.streamGenerateFlow(
+        "Test prompt",
+        undefined,
+        undefined,
+        {
+          signal: abortController.signal,
+        },
+      );
 
       // Abort after a short delay
       setTimeout(() => abortController.abort(), 10);

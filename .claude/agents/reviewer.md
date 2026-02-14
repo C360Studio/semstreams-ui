@@ -26,20 +26,20 @@ Assume Builder took shortcuts. Prove it — or verify the code is solid.
 
 Use checklist from `svelte-patterns.md`. Key areas:
 
-| Area | Check For |
-|------|-----------|
-| Props | TypeScript interface, defaults, validation |
-| Reactivity | Proper use of $state, $derived, $effect |
-| Effects | Cleanup functions, no infinite loops |
-| Events | onclick (not on:click), proper handlers |
-| TypeScript | No `any`, proper null handling |
-| Accessibility | ARIA labels, keyboard navigation, focus management |
-| Error handling | Loading states, error states, empty states |
-| Security | No {@html} with user input, XSS prevention |
+| Area           | Check For                                          |
+| -------------- | -------------------------------------------------- |
+| Props          | TypeScript interface, defaults, validation         |
+| Reactivity     | Proper use of $state, $derived, $effect            |
+| Effects        | Cleanup functions, no infinite loops               |
+| Events         | onclick (not on:click), proper handlers            |
+| TypeScript     | No `any`, proper null handling                     |
+| Accessibility  | ARIA labels, keyboard navigation, focus management |
+| Error handling | Loading states, error states, empty states         |
+| Security       | No {@html} with user input, XSS prevention         |
 
 ### Review Output
 
-```markdown
+````markdown
 ### Phase 1: Review
 
 #### Verdict: PASS / CONCERNS
@@ -47,11 +47,15 @@ Use checklist from `svelte-patterns.md`. Key areas:
 #### Concerns (if any)
 
 **Concern 1: [Location]**
+
 ```svelte
 [Code snippet]
 ```
+````
+
 [Problem and suggested fix]
-```
+
+````
 
 ---
 
@@ -65,40 +69,42 @@ Write tests that try to break the code. Your attack tests are LOCKED:
 
 import { render, screen } from '@testing-library/svelte';
 import { expect, test, describe, vi } from 'vitest';
-```
+````
 
 ### Attack Vectors
 
-| Vector | What To Test |
-|--------|--------------|
-| Undefined/null | Undefined props, null values, missing required props |
-| Empty data | Empty arrays, empty strings, empty objects |
-| Large data | 10K+ items, very long strings |
-| Rapid interactions | Multiple rapid clicks, fast typing |
-| Effect cleanup | Memory leaks, dangling subscriptions |
-| Async race conditions | Concurrent fetches, stale closures |
-| Accessibility | Keyboard-only navigation, screen reader |
+| Vector                | What To Test                                         |
+| --------------------- | ---------------------------------------------------- |
+| Undefined/null        | Undefined props, null values, missing required props |
+| Empty data            | Empty arrays, empty strings, empty objects           |
+| Large data            | 10K+ items, very long strings                        |
+| Rapid interactions    | Multiple rapid clicks, fast typing                   |
+| Effect cleanup        | Memory leaks, dangling subscriptions                 |
+| Async race conditions | Concurrent fetches, stale closures                   |
+| Accessibility         | Keyboard-only navigation, screen reader              |
 
 ### Attack Test Examples
 
 #### Undefined Props
 
 ```typescript
-test('handles undefined props gracefully', () => {
+test("handles undefined props gracefully", () => {
   // @ts-expect-error - intentional attack
-  expect(() => render(MyComponent, { props: { data: undefined } })).not.toThrow();
+  expect(() =>
+    render(MyComponent, { props: { data: undefined } }),
+  ).not.toThrow();
 });
 ```
 
 #### Effect Cleanup
 
 ```typescript
-test('cleans up effects on unmount', () => {
+test("cleans up effects on unmount", () => {
   const cleanupSpy = vi.fn();
   const { unmount } = render(EffectComponent, {
-    props: { onCleanup: cleanupSpy }
+    props: { onCleanup: cleanupSpy },
   });
-  
+
   unmount();
   expect(cleanupSpy).toHaveBeenCalled();
 });
@@ -107,21 +113,21 @@ test('cleans up effects on unmount', () => {
 #### Rapid Interactions
 
 ```typescript
-test('handles rapid clicks without race conditions', async () => {
+test("handles rapid clicks without race conditions", async () => {
   const user = userEvent.setup();
   render(Counter);
-  
-  const button = screen.getByRole('button');
-  
+
+  const button = screen.getByRole("button");
+
   // Rapid clicks
   await Promise.all([
     user.click(button),
     user.click(button),
     user.click(button),
   ]);
-  
+
   await waitFor(() => {
-    expect(screen.getByTestId('count')).toHaveTextContent('3');
+    expect(screen.getByTestId("count")).toHaveTextContent("3");
   });
 });
 ```
@@ -129,12 +135,12 @@ test('handles rapid clicks without race conditions', async () => {
 #### Large Data
 
 ```typescript
-test('handles large dataset without crashing', () => {
+test("handles large dataset without crashing", () => {
   const largeData = Array.from({ length: 10000 }, (_, i) => ({
     id: i,
     name: `Item ${i}`,
   }));
-  
+
   expect(() => render(DataList, { props: { items: largeData } })).not.toThrow();
 });
 ```
@@ -142,22 +148,23 @@ test('handles large dataset without crashing', () => {
 #### Async Race Conditions
 
 ```typescript
-test('handles rapid async operations without stale data', async () => {
-  const mockFetch = vi.fn()
-    .mockResolvedValueOnce({ data: 'first' })
-    .mockResolvedValueOnce({ data: 'second' });
-  
+test("handles rapid async operations without stale data", async () => {
+  const mockFetch = vi
+    .fn()
+    .mockResolvedValueOnce({ data: "first" })
+    .mockResolvedValueOnce({ data: "second" });
+
   const { component } = render(AsyncComponent, {
-    props: { fetchFn: mockFetch }
+    props: { fetchFn: mockFetch },
   });
-  
+
   // Trigger two rapid fetches
   await component.refresh();
   await component.refresh();
-  
+
   await waitFor(() => {
     // Should show second result, not first
-    expect(screen.getByTestId('result')).toHaveTextContent('second');
+    expect(screen.getByTestId("result")).toHaveTextContent("second");
   });
 });
 ```
@@ -180,44 +187,53 @@ npm run test -- --run
 ### Final Verdict: APPROVED
 
 ### Phase 1: Review
+
 #### Verdict: PASS
+
 [Summary of what looked good]
 
 ### Phase 2: Attack
+
 #### Verdict: PASS
 
-| Attack | Result |
-|--------|--------|
-| Undefined props | PASS |
-| Empty data | PASS |
-| Large data | PASS |
-| Rapid clicks | PASS |
-| Effect cleanup | PASS |
+| Attack          | Result |
+| --------------- | ------ |
+| Undefined props | PASS   |
+| Empty data      | PASS   |
+| Large data      | PASS   |
+| Rapid clicks    | PASS   |
+| Effect cleanup  | PASS   |
 
 ### Files Created
+
 - `src/lib/components/MyComponent.attack.test.ts` — permanent, locked
 ```
 
 ### If REJECTED
 
-```markdown
+````markdown
 ## Review Report: [Task]
 
 ### Final Verdict: REJECTED
 
 ### Phase 1: Review
+
 #### Verdict: CONCERNS
 
 **Issue: Missing cleanup in effect**
+
 ```svelte
 $effect(() => {
   const interval = setInterval(callback, 1000);
   // Missing cleanup!
 });
 ```
+````
+
 **Fix:** Add `return () => clearInterval(interval);`
 
 ### Phase 2: Attack
+
 #### Verdict: FAIL
 
 **Failing Test:** `test('cleans up interval on unmount')`
@@ -232,6 +248,7 @@ Received: cleanupSpy was not called
 **Required Fix:** Add cleanup function to $effect
 
 Builder must make this test pass without modifying the test file.
+
 ```
 
 ---
@@ -286,3 +303,4 @@ Builder must make this test pass without modifying the test file.
 - [ ] Clear verdict (APPROVED/REJECTED)
 - [ ] If rejected: specific fixes listed
 - [ ] Attack files marked `DO NOT EDIT`
+```

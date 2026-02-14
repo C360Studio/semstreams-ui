@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 vars:
   # Backend configuration - can point to any SemStreams-compatible backend
@@ -9,7 +9,7 @@ vars:
   #   - Semstreams monorepo: ../semstreams/specs/openapi.v3.yaml
   #   - Semmem monorepo:     ../semmem/specs/openapi.v3.yaml
   #   - Custom app:          /path/to/your-app/specs/openapi.v3.yaml
-  OPENAPI_SPEC_PATH: '{{.OPENAPI_SPEC_PATH}}'
+  OPENAPI_SPEC_PATH: "{{.OPENAPI_SPEC_PATH}}"
 
   # Development ports (configurable to avoid collisions)
   DEV_UI_PORT: '{{.DEV_UI_PORT | default "3001"}}'
@@ -87,8 +87,8 @@ tasks:
   dev:backend:start:
     desc: Start backend infrastructure in background
     env:
-      DEV_UI_PORT: '{{.DEV_UI_PORT}}'
-      DEV_VITE_PORT: '{{.DEV_VITE_PORT}}'
+      DEV_UI_PORT: "{{.DEV_UI_PORT}}"
+      DEV_VITE_PORT: "{{.DEV_VITE_PORT}}"
     cmds:
       - docker compose -f docker-compose.dev.yml up -d
       - echo "✅ Backend infrastructure starting..."
@@ -110,8 +110,8 @@ tasks:
   dev:full:
     desc: Start full development stack (backend + frontend)
     env:
-      DEV_UI_PORT: '{{.DEV_UI_PORT}}'
-      DEV_VITE_PORT: '{{.DEV_VITE_PORT}}'
+      DEV_UI_PORT: "{{.DEV_UI_PORT}}"
+      DEV_VITE_PORT: "{{.DEV_VITE_PORT}}"
     cmds:
       - task: dev:backend:start
       - echo "Waiting for Caddy health check..."

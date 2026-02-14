@@ -63,7 +63,7 @@ function ensureCleanupRunning(windowMs: number): void {
       for (const [key, record] of store.entries()) {
         // Remove timestamps older than the window
         record.timestamps = record.timestamps.filter(
-          (ts) => now - ts < windowMs
+          (ts) => now - ts < windowMs,
         );
         // Remove empty records
         if (record.timestamps.length === 0) {
@@ -71,7 +71,7 @@ function ensureCleanupRunning(windowMs: number): void {
         }
       }
     },
-    60000 // 1 minute
+    60000, // 1 minute
   );
 }
 
@@ -89,7 +89,7 @@ function ensureCleanupRunning(windowMs: number): void {
  */
 export function checkRateLimit(
   clientId: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): RateLimitResult {
   const now = Date.now();
   const { maxRequests, windowMs } = config;
@@ -159,7 +159,7 @@ export function clearAllRateLimits(): void {
  */
 export function getRateLimitStatus(
   clientId: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): RateLimitResult {
   const now = Date.now();
   const { maxRequests, windowMs } = config;

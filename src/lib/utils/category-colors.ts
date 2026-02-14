@@ -5,17 +5,22 @@
  * Types: input, output, processor, gateway, storage
  */
 
-export type ComponentTypeColor = 'input' | 'output' | 'processor' | 'gateway' | 'storage';
+export type ComponentTypeColor =
+  | "input"
+  | "output"
+  | "processor"
+  | "gateway"
+  | "storage";
 
 /**
  * Type-to-color CSS variable mapping
  */
 export const TYPE_COLORS: Record<ComponentTypeColor, string> = {
-	input: 'var(--category-input)',
-	output: 'var(--category-output)',
-	processor: 'var(--category-processor)',
-	gateway: 'var(--category-gateway)',
-	storage: 'var(--category-storage)'
+  input: "var(--category-input)",
+  output: "var(--category-output)",
+  processor: "var(--category-processor)",
+  gateway: "var(--category-gateway)",
+  storage: "var(--category-storage)",
 };
 
 /**
@@ -25,6 +30,6 @@ export const TYPE_COLORS: Record<ComponentTypeColor, string> = {
  * @returns CSS variable reference or fallback gray
  */
 export function getTypeColor(type: string | undefined): string {
-	if (!type) return 'var(--ui-border-subtle)';
-	return TYPE_COLORS[type as ComponentTypeColor] || 'var(--ui-border-subtle)';
+  if (!type) return "var(--ui-border-subtle)";
+  return TYPE_COLORS[type as ComponentTypeColor] || "var(--ui-border-subtle)";
 }

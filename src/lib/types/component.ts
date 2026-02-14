@@ -4,28 +4,35 @@
 export interface ComponentType {
   id: string;
   name: string;
-  type: string;           // "input", "processor", "output", "storage"
-  protocol: string;       // "udp", "mavlink", "websocket", etc.
-  category: string;       // Same as type, for grouping
-  domain?: string;        // Domain classification (e.g., "network", "graph", "storage")
+  type: string; // "input", "processor", "output", "storage"
+  protocol: string; // "udp", "mavlink", "websocket", etc.
+  category: string; // Same as type, for grouping
+  domain?: string; // Domain classification (e.g., "network", "graph", "storage")
   description: string;
   version: string;
-  ports?: PortDefinition[];       // Optional, for future use
-  schema?: ConfigSchema;          // Component configuration schema from backend
+  ports?: PortDefinition[]; // Optional, for future use
+  schema?: ConfigSchema; // Component configuration schema from backend
   icon?: string;
 }
 
 export interface PortDefinition {
   id: string;
   name: string;
-  direction: 'input' | 'output' | 'bidirectional';
+  direction: "input" | "output" | "bidirectional";
   required: boolean;
   description: string;
   config: PortConfig;
 }
 
 export interface PortConfig {
-  type: 'nats' | 'nats-request' | 'jetstream' | 'kvwatch' | 'kvwrite' | 'network' | 'file';
+  type:
+    | "nats"
+    | "nats-request"
+    | "jetstream"
+    | "kvwatch"
+    | "kvwrite"
+    | "network"
+    | "file";
 
   // Only one of these will be populated based on type
   nats?: NATSPortConfig;
@@ -69,7 +76,7 @@ export interface KVWritePortConfig {
 }
 
 export interface NetworkPortConfig {
-  protocol: 'tcp' | 'udp';
+  protocol: "tcp" | "udp";
   host: string;
   port: number;
 }
@@ -86,7 +93,7 @@ export interface InterfaceContract {
 }
 
 export interface ConfigSchema {
-  type: 'object';
+  type: "object";
   properties: Record<string, PropertySchema>;
   required: string[];
 }
@@ -100,8 +107,8 @@ export interface PropertySchema {
   minimum?: number;
   maximum?: number;
   enum?: string[];
-  category?: string;         // Field category (e.g., "basic", "advanced")
-  portFields?: Record<string, PortFieldSchema>;  // For ports type
+  category?: string; // Field category (e.g., "basic", "advanced")
+  portFields?: Record<string, PortFieldSchema>; // For ports type
 }
 
 export interface PortFieldSchema {

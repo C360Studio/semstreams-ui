@@ -18,7 +18,7 @@ export function checkPortAvailability(port: number): boolean {
   try {
     const output = execSync(`lsof -i :${port}`, { encoding: "utf-8" });
     // Handle both string and Buffer returns (for testing compatibility)
-    const outputStr = typeof output === 'string' ? output : output.toString();
+    const outputStr = typeof output === "string" ? output : output.toString();
     // If output is non-empty, port is in use
     return outputStr.trim().length === 0;
   } catch {
@@ -73,7 +73,7 @@ export function detectE2EContainers(projectName?: string): string[] {
     });
 
     // Handle both string and Buffer returns (for testing compatibility)
-    const outputStr = typeof output === 'string' ? output : output.toString();
+    const outputStr = typeof output === "string" ? output : output.toString();
 
     if (!outputStr || outputStr.trim().length === 0) {
       return [];
@@ -92,7 +92,10 @@ export function detectE2EContainers(projectName?: string): string[] {
       let containerName = trimmedLine;
 
       // Check if this looks like a table header or table row
-      if (trimmedLine.includes('CONTAINER ID') || trimmedLine.includes('IMAGE')) {
+      if (
+        trimmedLine.includes("CONTAINER ID") ||
+        trimmedLine.includes("IMAGE")
+      ) {
         // Skip header row
         continue;
       }
@@ -174,7 +177,7 @@ export function getPortFromContainers(containers: string[]): number | null {
       encoding: "utf-8",
     });
     // Handle both string and Buffer returns (for testing compatibility)
-    const outputStr = typeof output === 'string' ? output : output.toString();
+    const outputStr = typeof output === "string" ? output : output.toString();
     const inspectData = JSON.parse(outputStr);
 
     if (!inspectData || inspectData.length === 0) {

@@ -5,46 +5,46 @@
  * Uses cubic Bezier curves for smooth connections.
  */
 
-import type { LayoutEdge } from './d3-layout';
+import type { LayoutEdge } from "./d3-layout";
 
 /** Path styling options */
 export interface PathStyle {
-	/** Stroke color */
-	stroke: string;
-	/** Stroke width */
-	strokeWidth: number;
-	/** Dash pattern (empty for solid) */
-	strokeDasharray: string;
-	/** Whether to show arrow marker */
-	showArrow: boolean;
+  /** Stroke color */
+  stroke: string;
+  /** Stroke width */
+  strokeWidth: number;
+  /** Dash pattern (empty for solid) */
+  strokeDasharray: string;
+  /** Whether to show arrow marker */
+  showArrow: boolean;
 }
 
 /** Default path styles by validation state */
 export const PATH_STYLES = {
-	valid: {
-		stroke: 'var(--ui-interactive-primary)',
-		strokeWidth: 2,
-		strokeDasharray: '',
-		showArrow: true
-	},
-	error: {
-		stroke: 'var(--status-error)',
-		strokeWidth: 2,
-		strokeDasharray: '5,5',
-		showArrow: true
-	},
-	warning: {
-		stroke: 'var(--status-warning)',
-		strokeWidth: 2,
-		strokeDasharray: '5,5',
-		showArrow: true
-	},
-	auto: {
-		stroke: 'var(--ui-interactive-secondary)',
-		strokeWidth: 2,
-		strokeDasharray: '3,3',
-		showArrow: true
-	}
+  valid: {
+    stroke: "var(--ui-interactive-primary)",
+    strokeWidth: 2,
+    strokeDasharray: "",
+    showArrow: true,
+  },
+  error: {
+    stroke: "var(--status-error)",
+    strokeWidth: 2,
+    strokeDasharray: "5,5",
+    showArrow: true,
+  },
+  warning: {
+    stroke: "var(--status-warning)",
+    strokeWidth: 2,
+    strokeDasharray: "5,5",
+    showArrow: true,
+  },
+  auto: {
+    stroke: "var(--ui-interactive-secondary)",
+    strokeWidth: 2,
+    strokeDasharray: "3,3",
+    showArrow: true,
+  },
 } as const;
 
 /**
@@ -53,53 +53,58 @@ export const PATH_STYLES = {
  * Creates a smooth horizontal-first curve suitable for left-to-right flow diagrams.
  */
 export function generateBezierPath(
-	sourceX: number,
-	sourceY: number,
-	targetX: number,
-	targetY: number
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
 ): string {
-	// Control point offset (how far the curve extends horizontally)
-	const dx = Math.abs(targetX - sourceX);
-	const controlOffset = Math.min(dx * 0.5, 100);
+  // Control point offset (how far the curve extends horizontally)
+  const dx = Math.abs(targetX - sourceX);
+  const controlOffset = Math.min(dx * 0.5, 100);
 
-	// Source control point: extends right from source
-	const c1x = sourceX + controlOffset;
-	const c1y = sourceY;
+  // Source control point: extends right from source
+  const c1x = sourceX + controlOffset;
+  const c1y = sourceY;
 
-	// Target control point: extends left from target
-	const c2x = targetX - controlOffset;
-	const c2y = targetY;
+  // Target control point: extends left from target
+  const c2x = targetX - controlOffset;
+  const c2y = targetY;
 
-	return `M ${sourceX} ${sourceY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${targetX} ${targetY}`;
+  return `M ${sourceX} ${sourceY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${targetX} ${targetY}`;
 }
 
 /**
  * Generate path data for a layout edge
  */
 export function edgeToPath(edge: LayoutEdge): string {
-	return generateBezierPath(edge.sourceX, edge.sourceY, edge.targetX, edge.targetY);
+  return generateBezierPath(
+    edge.sourceX,
+    edge.sourceY,
+    edge.targetX,
+    edge.targetY,
+  );
 }
 
 /**
  * Get path style based on edge properties
  */
 export function getPathStyle(edge: LayoutEdge): PathStyle {
-	const conn = edge.original;
+  const conn = edge.original;
 
-	// Check validation state
-	if (conn.validationState === 'error') {
-		return PATH_STYLES.error;
-	}
-	if (conn.validationState === 'warning') {
-		return PATH_STYLES.warning;
-	}
+  // Check validation state
+  if (conn.validationState === "error") {
+    return PATH_STYLES.error;
+  }
+  if (conn.validationState === "warning") {
+    return PATH_STYLES.warning;
+  }
 
-	// Check if auto-discovered
-	if (conn.source === 'auto') {
-		return PATH_STYLES.auto;
-	}
+  // Check if auto-discovered
+  if (conn.source === "auto") {
+    return PATH_STYLES.auto;
+  }
 
-	return PATH_STYLES.valid;
+  return PATH_STYLES.valid;
 }
 
 /**
@@ -108,10 +113,10 @@ export function getPathStyle(edge: LayoutEdge): PathStyle {
  * Returns the SVG markup for an arrow marker that can be referenced by edges.
  */
 export function generateArrowMarker(
-	id: string,
-	color: string = 'var(--ui-interactive-primary)'
+  id: string,
+  color: string = "var(--ui-interactive-primary)",
 ): string {
-	return `
+  return `
 		<marker
 			id="${id}"
 			viewBox="0 0 10 10"
@@ -132,16 +137,16 @@ export function generateArrowMarker(
  * Useful for placing labels on edges.
  */
 export function getBezierMidpoint(
-	sourceX: number,
-	sourceY: number,
-	targetX: number,
-	targetY: number
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
 ): { x: number; y: number } {
-	// Simple midpoint (good enough for most cases)
-	return {
-		x: (sourceX + targetX) / 2,
-		y: (sourceY + targetY) / 2
-	};
+  // Simple midpoint (good enough for most cases)
+  return {
+    x: (sourceX + targetX) / 2,
+    y: (sourceY + targetY) / 2,
+  };
 }
 
 /**
@@ -150,60 +155,62 @@ export function getBezierMidpoint(
  * Useful for hit testing (e.g., clicking on an edge).
  */
 export function isPointNearEdge(
-	px: number,
-	py: number,
-	edge: LayoutEdge,
-	threshold: number = 10
+  px: number,
+  py: number,
+  edge: LayoutEdge,
+  threshold: number = 10,
 ): boolean {
-	// Sample points along the Bezier curve and check distance
-	const samples = 20;
+  // Sample points along the Bezier curve and check distance
+  const samples = 20;
 
-	for (let i = 0; i <= samples; i++) {
-		const t = i / samples;
-		const point = getBezierPoint(
-			edge.sourceX,
-			edge.sourceY,
-			edge.targetX,
-			edge.targetY,
-			t
-		);
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const point = getBezierPoint(
+      edge.sourceX,
+      edge.sourceY,
+      edge.targetX,
+      edge.targetY,
+      t,
+    );
 
-		const distance = Math.sqrt(Math.pow(px - point.x, 2) + Math.pow(py - point.y, 2));
-		if (distance <= threshold) {
-			return true;
-		}
-	}
+    const distance = Math.sqrt(
+      Math.pow(px - point.x, 2) + Math.pow(py - point.y, 2),
+    );
+    if (distance <= threshold) {
+      return true;
+    }
+  }
 
-	return false;
+  return false;
 }
 
 /**
  * Get a point along a Bezier curve at parameter t (0 to 1)
  */
 function getBezierPoint(
-	sourceX: number,
-	sourceY: number,
-	targetX: number,
-	targetY: number,
-	t: number
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  t: number,
 ): { x: number; y: number } {
-	const dx = Math.abs(targetX - sourceX);
-	const controlOffset = Math.min(dx * 0.5, 100);
+  const dx = Math.abs(targetX - sourceX);
+  const controlOffset = Math.min(dx * 0.5, 100);
 
-	const c1x = sourceX + controlOffset;
-	const c1y = sourceY;
-	const c2x = targetX - controlOffset;
-	const c2y = targetY;
+  const c1x = sourceX + controlOffset;
+  const c1y = sourceY;
+  const c2x = targetX - controlOffset;
+  const c2y = targetY;
 
-	// Cubic Bezier formula
-	const mt = 1 - t;
-	const mt2 = mt * mt;
-	const mt3 = mt2 * mt;
-	const t2 = t * t;
-	const t3 = t2 * t;
+  // Cubic Bezier formula
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const mt3 = mt2 * mt;
+  const t2 = t * t;
+  const t3 = t2 * t;
 
-	return {
-		x: mt3 * sourceX + 3 * mt2 * t * c1x + 3 * mt * t2 * c2x + t3 * targetX,
-		y: mt3 * sourceY + 3 * mt2 * t * c1y + 3 * mt * t2 * c2y + t3 * targetY
-	};
+  return {
+    x: mt3 * sourceX + 3 * mt2 * t * c1x + 3 * mt * t2 * c2x + t3 * targetX,
+    y: mt3 * sourceY + 3 * mt2 * t * c1y + 3 * mt * t2 * c2y + t3 * targetY,
+  };
 }

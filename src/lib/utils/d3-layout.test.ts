@@ -29,7 +29,8 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "node-1",
-          component: "udp-input", type: "input",
+          component: "udp-input",
+          type: "input",
           name: "UDP Input",
           position: { x: 0, y: 0 },
           config: { port: 5000 },
@@ -42,7 +43,8 @@ describe("layoutNodes", () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
         id: "node-1",
-        component: "udp-input", type: "input",
+        component: "udp-input",
+        type: "input",
         name: "UDP Input",
         x: 50, // DEFAULT_CONFIG.padding
         y: 50,
@@ -58,21 +60,24 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "transform", type: "processor",
+          component: "transform",
+          type: "processor",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "c",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "C",
           position: { x: 0, y: 0 },
           config: {},
@@ -118,21 +123,24 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "output-1", type: "output",
+          component: "output-1",
+          type: "output",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "c",
-          component: "output-2", type: "output",
+          component: "output-2",
+          type: "output",
           name: "C",
           position: { x: 0, y: 0 },
           config: {},
@@ -179,28 +187,32 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "mid-1", type: "processor",
+          component: "mid-1",
+          type: "processor",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "c",
-          component: "mid-2", type: "processor",
+          component: "mid-2",
+          type: "processor",
           name: "C",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "d",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "D",
           position: { x: 0, y: 0 },
           config: {},
@@ -260,14 +272,16 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "node-a", type: "processor",
+          component: "node-a",
+          type: "processor",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "node-b", type: "processor",
+          component: "node-b",
+          type: "processor",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
@@ -303,28 +317,32 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "mid", type: "processor",
+          component: "mid",
+          type: "processor",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "c",
-          component: "mid", type: "processor",
+          component: "mid",
+          type: "processor",
           name: "C",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "d",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "D",
           position: { x: 0, y: 0 },
           config: {},
@@ -373,7 +391,8 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "node-1",
-          component: "test", type: "processor",
+          component: "test",
+          type: "processor",
           name: "Test",
           position: { x: 0, y: 0 },
           config: {},
@@ -395,14 +414,16 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
@@ -435,21 +456,24 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "out-1", type: "output",
+          component: "out-1",
+          type: "output",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "c",
-          component: "out-2", type: "output",
+          component: "out-2",
+          type: "output",
           name: "C",
           position: { x: 0, y: 0 },
           config: {},
@@ -491,21 +515,24 @@ describe("layoutNodes", () => {
       const nodes: FlowNode[] = [
         {
           id: "a",
-          component: "connected", type: "processor",
+          component: "connected",
+          type: "processor",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "b",
-          component: "connected", type: "processor",
+          component: "connected",
+          type: "processor",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
         },
         {
           id: "orphan",
-          component: "disconnected", type: "processor",
+          component: "disconnected",
+          type: "processor",
           name: "Orphan",
           position: { x: 0, y: 0 },
           config: {},
@@ -544,7 +571,8 @@ describe("layoutEdges", () => {
       const layoutNodes: LayoutNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           x: 50,
           y: 50,
@@ -553,7 +581,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "a",
-            component: "input", type: "input",
+            component: "input",
+            type: "input",
             name: "A",
             position: { x: 0, y: 0 },
             config: {},
@@ -561,7 +590,8 @@ describe("layoutEdges", () => {
         },
         {
           id: "b",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "B",
           x: 350,
           y: 50,
@@ -570,7 +600,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "b",
-            component: "output", type: "output",
+            component: "output",
+            type: "output",
             name: "B",
             position: { x: 0, y: 0 },
             config: {},
@@ -608,7 +639,8 @@ describe("layoutEdges", () => {
       const layoutNodes: LayoutNode[] = [
         {
           id: "b",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "B",
           x: 350,
           y: 50,
@@ -617,7 +649,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "b",
-            component: "output", type: "output",
+            component: "output",
+            type: "output",
             name: "B",
             position: { x: 0, y: 0 },
             config: {},
@@ -643,7 +676,8 @@ describe("layoutEdges", () => {
       const layoutNodes: LayoutNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           x: 50,
           y: 50,
@@ -652,7 +686,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "a",
-            component: "input", type: "input",
+            component: "input",
+            type: "input",
             name: "A",
             position: { x: 0, y: 0 },
             config: {},
@@ -680,7 +715,8 @@ describe("layoutEdges", () => {
       const layoutNodes: LayoutNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           x: 50,
           y: 50,
@@ -689,7 +725,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "a",
-            component: "input", type: "input",
+            component: "input",
+            type: "input",
             name: "A",
             position: { x: 0, y: 0 },
             config: {},
@@ -697,7 +734,8 @@ describe("layoutEdges", () => {
         },
         {
           id: "b",
-          component: "mid", type: "processor",
+          component: "mid",
+          type: "processor",
           name: "B",
           x: 350,
           y: 50,
@@ -706,7 +744,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "b",
-            component: "mid", type: "processor",
+            component: "mid",
+            type: "processor",
             name: "B",
             position: { x: 0, y: 0 },
             config: {},
@@ -714,7 +753,8 @@ describe("layoutEdges", () => {
         },
         {
           id: "c",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "C",
           x: 650,
           y: 50,
@@ -723,7 +763,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "c",
-            component: "output", type: "output",
+            component: "output",
+            type: "output",
             name: "C",
             position: { x: 0, y: 0 },
             config: {},
@@ -760,7 +801,8 @@ describe("layoutEdges", () => {
       const layoutNodes: LayoutNode[] = [
         {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           x: 50,
           y: 50,
@@ -769,7 +811,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "a",
-            component: "input", type: "input",
+            component: "input",
+            type: "input",
             name: "A",
             position: { x: 0, y: 0 },
             config: {},
@@ -777,7 +820,8 @@ describe("layoutEdges", () => {
         },
         {
           id: "b",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "B",
           x: 350,
           y: 50,
@@ -786,7 +830,8 @@ describe("layoutEdges", () => {
           config: {},
           original: {
             id: "b",
-            component: "output", type: "output",
+            component: "output",
+            type: "output",
             name: "B",
             position: { x: 0, y: 0 },
             config: {},
@@ -824,7 +869,8 @@ describe("calculateCanvasBounds", () => {
     const layoutNodes: LayoutNode[] = [
       {
         id: "node-1",
-        component: "test", type: "processor",
+        component: "test",
+        type: "processor",
         name: "Test",
         x: 50,
         y: 50,
@@ -833,7 +879,8 @@ describe("calculateCanvasBounds", () => {
         config: {},
         original: {
           id: "node-1",
-          component: "test", type: "processor",
+          component: "test",
+          type: "processor",
           name: "Test",
           position: { x: 0, y: 0 },
           config: {},
@@ -852,7 +899,8 @@ describe("calculateCanvasBounds", () => {
     const layoutNodes: LayoutNode[] = [
       {
         id: "a",
-        component: "input", type: "input",
+        component: "input",
+        type: "input",
         name: "A",
         x: 50,
         y: 50,
@@ -861,7 +909,8 @@ describe("calculateCanvasBounds", () => {
         config: {},
         original: {
           id: "a",
-          component: "input", type: "input",
+          component: "input",
+          type: "input",
           name: "A",
           position: { x: 0, y: 0 },
           config: {},
@@ -869,7 +918,8 @@ describe("calculateCanvasBounds", () => {
       },
       {
         id: "b",
-        component: "output", type: "output",
+        component: "output",
+        type: "output",
         name: "B",
         x: 350,
         y: 200,
@@ -878,7 +928,8 @@ describe("calculateCanvasBounds", () => {
         config: {},
         original: {
           id: "b",
-          component: "output", type: "output",
+          component: "output",
+          type: "output",
           name: "B",
           position: { x: 0, y: 0 },
           config: {},
@@ -897,7 +948,8 @@ describe("calculateCanvasBounds", () => {
     const layoutNodes: LayoutNode[] = [
       {
         id: "node-1",
-        component: "test", type: "processor",
+        component: "test",
+        type: "processor",
         name: "Test",
         x: 100,
         y: 100,
@@ -906,7 +958,8 @@ describe("calculateCanvasBounds", () => {
         config: {},
         original: {
           id: "node-1",
-          component: "test", type: "processor",
+          component: "test",
+          type: "processor",
           name: "Test",
           position: { x: 0, y: 0 },
           config: {},
@@ -925,7 +978,8 @@ describe("calculateCanvasBounds", () => {
     const layoutNodes: LayoutNode[] = [
       {
         id: "node-1",
-        component: "test", type: "processor",
+        component: "test",
+        type: "processor",
         name: "Test",
         x: -50,
         y: -50,
@@ -934,7 +988,8 @@ describe("calculateCanvasBounds", () => {
         config: {},
         original: {
           id: "node-1",
-          component: "test", type: "processor",
+          component: "test",
+          type: "processor",
           name: "Test",
           position: { x: 0, y: 0 },
           config: {},

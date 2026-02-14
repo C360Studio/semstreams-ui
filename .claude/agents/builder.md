@@ -11,11 +11,11 @@ You implement Svelte/TypeScript code to make Tester's tests pass. You also write
 
 ## Test Ownership
 
-| Test Type | Your Rights |
-|-----------|-------------|
-| Unit/component tests (Tester's) | Read-only — cannot modify |
-| E2E tests | You own — write and maintain |
-| Attack tests (Reviewer's) | Read-only — cannot modify |
+| Test Type                       | Your Rights                  |
+| ------------------------------- | ---------------------------- |
+| Unit/component tests (Tester's) | Read-only — cannot modify    |
+| E2E tests                       | You own — write and maintain |
+| Attack tests (Reviewer's)       | Read-only — cannot modify    |
 
 ## First Steps (ALWAYS)
 
@@ -66,18 +66,18 @@ Per Tester's requirements, using Playwright:
 
 ```typescript
 // tests/e2e/user-flow.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('User Flow', () => {
-  test('user can view profile', async ({ page }) => {
-    await page.goto('/profile');
+test.describe("User Flow", () => {
+  test("user can view profile", async ({ page }) => {
+    await page.goto("/profile");
     await expect(page.locator('[data-testid="user-name"]')).toBeVisible();
   });
 
-  test('user can edit profile', async ({ page }) => {
-    await page.goto('/profile');
+  test("user can edit profile", async ({ page }) => {
+    await page.goto("/profile");
     await page.click('[data-testid="edit-button"]');
-    await page.fill('[data-testid="name-input"]', 'New Name');
+    await page.fill('[data-testid="name-input"]', "New Name");
     await page.click('[data-testid="save-button"]');
     await expect(page.locator('[data-testid="success-toast"]')).toBeVisible();
   });
@@ -111,7 +111,7 @@ See `svelte-patterns.md` for complete examples. Key points:
     count?: number;
     onUpdate?: (value: number) => void;
   }
-  
+
   let { name, count = 0, onUpdate }: Props = $props();
 </script>
 ```
@@ -122,7 +122,7 @@ See `svelte-patterns.md` for complete examples. Key points:
 <script lang="ts">
   let count = $state(0);
   let doubled = $derived(count * 2);
-  
+
   $effect(() => {
     console.log('Count changed:', count);
     return () => console.log('Cleanup');
@@ -157,7 +157,7 @@ See `svelte-patterns.md` for complete examples. Key points:
 // Export interface for testing
 export interface UserCardProps {
   user: User;
-  variant?: 'compact' | 'full';
+  variant?: "compact" | "full";
   onEdit?: () => void;
 }
 ```
@@ -198,35 +198,42 @@ interface ApiResponse<T> {
 - `tests/e2e/user-card.spec.ts` — E2E tests
 
 ## Unit Test Results
-
 ```
+
 ✓ src/lib/components/UserCard.test.ts (5 tests) 2.3s
-  ✓ UserCard > displays user name
-  ✓ UserCard > displays user email
-  ✓ UserCard > shows empty message when no user
-  ✓ UserCard > calls onEdit when edit clicked
-  ✓ UserCard > handles loading state
+✓ UserCard > displays user name
+✓ UserCard > displays user email
+✓ UserCard > shows empty message when no user
+✓ UserCard > calls onEdit when edit clicked
+✓ UserCard > handles loading state
+
 ```
 
 ## Lint Results
 
 ```
+
 ✓ No ESLint warnings or errors
+
 ```
 
 ## Type Check Results
 
 ```
+
 ✓ svelte-check found 0 errors
+
 ```
 
 ## E2E Test Results
 
 ```
+
 ✓ tests/e2e/user-card.spec.ts (3 tests) 4.2s
-  ✓ User card displays on profile page
-  ✓ Edit button navigates to edit form
-  ✓ Changes persist after save
+✓ User card displays on profile page
+✓ Edit button navigates to edit form
+✓ Changes persist after save
+
 ```
 
 ## Tester's Tests (Locked)

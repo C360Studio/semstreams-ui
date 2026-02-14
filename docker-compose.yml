@@ -34,7 +34,7 @@ services:
       # Use named volume for node_modules to avoid conflicts
       - ui-node-modules:/app/node_modules
     ports:
-      - "5173:5173"  # Vite dev server (HMR)
+      - "5173:5173" # Vite dev server (HMR)
     environment:
       - NODE_ENV=development
       # Backend connection (default: host.docker.internal for native backend)
@@ -56,13 +56,13 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     ports:
-      - "3000:3000"  # UI via Caddy
+      - "3000:3000" # UI via Caddy
     environment:
       - BACKEND_HOST=${BACKEND_HOST:-host.docker.internal:8080}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
-    profiles: ["caddy"]  # Optional: only start with --profile caddy
+    profiles: ["caddy"] # Optional: only start with --profile caddy
 
 volumes:
   ui-node-modules:

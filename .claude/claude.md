@@ -45,12 +45,14 @@ task dev:full
 ```
 
 This starts:
+
 - **Caddy** at `localhost:3001` (unified access point)
 - **NATS** (internal Docker network)
 - **Backend** (internal Docker network)
 - **Vite** at `localhost:5173` (dev server)
 
 **Manage backend separately:**
+
 ```bash
 task dev:backend:start   # Start NATS + backend in background
 task dev                 # Start frontend (in another terminal)
@@ -59,6 +61,7 @@ task dev:backend:stop    # Stop backend when done
 ```
 
 **Custom ports if needed (avoid collisions):**
+
 ```bash
 DEV_UI_PORT=3002 DEV_VITE_PORT=5174 task dev:full
 ```
@@ -68,6 +71,7 @@ DEV_UI_PORT=3002 DEV_VITE_PORT=5174 task dev:full
 ## Infrastructure & API Access
 
 **Architecture:**
+
 ```
 localhost:3001 (Caddy) ─┬─► /components/* ──► backend:8080 (Docker internal)
                         ├─► /flowbuilder/* ─► backend:8080
@@ -76,6 +80,7 @@ localhost:3001 (Caddy) ─┬─► /components/* ──► backend:8080 (Docker
 ```
 
 **To query the backend API directly:**
+
 ```bash
 # Component types (returns id, name, type, protocol, category, description, schema)
 curl -s http://localhost:3001/components/types | jq
@@ -88,6 +93,7 @@ curl http://localhost:3001/flowbuilder/flows
 ```
 
 **Backend returns for `/components/types`:**
+
 ```json
 {
   "id": "udp-input",
@@ -101,6 +107,7 @@ curl http://localhost:3001/flowbuilder/flows
 ```
 
 **Key files:**
+
 - `docker-compose.dev.yml` - Docker services config
 - `Caddyfile.dev` - Reverse proxy routing
 - `src/hooks.server.ts` - SSR fetch transformations
@@ -278,12 +285,12 @@ Before accepting work:
 
 ## Status Tracking
 
-| Status | Meaning |
-|--------|---------|
-| `todo` | Not started |
-| `in_progress` | Builder working |
-| `review` | Reviewer examining |
-| `done` | Reviewer approved (or justified skip) |
+| Status        | Meaning                               |
+| ------------- | ------------------------------------- |
+| `todo`        | Not started                           |
+| `in_progress` | Builder working                       |
+| `review`      | Reviewer examining                    |
+| `done`        | Reviewer approved (or justified skip) |
 
 Only mark `done` after Reviewer approval and your verification.
 
@@ -295,16 +302,20 @@ When delegating to any agent:
 
 ```markdown
 ## Task
+
 [Clear description from plan file]
 
 ## Context
+
 - Plan: `~/.claude/plans/[plan-name].md`
 - Related code: [paths if relevant]
 
 ## Success Criteria
+
 [Acceptance criteria from plan file]
 
 ## Notes
+
 [Any constraints, prior attempts, or context]
 ```
 
@@ -354,15 +365,16 @@ Use when encountering errors that need investigation:
 
 ## Technology Reference
 
-| Tool | Purpose | Command |
-|------|---------|---------|
-| Vitest | Unit/component tests | `npm run test` |
-| Playwright | E2E tests | `npm run test:e2e` |
-| ESLint | Linting | `npm run lint` |
-| Prettier | Formatting | `npm run format` |
-| svelte-check | TypeScript | `npm run check` |
+| Tool         | Purpose              | Command            |
+| ------------ | -------------------- | ------------------ |
+| Vitest       | Unit/component tests | `npm run test`     |
+| Playwright   | E2E tests            | `npm run test:e2e` |
+| ESLint       | Linting              | `npm run lint`     |
+| Prettier     | Formatting           | `npm run format`   |
+| svelte-check | TypeScript           | `npm run check`    |
 
 See `docs/agents/svelte-patterns.md` for:
+
 - Test patterns
 - Svelte 5 patterns
 - Code review checklists

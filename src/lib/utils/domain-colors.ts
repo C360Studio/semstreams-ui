@@ -9,9 +9,9 @@
  */
 
 export interface DomainMetadata {
-	color: string;
-	label: string;
-	description: string;
+  color: string;
+  label: string;
+  description: string;
 }
 
 /**
@@ -24,47 +24,47 @@ export interface DomainMetadata {
  * - Storage = Green #198038 (DIFFERENT from success green #24a148)
  */
 export const DOMAIN_COLORS = {
-	robotics: {
-		color: 'var(--domain-robotics)',
-		label: 'Robotics',
-		description: 'Autonomous vehicles and MAVLink processing'
-	},
-	semantic: {
-		color: 'var(--domain-semantic)',
-		label: 'Semantic Processing',
-		description: 'Knowledge graphs, rules, and reasoning'
-	},
-	network: {
-		color: 'var(--domain-network)',
-		label: 'Network I/O',
-		description: 'Data ingestion and output (UDP, WebSocket, HTTP)'
-	},
-	storage: {
-		color: 'var(--domain-storage)',
-		label: 'Storage',
-		description: 'Data persistence and retrieval'
-	},
-	// Future domains (reserved for expansion)
-	telemetry: {
-		color: 'var(--domain-telemetry)',
-		label: 'Telemetry',
-		description: 'Metrics and observability'
-	},
-	geospatial: {
-		color: 'var(--domain-geospatial)',
-		label: 'Geospatial',
-		description: 'GIS, mapping, and location services'
-	},
-	media: {
-		color: 'var(--domain-media)',
-		label: 'Media',
-		description: 'Video, audio, and image processing'
-	},
-	integration: {
-		color: 'var(--domain-integration)',
-		label: 'Integration',
-		description: 'External system connectors'
-	}
+  robotics: {
+    color: "var(--domain-robotics)",
+    label: "Robotics",
+    description: "Autonomous vehicles and MAVLink processing",
+  },
+  semantic: {
+    color: "var(--domain-semantic)",
+    label: "Semantic Processing",
+    description: "Knowledge graphs, rules, and reasoning",
+  },
+  network: {
+    color: "var(--domain-network)",
+    label: "Network I/O",
+    description: "Data ingestion and output (UDP, WebSocket, HTTP)",
+  },
+  storage: {
+    color: "var(--domain-storage)",
+    label: "Storage",
+    description: "Data persistence and retrieval",
+  },
+  // Future domains (reserved for expansion)
+  telemetry: {
+    color: "var(--domain-telemetry)",
+    label: "Telemetry",
+    description: "Metrics and observability",
+  },
+  geospatial: {
+    color: "var(--domain-geospatial)",
+    label: "Geospatial",
+    description: "GIS, mapping, and location services",
+  },
+  media: {
+    color: "var(--domain-media)",
+    label: "Media",
+    description: "Video, audio, and image processing",
+  },
+  integration: {
+    color: "var(--domain-integration)",
+    label: "Integration",
+    description: "External system connectors",
+  },
 } as const;
 
 export type DomainType = keyof typeof DOMAIN_COLORS;
@@ -83,8 +83,8 @@ export type DomainType = keyof typeof DOMAIN_COLORS;
  * ```
  */
 export function getDomainColor(domain: string): string {
-	const metadata = DOMAIN_COLORS[domain as DomainType];
-	return metadata?.color || 'var(--ui-border-subtle)';
+  const metadata = DOMAIN_COLORS[domain as DomainType];
+  return metadata?.color || "var(--ui-border-subtle)";
 }
 
 /**
@@ -100,8 +100,8 @@ export function getDomainColor(domain: string): string {
  * ```
  */
 export function getDomainLabel(domain: string): string {
-	const metadata = DOMAIN_COLORS[domain as DomainType];
-	return metadata?.label || domain;
+  const metadata = DOMAIN_COLORS[domain as DomainType];
+  return metadata?.label || domain;
 }
 
 /**
@@ -118,8 +118,8 @@ export function getDomainLabel(domain: string): string {
  * ```
  */
 export function getDomainDescription(domain: string): string {
-	const metadata = DOMAIN_COLORS[domain as DomainType];
-	return metadata?.description || '';
+  const metadata = DOMAIN_COLORS[domain as DomainType];
+  return metadata?.description || "";
 }
 
 /**
@@ -129,7 +129,7 @@ export function getDomainDescription(domain: string): string {
  * @returns Domain metadata object or null if not found
  */
 export function getDomainMetadata(domain: string): DomainMetadata | null {
-	return DOMAIN_COLORS[domain as DomainType] || null;
+  return DOMAIN_COLORS[domain as DomainType] || null;
 }
 
 /**
@@ -138,7 +138,7 @@ export function getDomainMetadata(domain: string): DomainMetadata | null {
  * @returns Array of domain names
  */
 export function getAllDomains(): DomainType[] {
-	return Object.keys(DOMAIN_COLORS) as DomainType[];
+  return Object.keys(DOMAIN_COLORS) as DomainType[];
 }
 
 /**
@@ -148,5 +148,5 @@ export function getAllDomains(): DomainType[] {
  * @returns true if domain exists in DOMAIN_COLORS
  */
 export function isValidDomain(domain: string): domain is DomainType {
-	return domain in DOMAIN_COLORS;
+  return domain in DOMAIN_COLORS;
 }

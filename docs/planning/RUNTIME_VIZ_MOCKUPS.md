@@ -77,6 +77,7 @@
 ```
 
 **Key Features:**
+
 - Panel slides up from status bar
 - Canvas height reduces proportionally
 - Tabs for different views (Logs, Metrics, Health)
@@ -116,6 +117,7 @@
 ```
 
 **Key Features:**
+
 - Real-time metrics table
 - Throughput (messages per second)
 - Error rates
@@ -155,6 +157,7 @@
 ```
 
 **Key Features:**
+
 - Component health status
 - Uptime counters
 - Last activity timestamps
@@ -210,6 +213,7 @@
 ```
 
 **Key Features:**
+
 - Tabs in right panel (Config | Debug)
 - Canvas width reduces when panel is wide
 - Resizable panel (drag left/right edge)
@@ -217,6 +221,7 @@
 - Must switch tabs to see config vs debug
 
 **Issues:**
+
 - ⚠️ Less horizontal space for logs
 - ⚠️ Config not visible while debugging
 - ⚠️ Canvas gets narrower (worse for wide flows)
@@ -226,6 +231,7 @@
 ## Animation Sequence (Bottom Panel)
 
 ### 1. Initial State - Panel Closed
+
 ```
 ┌────────────────────────────────────────────┐
 │                                            │
@@ -238,6 +244,7 @@
 ```
 
 ### 2. User Clicks "Debug" Button
+
 ```
 ┌────────────────────────────────────────────┐
 │                                            │
@@ -255,6 +262,7 @@
 ```
 
 ### 3. Panel Fully Open (300ms animation)
+
 ```
 ┌────────────────────────────────────────────┐
 │           Canvas (reduced)                 │ Canvas now smaller
@@ -271,6 +279,7 @@
 ```
 
 ### 4. User Drags Resize Handle Up
+
 ```
 ┌────────────────────────────────────────────┐
 │           Canvas (smaller)                 │ ← Even smaller
@@ -293,16 +302,19 @@
 ## Mobile/Responsive Behavior
 
 ### Desktop (> 1024px)
+
 - Bottom panel: 300px default, 150px min, 60vh max
 - Right config panel: 400px default
 - Both visible simultaneously
 
 ### Tablet (768px - 1024px)
+
 - Bottom panel: 250px default, min 150px
 - Right config panel: Overlay mode (covers canvas)
 - One panel visible at a time
 
 ### Mobile (< 768px)
+
 - Bottom panel: Full screen overlay
 - No simultaneous panels
 - Tap status bar "Debug" → full screen debug view
@@ -312,20 +324,21 @@
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+`` | Toggle runtime panel |
-| `Esc` | Close runtime panel |
-| `Ctrl+L` | Focus logs tab |
-| `Ctrl+M` | Focus metrics tab |
-| `Ctrl+H` | Focus health tab |
-| `Ctrl+Shift+C` | Clear logs |
+| Shortcut       | Action               |
+| -------------- | -------------------- |
+| `Ctrl+``       | Toggle runtime panel |
+| `Esc`          | Close runtime panel  |
+| `Ctrl+L`       | Focus logs tab       |
+| `Ctrl+M`       | Focus metrics tab    |
+| `Ctrl+H`       | Focus health tab     |
+| `Ctrl+Shift+C` | Clear logs           |
 
 ---
 
 ## Status Bar Evolution
 
 ### Before (Current)
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │ Runtime: running ▶️  │ Cannot edit │ [Stop]         │
@@ -333,6 +346,7 @@
 ```
 
 ### After (With Debug Button)
+
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ Runtime: running ▶️  │ [Stop] [▲ Debug] Ctrl+`          │
@@ -342,6 +356,7 @@
 ```
 
 ### After (Panel Open)
+
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ Runtime: running ▶️  │ [Stop] [▼ Debug]                  │
@@ -355,6 +370,7 @@
 ## Summary - Why Bottom Panel Wins
 
 **Visual Advantages:**
+
 ```
 Bottom Panel:                Right Panel:
 +----------------------+     +----------------+----------+
@@ -371,6 +387,7 @@ Bottom Panel:                Right Panel:
 ```
 
 **User Flow:**
+
 ```
 1. User runs flow
 2. Notices error in status bar
@@ -382,6 +399,7 @@ Bottom Panel:                Right Panel:
 ```
 
 **Next Steps:**
+
 1. ✅ Confirm bottom panel approach
 2. Create RuntimePanel.svelte component
 3. Add toggle to StatusBar

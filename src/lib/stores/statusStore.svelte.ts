@@ -1,11 +1,11 @@
 // Status monitoring store using Svelte 5 stores
 // Tracks runtime state from WebSocket updates
 
-import * as store from 'svelte/store';
-import type { RuntimeState } from '$lib/types/flow';
+import * as store from "svelte/store";
+import type { RuntimeState } from "$lib/types/flow";
 
 interface StatusMessage {
-  type: 'flow_status' | 'component_health' | 'connection_metrics';
+  type: "flow_status" | "component_health" | "connection_metrics";
   flowId: string;
   timestamp: string;
   payload: unknown;
@@ -17,7 +17,7 @@ interface StatusState {
 
 function createStatusStore() {
   const { subscribe, update, set } = store.writable<StatusState>({
-    runtimeState: 'not_deployed'
+    runtimeState: "not_deployed",
   });
 
   return {
@@ -30,11 +30,11 @@ function createStatusStore() {
 
     // Update from WebSocket message
     updateFromWebSocket(message: StatusMessage) {
-      if (message.type === 'flow_status') {
+      if (message.type === "flow_status") {
         const payload = message.payload as { state: RuntimeState };
         update((state) => ({
           ...state,
-          runtimeState: payload.state
+          runtimeState: payload.state,
         }));
       }
     },
@@ -43,16 +43,16 @@ function createStatusStore() {
     setRuntimeState(newState: RuntimeState) {
       update((state) => ({
         ...state,
-        runtimeState: newState
+        runtimeState: newState,
       }));
     },
 
     // Reset to initial state
     reset() {
       set({
-        runtimeState: 'not_deployed'
+        runtimeState: "not_deployed",
       });
-    }
+    },
   };
 }
 

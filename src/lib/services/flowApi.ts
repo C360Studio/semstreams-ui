@@ -1,9 +1,9 @@
 // Flow API client
 // Handles CRUD operations for flows
 
-import type { Flow } from '$lib/types/flow';
+import type { Flow } from "$lib/types/flow";
 
-const API_BASE = '/flowbuilder/flows';
+const API_BASE = "/flowbuilder/flows";
 
 export interface CreateFlowRequest {
   name: string;
@@ -18,10 +18,10 @@ export class FlowApiError extends Error {
   constructor(
     message: string,
     public statusCode: number,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message);
-    this.name = 'FlowApiError';
+    this.name = "FlowApiError";
   }
 }
 
@@ -52,9 +52,9 @@ interface BackendFlowResponse {
 function normalizeFlow(flow: BackendFlowResponse): Flow {
   return {
     ...flow,
-    nodes: (flow.nodes || []) as Flow['nodes'],
-    connections: (flow.connections || []) as Flow['connections'],
-    runtime_state: flow.runtime_state as Flow['runtime_state']
+    nodes: (flow.nodes || []) as Flow["nodes"],
+    connections: (flow.connections || []) as Flow["connections"],
+    runtime_state: flow.runtime_state as Flow["runtime_state"],
   };
 }
 
@@ -64,11 +64,11 @@ export const flowApi = {
    */
   async createFlow(request: CreateFlowRequest): Promise<Flow> {
     const response = await fetch(API_BASE, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(request)
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -76,7 +76,7 @@ export const flowApi = {
       throw new FlowApiError(
         `Failed to create flow: ${response.statusText}`,
         response.status,
-        error
+        error,
       );
     }
 
@@ -93,7 +93,7 @@ export const flowApi = {
     if (!response.ok) {
       throw new FlowApiError(
         `Failed to list flows: ${response.statusText}`,
-        response.status
+        response.status,
       );
     }
 
@@ -110,7 +110,7 @@ export const flowApi = {
     if (!response.ok) {
       throw new FlowApiError(
         `Failed to get flow: ${response.statusText}`,
-        response.status
+        response.status,
       );
     }
 
@@ -124,11 +124,11 @@ export const flowApi = {
    */
   async updateFlow(id: string, flow: Flow): Promise<Flow> {
     const response = await fetch(`${API_BASE}/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(flow)
+      body: JSON.stringify(flow),
     });
 
     if (!response.ok) {
@@ -136,7 +136,7 @@ export const flowApi = {
       throw new FlowApiError(
         `Failed to update flow: ${response.statusText}`,
         response.status,
-        error
+        error,
       );
     }
 
@@ -149,14 +149,14 @@ export const flowApi = {
    */
   async deleteFlow(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
 
     if (!response.ok) {
       throw new FlowApiError(
         `Failed to delete flow: ${response.statusText}`,
-        response.status
+        response.status,
       );
     }
-  }
+  },
 };

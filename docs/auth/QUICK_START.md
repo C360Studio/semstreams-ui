@@ -5,6 +5,7 @@ Choose your authentication approach based on your needs:
 ## Option 1: No Auth (Development / Internal Networks)
 
 **When to use:**
+
 - Local development
 - Internal networks with network-level security
 - Testing and prototyping
@@ -12,6 +13,7 @@ Choose your authentication approach based on your needs:
 **Setup time:** 0 minutes
 
 **Steps:**
+
 ```bash
 # Use standard docker-compose (no auth)
 docker compose up
@@ -24,6 +26,7 @@ Access: http://localhost:3000 (no login required)
 ## Option 2: OAuth2-Proxy + Google OAuth (Simple)
 
 **When to use:**
+
 - Small teams
 - "Sign in with Google" is acceptable
 - Quick enterprise auth needed
@@ -39,6 +42,7 @@ Access: http://localhost:3000 (no login required)
    - Copy Client ID and Client Secret
 
 2. **Create `.env.oauth` file:**
+
 ```bash
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
@@ -46,6 +50,7 @@ OAUTH2_PROXY_COOKIE_SECRET=$(openssl rand -base64 32)
 ```
 
 3. **Start services:**
+
 ```bash
 cd docs/auth/examples
 docker compose -f oauth2-proxy-docker-compose.yml --env-file .env.oauth up
@@ -57,6 +62,7 @@ docker compose -f oauth2-proxy-docker-compose.yml --env-file .env.oauth up
    - Only users with @example.com domain can access
 
 **Customize:**
+
 - Change `--email-domain=example.com` to your domain
 - Add `--github-org=your-org` for GitHub OAuth
 - Add `--azure-tenant=your-tenant` for Azure AD
@@ -66,6 +72,7 @@ docker compose -f oauth2-proxy-docker-compose.yml --env-file .env.oauth up
 ## Option 3: Authelia (Full SSO with 2FA)
 
 **When to use:**
+
 - Enterprise deployments
 - Need SSO (Azure AD, Okta, etc.)
 - Want 2FA (TOTP, WebAuthn)
@@ -76,12 +83,14 @@ docker compose -f oauth2-proxy-docker-compose.yml --env-file .env.oauth up
 **Steps:**
 
 1. **Create Authelia configuration directory:**
+
 ```bash
 mkdir -p authelia
 cd authelia
 ```
 
 2. **Create `authelia/configuration.yml`:**
+
 ```yaml
 server:
   host: 0.0.0.0
@@ -118,11 +127,12 @@ notifier:
 ```
 
 3. **Create `authelia/users_database.yml`:**
+
 ```yaml
 users:
   admin:
     displayname: "Admin User"
-    password: "$argon2id$v=19$m=65536,t=3,p=4$<hash>"  # Generate with: authelia crypto hash generate argon2
+    password: "$argon2id$v=19$m=65536,t=3,p=4$<hash>" # Generate with: authelia crypto hash generate argon2
     email: admin@example.com
     groups:
       - admins
@@ -130,6 +140,7 @@ users:
 ```
 
 4. **Generate secrets:**
+
 ```bash
 # Generate Authelia secrets
 export AUTHELIA_JWT_SECRET=$(openssl rand -base64 32)
@@ -145,6 +156,7 @@ EOF
 ```
 
 5. **Start services:**
+
 ```bash
 cd docs/auth/examples
 docker compose -f authelia-docker-compose.yml --env-file .env.authelia up
@@ -177,6 +189,7 @@ Then configure your OIDC provider (Azure AD, Okta, etc.) and point it to Autheli
 ## Option 4: Backend-Managed Auth (Custom)
 
 **When to use:**
+
 - Backend already has authentication
 - Custom auth requirements
 - Existing user database
@@ -186,6 +199,7 @@ Then configure your OIDC provider (Azure AD, Okta, etc.) and point it to Autheli
 **Steps:**
 
 1. **Backend implements auth endpoints:**
+
 ```go
 // Example backend endpoints
 POST /auth/login       // Login with credentials
@@ -195,30 +209,32 @@ GET  /auth/providers   // List OAuth providers (optional)
 ```
 
 2. **UI calls backend for auth:**
+
 ```typescript
 // SvelteKit hooks.server.ts
 export async function handle({ event, resolve }) {
-    const session = event.cookies.get('session');
+  const session = event.cookies.get("session");
 
-    if (!session) {
-        return Response.redirect('/login');
-    }
+  if (!session) {
+    return Response.redirect("/login");
+  }
 
-    // Validate session with backend
-    const user = await fetch(`${BACKEND_URL}/auth/session`, {
-        headers: { 'Cookie': `session=${session}` }
-    });
+  // Validate session with backend
+  const user = await fetch(`${BACKEND_URL}/auth/session`, {
+    headers: { Cookie: `session=${session}` },
+  });
 
-    if (!user.ok) {
-        return Response.redirect('/login');
-    }
+  if (!user.ok) {
+    return Response.redirect("/login");
+  }
 
-    event.locals.user = await user.json();
-    return resolve(event);
+  event.locals.user = await user.json();
+  return resolve(event);
 }
 ```
 
 3. **Deploy:**
+
 ```bash
 # Build UI with auth code
 npm run build
@@ -232,18 +248,19 @@ docker compose up
 
 ## Comparison
 
-| Approach | Setup | Enterprise SSO | 2FA | Code Changes |
-|----------|-------|----------------|-----|--------------|
-| **No Auth** | 0 min | ❌ | ❌ | None |
-| **OAuth2-Proxy** | 15 min | ✅ (OIDC) | ❌ | None |
-| **Authelia** | 30 min | ✅ (OIDC) | ✅ | None |
-| **Backend Auth** | Varies | ✅ | ✅ | UI + Backend |
+| Approach         | Setup  | Enterprise SSO | 2FA | Code Changes |
+| ---------------- | ------ | -------------- | --- | ------------ |
+| **No Auth**      | 0 min  | ❌             | ❌  | None         |
+| **OAuth2-Proxy** | 15 min | ✅ (OIDC)      | ❌  | None         |
+| **Authelia**     | 30 min | ✅ (OIDC)      | ✅  | None         |
+| **Backend Auth** | Varies | ✅             | ✅  | UI + Backend |
 
 ---
 
 ## Testing Authentication
 
 ### Test OAuth2-Proxy:
+
 ```bash
 # Check if protected
 curl http://localhost:4180
@@ -254,6 +271,7 @@ docker compose logs oauth2-proxy | grep X-Forwarded
 ```
 
 ### Test Authelia:
+
 ```bash
 # Check if protected
 curl http://localhost:3000
@@ -265,6 +283,7 @@ curl -v http://localhost:3000 \
 ```
 
 ### Check auth headers received by backend:
+
 ```bash
 # See what headers backend receives
 docker compose exec backend env | grep -i remote
@@ -276,16 +295,19 @@ docker compose exec backend env | grep -i remote
 ## Troubleshooting
 
 ### OAuth2-Proxy not redirecting
+
 - Check Google OAuth redirect URI matches exactly
 - Verify `--email-domain` matches your email
 - Check logs: `docker compose logs oauth2-proxy`
 
 ### Authelia login fails
+
 - Verify password hash: `docker compose exec authelia authelia crypto hash generate argon2`
 - Check configuration: `docker compose exec authelia cat /config/configuration.yml`
 - Review logs: `docker compose logs authelia`
 
 ### Headers not passed to backend
+
 - Verify Caddy `forward_auth` with `copy_headers`
 - Check backend receives headers: Add debug logging
 - Test with curl: Include auth cookies
@@ -321,6 +343,7 @@ After choosing an auth approach:
 ## Recommended: Start with OAuth2-Proxy
 
 For most teams, we recommend starting with **OAuth2-Proxy + Google OAuth**:
+
 - Quick setup (15 minutes)
 - No code changes
 - Works with existing Google Workspace
@@ -328,6 +351,7 @@ For most teams, we recommend starting with **OAuth2-Proxy + Google OAuth**:
 - Can upgrade to Authelia later for 2FA
 
 Then upgrade to **Authelia** when you need:
+
 - Two-factor authentication
 - More complex access rules
 - Session management

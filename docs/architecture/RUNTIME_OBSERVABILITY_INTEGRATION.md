@@ -17,17 +17,20 @@ This document guides the investigation of existing observability infrastructure 
 The Runtime Visualization Panel needs:
 
 ### 1. Logs Tab
+
 - **Data**: Real-time component logs with timestamp, level, component name, message
 - **Format**: Streaming (SSE preferred)
 - **Filters**: By level (DEBUG/INFO/WARN/ERROR), by component
 - **Expected Endpoint**: `GET /flows/{id}/runtime/logs` (SSE)
 
 ### 2. Metrics Tab
+
 - **Data**: Component throughput (msgs/sec), error rates, CPU/memory, status
 - **Format**: JSON polling (1-10s intervals)
 - **Expected Endpoint**: `GET /flows/{id}/runtime/metrics` (JSON)
 
 ### 3. Health Tab
+
 - **Data**: Component status (running/degraded/error), uptime, last activity, issue details
 - **Format**: JSON polling (5s interval)
 - **Expected Endpoint**: `GET /flows/{id}/runtime/health` (JSON)
@@ -41,6 +44,7 @@ The Runtime Visualization Panel needs:
 **Location**: `semstreams/service/http/` (or similar)
 
 **Questions**:
+
 - What endpoints does it currently expose?
 - Does it provide health checks?
 - Does it expose component status?
@@ -48,6 +52,7 @@ The Runtime Visualization Panel needs:
 - What's the base URL pattern?
 
 **Investigation Steps**:
+
 ```bash
 # Find HTTP service implementation
 cd semstreams
@@ -61,6 +66,7 @@ grep -r "/metrics\|/health\|/logs" --include="*.go"
 ```
 
 **Expected Findings**:
+
 - [ ] List of current HTTP endpoints
 - [ ] Health check implementation
 - [ ] Component status API (if exists)
@@ -73,6 +79,7 @@ grep -r "/metrics\|/health\|/logs" --include="*.go"
 **Metrics Endpoint**: `/metrics` (standard Prometheus format)
 
 **Questions**:
+
 - What metrics are already exposed?
 - Are component-level metrics available?
 - Can we get throughput (msgs/sec)?
@@ -81,6 +88,7 @@ grep -r "/metrics\|/health\|/logs" --include="*.go"
 - Is CPU/memory exposed per component?
 
 **Investigation Steps**:
+
 ```bash
 # Find Prometheus instrumentation
 cd semstreams
@@ -94,6 +102,7 @@ grep -r "WithLabelValues\|Labels{" --include="*.go"
 ```
 
 **Example Prometheus Queries** (if metrics exist):
+
 ```promql
 # Component throughput
 rate(component_messages_processed_total[1m])
@@ -106,6 +115,7 @@ time() - component_start_time_seconds
 ```
 
 **Expected Findings**:
+
 - [ ] List of available Prometheus metrics
 - [ ] Whether metrics are per-component
 - [ ] Whether throughput/errors/uptime are available
@@ -118,6 +128,7 @@ time() - component_start_time_seconds
 **Location**: Possibly `semstreams/messagelogger/` or similar
 
 **Questions**:
+
 - What is the message logger service?
 - Does it track message flow across NATS?
 - Does it provide traces/spans?
@@ -125,6 +136,7 @@ time() - component_start_time_seconds
 - Should we add a "Traces" or "Message Flow" tab?
 
 **Investigation Steps**:
+
 ```bash
 # Find message logger implementation
 cd semstreams
@@ -138,12 +150,14 @@ grep -r "Subscribe.*logger\|logger.*Subscribe" --include="*.go"
 ```
 
 **Potential Capabilities**:
+
 - Message tracing across components
 - End-to-end latency tracking
 - Message routing visualization
 - Dropped message detection
 
 **Expected Findings**:
+
 - [ ] Message logger architecture
 - [ ] What data it captures
 - [ ] How to query/stream message events
@@ -155,12 +169,14 @@ grep -r "Subscribe.*logger\|logger.*Subscribe" --include="*.go"
 ### 4. NATS System Events
 
 **Questions**:
+
 - Can components publish lifecycle events to NATS?
 - Are there system subjects for logs/metrics/health?
 - Can UI subscribe via SSE proxy?
 - Would this be better than HTTP polling?
 
 **Investigation Steps**:
+
 ```bash
 # Find NATS event publishing
 cd semstreams
@@ -174,12 +190,14 @@ grep -r "nc.Subscribe\|js.Subscribe" --include="*.go"
 ```
 
 **Potential System Subjects**:
+
 - `system.component.{id}.logs` - Component log stream
 - `system.component.{id}.metrics` - Component metrics
 - `system.component.{id}.status` - Component status changes
 - `system.flow.{id}.events` - Flow lifecycle events
 
 **Expected Findings**:
+
 - [ ] Whether system subjects exist
 - [ ] Event formats/schemas
 - [ ] Whether SSE proxy exists or is needed
@@ -192,22 +210,25 @@ grep -r "nc.Subscribe\|js.Subscribe" --include="*.go"
 ### Option 1: Use Prometheus Metrics (for Metrics Tab)
 
 **Pros**:
+
 - ✅ Already instrumented (likely)
 - ✅ Standard observability pattern
 - ✅ No new backend code needed
 - ✅ Can leverage existing monitoring infrastructure
 
 **Cons**:
+
 - ❌ Requires Prometheus server running
 - ❌ Adds dependency (Prometheus API)
 - ❌ May not have all needed metrics
 - ❌ Query complexity (PromQL in frontend?)
 
 **Implementation**:
+
 ```typescript
 // Option 1A: Query Prometheus directly from frontend
 const response = await fetch(
-    `http://prometheus:9090/api/v1/query?query=rate(component_messages_total[1m])`
+  `http://prometheus:9090/api/v1/query?query=rate(component_messages_total[1m])`,
 );
 
 // Option 1B: Backend proxy to Prometheus
@@ -216,6 +237,7 @@ const response = await fetch(`/flowbuilder/flows/${flowId}/runtime/metrics`);
 ```
 
 **Recommendation**: Use backend proxy (Option 1B) to:
+
 - Abstract Prometheus details from UI
 - Handle authentication
 - Format data consistently
@@ -226,29 +248,32 @@ const response = await fetch(`/flowbuilder/flows/${flowId}/runtime/metrics`);
 ### Option 2: Use Message Logger (for Logs/Traces Tab)
 
 **Pros**:
+
 - ✅ May already track message flow
 - ✅ Could provide end-to-end tracing
 - ✅ Richer than simple logs
 - ✅ NATS-native integration
 
 **Cons**:
+
 - ❌ May not exist yet
 - ❌ May not capture component logs
 - ❌ Different from traditional logs
 - ❌ Requires message logger enabled
 
 **Implementation**:
+
 ```typescript
 // Subscribe to message logger events via SSE
 const eventSource = new EventSource(
-    `/flowbuilder/flows/${flowId}/runtime/traces`
+  `/flowbuilder/flows/${flowId}/runtime/traces`,
 );
 
-eventSource.addEventListener('trace', (event) => {
-    const trace = JSON.parse(event.data);
-    // trace.componentPath: ["udp-source", "processor", "nats-sink"]
-    // trace.latency: 5.2ms
-    // trace.messageId: "msg-123"
+eventSource.addEventListener("trace", (event) => {
+  const trace = JSON.parse(event.data);
+  // trace.componentPath: ["udp-source", "processor", "nats-sink"]
+  // trace.latency: 5.2ms
+  // trace.messageId: "msg-123"
 });
 ```
 
@@ -259,18 +284,21 @@ eventSource.addEventListener('trace', (event) => {
 ### Option 3: NATS System Events (for Real-time Streaming)
 
 **Pros**:
+
 - ✅ Real-time (no polling needed)
 - ✅ NATS-native architecture
 - ✅ Scalable pub/sub
 - ✅ Can stream logs, metrics, health
 
 **Cons**:
+
 - ❌ Requires SSE proxy (backend → NATS → frontend)
 - ❌ May need new system subjects
 - ❌ More complex architecture
 - ❌ Connection management (reconnects)
 
 **Implementation**:
+
 ```go
 // Backend SSE proxy
 func streamComponentLogs(w http.ResponseWriter, r *http.Request, flowID string) {
@@ -298,6 +326,7 @@ func streamComponentLogs(w http.ResponseWriter, r *http.Request, flowID string) 
 If existing infrastructure doesn't provide needed data:
 
 **Logs Endpoint**:
+
 ```go
 // GET /flowbuilder/flows/{id}/runtime/logs (SSE)
 // Streams component logs from all components in flow
@@ -311,6 +340,7 @@ type LogEvent struct {
 ```
 
 **Metrics Endpoint**:
+
 ```go
 // GET /flowbuilder/flows/{id}/runtime/metrics (JSON)
 // Polls Prometheus or internal metrics store
@@ -331,6 +361,7 @@ type ComponentMetrics struct {
 ```
 
 **Health Endpoint**:
+
 ```go
 // GET /flowbuilder/flows/{id}/runtime/health (JSON)
 // Component health status and diagnostics
@@ -357,6 +388,7 @@ type ComponentHealth struct {
 ### Phase 1: Discovery (Current Step)
 
 **Tasks**:
+
 - [ ] Locate service manager HTTP service code
 - [ ] Document existing HTTP endpoints
 - [ ] Review Prometheus metrics implementation
@@ -370,6 +402,7 @@ type ComponentHealth struct {
 ### Phase 2: Gap Analysis
 
 **Tasks**:
+
 - [ ] Map UI requirements to existing capabilities
 - [ ] Identify gaps (what's missing)
 - [ ] Evaluate integration options
@@ -377,14 +410,14 @@ type ComponentHealth struct {
 
 **Deliverable**: Requirements coverage matrix
 
-| UI Requirement | Existing Source | Gap | Recommendation |
-|----------------|-----------------|-----|----------------|
-| Real-time logs | NATS events? | TBD | SSE from NATS |
-| Component throughput | Prometheus | TBD | Query via backend |
-| Error rates | Prometheus | TBD | Query via backend |
-| Component status | HTTP health? | TBD | New endpoint or Prometheus |
-| Uptime | Prometheus | TBD | Calculate from start_time |
-| Message traces | Message logger? | TBD | New "Traces" tab? |
+| UI Requirement       | Existing Source | Gap | Recommendation             |
+| -------------------- | --------------- | --- | -------------------------- |
+| Real-time logs       | NATS events?    | TBD | SSE from NATS              |
+| Component throughput | Prometheus      | TBD | Query via backend          |
+| Error rates          | Prometheus      | TBD | Query via backend          |
+| Component status     | HTTP health?    | TBD | New endpoint or Prometheus |
+| Uptime               | Prometheus      | TBD | Calculate from start_time  |
+| Message traces       | Message logger? | TBD | New "Traces" tab?          |
 
 ---
 
@@ -417,21 +450,25 @@ type ComponentHealth struct {
 Based on architecture decision:
 
 **If using Prometheus**:
+
 - [ ] Implement Prometheus query backend
 - [ ] Create `/metrics` proxy endpoint
 - [ ] Update UI to use backend proxy
 
 **If using Message Logger**:
+
 - [ ] Design "Traces" tab UI
 - [ ] Implement message logger query API
 - [ ] Add trace visualization
 
 **If using NATS Events**:
+
 - [ ] Define system event subjects
 - [ ] Implement SSE proxy
 - [ ] Add component event publishing
 
 **If creating new endpoints**:
+
 - [ ] Implement logs SSE endpoint
 - [ ] Implement metrics polling endpoint
 - [ ] Implement health polling endpoint
@@ -464,21 +501,23 @@ When evaluating options, consider:
 
 **System Endpoints Available**:
 
-| Endpoint | Method | Description | Response Format |
-|----------|--------|-------------|-----------------|
-| `/health` | GET | Aggregated system health (all services + NATS) | JSON (`health.Status`) |
-| `/healthz` | GET | Simple liveness probe | Text: "OK" |
-| `/readyz` | GET | Readiness check (all services running?) | Text: "READY" / "NOT READY" |
-| `/services` | GET | List all services with status | JSON: `{services: [], count: N}` |
-| `/services/health` | GET | Detailed health of all services | JSON: `{overall: {...}, services: [...]}` |
-| `/openapi.json` | GET | OpenAPI specification | JSON (OpenAPI 3.0) |
-| `/docs` | GET | Swagger UI | HTML |
+| Endpoint           | Method | Description                                    | Response Format                           |
+| ------------------ | ------ | ---------------------------------------------- | ----------------------------------------- |
+| `/health`          | GET    | Aggregated system health (all services + NATS) | JSON (`health.Status`)                    |
+| `/healthz`         | GET    | Simple liveness probe                          | Text: "OK"                                |
+| `/readyz`          | GET    | Readiness check (all services running?)        | Text: "READY" / "NOT READY"               |
+| `/services`        | GET    | List all services with status                  | JSON: `{services: [], count: N}`          |
+| `/services/health` | GET    | Detailed health of all services                | JSON: `{overall: {...}, services: [...]}` |
+| `/openapi.json`    | GET    | OpenAPI specification                          | JSON (OpenAPI 3.0)                        |
+| `/docs`            | GET    | Swagger UI                                     | HTML                                      |
 
 **Service-Specific Endpoints**:
+
 - Services implementing `HTTPHandler` interface register routes at `/{service-prefix}/*`
 - Gateway components register at `/{component-name}/*`
 
 **Health Status Structure** (`health.Status`):
+
 ```go
 type Status struct {
     Name       string   // Component/service name
@@ -502,14 +541,15 @@ type Status struct {
 
 **HTTP Endpoints** (registered at `/message-logger/*`):
 
-| Endpoint | Method | Parameters | Description |
-|----------|--------|------------|-------------|
-| `/message-logger/entries` | GET | `?limit=N&subject=pattern` | Get recent message log entries |
-| `/message-logger/stats` | GET | - | Message statistics |
-| `/message-logger/subjects` | GET | - | List monitored NATS subjects |
-| `/message-logger/kv/{bucket}` | GET | - | Query KV bucket contents |
+| Endpoint                      | Method | Parameters                 | Description                    |
+| ----------------------------- | ------ | -------------------------- | ------------------------------ |
+| `/message-logger/entries`     | GET    | `?limit=N&subject=pattern` | Get recent message log entries |
+| `/message-logger/stats`       | GET    | -                          | Message statistics             |
+| `/message-logger/subjects`    | GET    | -                          | List monitored NATS subjects   |
+| `/message-logger/kv/{bucket}` | GET    | -                          | Query KV bucket contents       |
 
 **MessageLogEntry Structure**:
+
 ```go
 type MessageLogEntry struct {
     Timestamp   time.Time       // When message observed
@@ -523,6 +563,7 @@ type MessageLogEntry struct {
 ```
 
 **Key Capabilities**:
+
 - ✅ Real-time NATS message observation
 - ✅ Subject filtering support
 - ✅ Limit/pagination support
@@ -531,6 +572,7 @@ type MessageLogEntry struct {
 - ❌ No structured component logs (only NATS messages)
 
 **Potential UI Use**:
+
 - Could power "Message Flow" or "Traces" tab showing NATS message routing
 - NOT suitable for component logs (different data model)
 
@@ -543,6 +585,7 @@ type MessageLogEntry struct {
 **Separate HTTP Server**: Dedicated metrics server at `:9090/metrics` (standard Prometheus pattern)
 
 **Endpoints**:
+
 - `GET :9090/metrics` - Prometheus metrics (OpenMetrics format)
 - `GET :9090/health` - Metrics server health check
 - `GET :9090/` - HTML info page with links
@@ -595,12 +638,14 @@ semstreams_websocket_queue_utilization                   # Gauge
 ```
 
 **Similar patterns exist for**:
+
 - JSON processors (`processor/json_filter/`, `json_map/`)
 - Graph processors (`processor/graph/querymanager/`, `indexmanager/`)
 - Storage components (`storage/objectstore/`)
 - NATS JetStream (`natsclient/jetstream_metrics.go`)
 
 **Key Capabilities**:
+
 - ✅ Per-component metrics (throughput, errors, latency)
 - ✅ Industry-standard Prometheus format
 - ✅ Rich metric types (counters, gauges, histograms)
@@ -615,6 +660,7 @@ semstreams_websocket_queue_utilization                   # Gauge
 ### 1. Logs Tab
 
 **UI Requirements**:
+
 - Real-time component logs
 - Filter by level (DEBUG/INFO/WARN/ERROR)
 - Filter by component
@@ -622,20 +668,22 @@ semstreams_websocket_queue_utilization                   # Gauge
 
 **Existing Infrastructure**:
 
-| Requirement | Source | Gap |
-|-------------|--------|-----|
-| Component logs | ❌ Not available | **Need new endpoint** |
-| Real-time streaming | ❌ No SSE endpoint | **Need SSE implementation** |
-| Filter by level | ❌ N/A | **Need structured logging** |
-| Filter by component | ❌ N/A | **Need component identification** |
+| Requirement         | Source             | Gap                               |
+| ------------------- | ------------------ | --------------------------------- |
+| Component logs      | ❌ Not available   | **Need new endpoint**             |
+| Real-time streaming | ❌ No SSE endpoint | **Need SSE implementation**       |
+| Filter by level     | ❌ N/A             | **Need structured logging**       |
+| Filter by component | ❌ N/A             | **Need component identification** |
 
 **Message Logger Evaluation**:
+
 - ❌ Tracks NATS messages, NOT component logs
 - ❌ No log levels (DEBUG/INFO/WARN/ERROR)
 - ❌ Different data model (message traces vs logs)
 - ✅ Could power separate "Message Flow" tab
 
 **Recommendation**: **Build new `/flows/{id}/runtime/logs` SSE endpoint**
+
 - Aggregate logs from all components in flow
 - Add structured logging to components (level, component, message)
 - Stream via SSE (not available in message-logger)
@@ -645,6 +693,7 @@ semstreams_websocket_queue_utilization                   # Gauge
 ### 2. Metrics Tab
 
 **UI Requirements**:
+
 - Component throughput (msgs/sec)
 - Error rates
 - CPU/memory usage
@@ -653,22 +702,24 @@ semstreams_websocket_queue_utilization                   # Gauge
 
 **Existing Infrastructure**:
 
-| Requirement | Source | Status |
-|-------------|--------|--------|
-| Throughput | Prometheus: `rate(messages_published_total[1m])` | ✅ Available |
-| Error rates | Prometheus: `rate(messages_dropped_total[1m])` | ✅ Available |
-| CPU/memory | ❓ TBD (process-level?) | ⚠️ May not be per-component |
-| Component status | `/services/health` endpoint | ✅ Available |
+| Requirement      | Source                                           | Status                      |
+| ---------------- | ------------------------------------------------ | --------------------------- |
+| Throughput       | Prometheus: `rate(messages_published_total[1m])` | ✅ Available                |
+| Error rates      | Prometheus: `rate(messages_dropped_total[1m])`   | ✅ Available                |
+| CPU/memory       | ❓ TBD (process-level?)                          | ⚠️ May not be per-component |
+| Component status | `/services/health` endpoint                      | ✅ Available                |
 
 **Recommendation**: **Proxy Prometheus + `/services/health`**
 
 Create `/flows/{id}/runtime/metrics` endpoint that:
+
 1. Queries Prometheus for throughput/error metrics
 2. Queries `/services/health` for component status
 3. Combines into UI-friendly JSON
 4. Returns component-level metrics array
 
 **Example PromQL queries**:
+
 ```promql
 # Component throughput (messages/sec)
 rate(semstreams_websocket_messages_published_total{component="udp-source"}[1m])
@@ -684,6 +735,7 @@ rate(semstreams_websocket_messages_dropped_total{component="processor"}[1m])
 ### 3. Health Tab
 
 **UI Requirements**:
+
 - Component status (running/degraded/error)
 - Uptime tracking
 - Last activity timestamp
@@ -692,14 +744,15 @@ rate(semstreams_websocket_messages_dropped_total{component="processor"}[1m])
 
 **Existing Infrastructure**:
 
-| Requirement | Source | Status |
-|-------------|--------|--------|
-| Component status | `/services/health` | ✅ Available (hierarchical health) |
-| Uptime | Prometheus: `time() - component_start_time_seconds` | ⚠️ Need start_time metric |
-| Last activity | ❌ Not tracked | ⚠️ Need new metric/endpoint |
-| Issue details | `/services/health` - `Message` field | ✅ Available |
+| Requirement      | Source                                              | Status                             |
+| ---------------- | --------------------------------------------------- | ---------------------------------- |
+| Component status | `/services/health`                                  | ✅ Available (hierarchical health) |
+| Uptime           | Prometheus: `time() - component_start_time_seconds` | ⚠️ Need start_time metric          |
+| Last activity    | ❌ Not tracked                                      | ⚠️ Need new metric/endpoint        |
+| Issue details    | `/services/health` - `Message` field                | ✅ Available                       |
 
 **Existing `/services/health` Response**:
+
 ```json
 {
   "overall": {
@@ -734,11 +787,13 @@ rate(semstreams_websocket_messages_dropped_total{component="processor"}[1m])
 **Recommendation**: **Enhance `/services/health` or create `/flows/{id}/runtime/health`**
 
 Add to response:
+
 - `start_time`: Component startup timestamp (for uptime calculation)
 - `last_activity`: Last message processed timestamp
 - `details`: Preserve existing hierarchical health structure
 
 **Alternative**: Query Prometheus for uptime:
+
 ```promql
 # Component uptime (seconds)
 time() - component_start_time_seconds{component="udp-source"}
@@ -753,22 +808,26 @@ time() - component_start_time_seconds{component="udp-source"}
 ### Recommended Approach: Hybrid Pattern
 
 **For Logs Tab**: Build new SSE endpoint
+
 - **Why**: Message logger tracks NATS messages, not component logs
 - **Endpoint**: `GET /flows/{id}/runtime/logs` (SSE)
 - **Implementation**: Aggregate component logs, stream via SSE
 
 **For Messages Tab**: Use Message Logger (MVP REQUIRED)
+
 - **Why**: Tracking message flow through NATS is critical for debugging
 - **Endpoint**: `GET /flows/{id}/runtime/messages` (SSE or polling)
 - **Implementation**: Wrap `/message-logger/entries` with flow filtering
 - **Value**: See message routing, latency, dropped messages, NATS subject activity
 
 **For Metrics Tab**: Proxy to Prometheus + Health endpoint
+
 - **Why**: Metrics already exist, avoid duplication
 - **Endpoint**: `GET /flows/{id}/runtime/metrics` (JSON polling)
 - **Implementation**: Backend queries Prometheus, formats for UI
 
 **For Health Tab**: Use existing `/services/health` + optional Prometheus uptime
+
 - **Why**: Health infrastructure already exists
 - **Endpoint**: `GET /flows/{id}/runtime/health` (JSON polling)
 - **Implementation**: Query `/services/health`, optionally augment with Prometheus uptime
@@ -780,6 +839,7 @@ time() - component_start_time_seconds{component="udp-source"}
 ### Phase 1: Metrics Tab (Use Existing Infrastructure) - MVP
 
 **Backend**: Create Prometheus proxy endpoint
+
 - Endpoint: `GET /flows/{id}/runtime/metrics`
 - Query Prometheus for component metrics
 - Query `/services/health` for status
@@ -793,6 +853,7 @@ time() - component_start_time_seconds{component="udp-source"}
 ### Phase 2: Health Tab (Use Existing + Enhance) - MVP
 
 **Backend**: Enhance health endpoint
+
 - Endpoint: `GET /flows/{id}/runtime/health`
 - Base data from `/services/health`
 - Add `start_time` and `last_activity` fields
@@ -806,6 +867,7 @@ time() - component_start_time_seconds{component="udp-source"}
 ### Phase 3: Messages Tab (Message Logger Integration) - MVP
 
 **Backend**: Wrap message logger with flow filtering
+
 - Endpoint: `GET /flows/{id}/runtime/messages` (SSE or polling)
 - Filter `/message-logger/entries` by flow component subjects
 - Add flow-specific filtering (only messages from flow components)
@@ -813,6 +875,7 @@ time() - component_start_time_seconds{component="udp-source"}
 - **Critical**: Without this, debugging NATS message flow is extremely difficult
 
 **Response Format**:
+
 ```json
 {
   "timestamp": "2025-11-17T14:23:01Z",
@@ -841,6 +904,7 @@ time() - component_start_time_seconds{component="udp-source"}
 ### Phase 4: Logs Tab (New SSE Endpoint) - MVP
 
 **Backend**: Build log streaming endpoint
+
 - Endpoint: `GET /flows/{id}/runtime/logs` (SSE)
 - Add structured logging to components (level, component, message)
 - Aggregate logs from flow components

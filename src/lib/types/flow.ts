@@ -1,12 +1,12 @@
 // Type definitions for Flow entities
 // Matches backend schema from pkg/flowstore/flow.go
 
-import type { RuntimeState, SaveStatus, UserPreferences } from './ui-state';
-import type { ValidationState as PortValidationState } from './port';
+import type { RuntimeState, SaveStatus, UserPreferences } from "./ui-state";
+import type { ValidationState as PortValidationState } from "./port";
 
 // Re-export for convenience
 export type { RuntimeState, SaveStatus, UserPreferences };
-export { DEFAULT_PREFERENCES } from './ui-state';
+export { DEFAULT_PREFERENCES } from "./ui-state";
 
 export interface Flow {
   // Identity
@@ -23,15 +23,15 @@ export interface Flow {
 
   // Runtime state
   runtime_state: RuntimeState;
-  deployed_at?: string;   // ISO 8601, optional
-  started_at?: string;    // ISO 8601, optional
-  stopped_at?: string;    // ISO 8601, optional
+  deployed_at?: string; // ISO 8601, optional
+  started_at?: string; // ISO 8601, optional
+  stopped_at?: string; // ISO 8601, optional
 
   // Audit
-  created_at: string;     // ISO 8601
-  updated_at: string;     // ISO 8601
+  created_at: string; // ISO 8601
+  updated_at: string; // ISO 8601
   created_by?: string;
-  last_modified: string;  // ISO 8601
+  last_modified: string; // ISO 8601
 }
 
 // Helper type for UI state (not from backend)
@@ -42,11 +42,11 @@ export interface FlowMetadata {
 // Backend schema: FlowNode
 export interface FlowNode {
   id: string;
-  component: string;       // References ComponentType.id (e.g., "json_filter")
-  type: string;            // Component type for colors: "input" | "output" | "processor" | "gateway" | "storage"
+  component: string; // References ComponentType.id (e.g., "json_filter")
+  type: string; // Component type for colors: "input" | "output" | "processor" | "gateway" | "storage"
   name: string;
   position: Position;
-  config: Record<string, unknown>;  // Component-specific config
+  config: Record<string, unknown>; // Component-specific config
 }
 
 // UI-only: Extended node with health status
@@ -62,20 +62,16 @@ export interface Position {
 export interface ComponentHealth {
   status: HealthStatus;
   errorMessage?: string;
-  lastUpdated: string;  // ISO 8601
+  lastUpdated: string; // ISO 8601
 }
 
-export type HealthStatus =
-  | 'healthy'
-  | 'degraded'
-  | 'unhealthy'
-  | 'not_running';
+export type HealthStatus = "healthy" | "degraded" | "unhealthy" | "not_running";
 
 /**
  * Connection source type
  * Distinguishes auto-discovered connections (from FlowGraph) vs manually created
  */
-export type ConnectionSource = 'auto' | 'manual';
+export type ConnectionSource = "auto" | "manual";
 
 // Backend schema: FlowConnection (EXTENDED for visual component wiring)
 export interface FlowConnection {
@@ -101,12 +97,12 @@ export interface Connection extends FlowConnection {
   metrics?: ConnectionMetrics;
 }
 
-export type InteractionPattern = 'stream' | 'request' | 'watch' | 'network';
+export type InteractionPattern = "stream" | "request" | "watch" | "network";
 
 export interface ConnectionMetrics {
   messageCount: number;
-  throughputRate: number;   // messages/second
-  lastActivity: string;     // ISO 8601
+  throughputRate: number; // messages/second
+  lastActivity: string; // ISO 8601
 }
 
 // ============================================================================
@@ -122,29 +118,29 @@ export interface ConnectionMetrics {
  * @see specs/014-flow-ux-port/data-model.md
  */
 export interface ConnectionVisualState {
-	/** Connection ID (XYFlow edge ID) */
-	connectionId: string;
+  /** Connection ID (XYFlow edge ID) */
+  connectionId: string;
 
-	/** Line style based on pattern type */
-	linePattern: 'solid' | 'dashed' | 'dotted';
+  /** Line style based on pattern type */
+  linePattern: "solid" | "dashed" | "dotted";
 
-	/** Line color based on validation state */
-	color: string;
+  /** Line color based on validation state */
+  color: string;
 
-	/** Validation state */
-	validationState: 'valid' | 'error' | 'warning';
+  /** Validation state */
+  validationState: "valid" | "error" | "warning";
 
-	/** SVG stroke-dasharray value */
-	strokeDasharray: string;
+  /** SVG stroke-dasharray value */
+  strokeDasharray: string;
 
-	/** Z-index for layering (selected connections on top) */
-	zIndex: number;
+  /** Z-index for layering (selected connections on top) */
+  zIndex: number;
 
-	/** Optional error icon to display on line */
-	errorIcon?: string;
+  /** Optional error icon to display on line */
+  errorIcon?: string;
 
-	/** Tooltip content for connection */
-	tooltipContent?: string;
+  /** Tooltip content for connection */
+  tooltipContent?: string;
 }
 
 /**
@@ -156,23 +152,23 @@ export interface ConnectionVisualState {
  * @see specs/014-flow-ux-port/data-model.md
  */
 export interface CompatibilityFeedback {
-	/** Currently dragged source port ID */
-	sourcePortId: string;
+  /** Currently dragged source port ID */
+  sourcePortId: string;
 
-	/** Target port being hovered over (if any) */
-	targetPortId?: string;
+  /** Target port being hovered over (if any) */
+  targetPortId?: string;
 
-	/** Compatibility status */
-	compatibility: 'compatible' | 'incompatible' | 'unknown';
+  /** Compatibility status */
+  compatibility: "compatible" | "incompatible" | "unknown";
 
-	/** Visual indicator to display */
-	indicator: 'green-highlight' | 'red-indicator' | 'none';
+  /** Visual indicator to display */
+  indicator: "green-highlight" | "red-indicator" | "none";
 
-	/** Reason for incompatibility (if any) */
-	incompatibilityReason?: string;
+  /** Reason for incompatibility (if any) */
+  incompatibilityReason?: string;
 
-	/** CSS classes for visual feedback */
-	feedbackClasses: string[];
+  /** CSS classes for visual feedback */
+  feedbackClasses: string[];
 }
 
 /**
@@ -184,20 +180,20 @@ export interface CompatibilityFeedback {
  * @see specs/014-flow-ux-port/data-model.md
  */
 export interface XYFlowEdgeWithVisuals {
-	id: string;
-	source: string;
-	target: string;
-	sourceHandle?: string;
-	targetHandle?: string;
-	type?: string;
-	data?: {
-		/** Connection visual state */
-		visualState?: ConnectionVisualState;
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+  type?: string;
+  data?: {
+    /** Connection visual state */
+    visualState?: ConnectionVisualState;
 
-		/** Pattern type (from backend validation) */
-		patternType?: 'stream' | 'request' | 'watch';
+    /** Pattern type (from backend validation) */
+    patternType?: "stream" | "request" | "watch";
 
-		/** Source (auto-discovered vs manual) */
-		connectionSource?: 'auto' | 'manual';
-	};
+    /** Source (auto-discovered vs manual) */
+    connectionSource?: "auto" | "manual";
+  };
 }

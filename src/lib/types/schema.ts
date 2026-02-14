@@ -9,49 +9,58 @@
  * Valid default values for PropertySchema fields based on type
  */
 export type PropertyDefaultValue =
-	| string
-	| number
-	| boolean
-	| string[]
-	| Record<string, unknown>
-	| null
-	| undefined;
+  | string
+  | number
+  | boolean
+  | string[]
+  | Record<string, unknown>
+  | null
+  | undefined;
 
 export interface PropertySchema {
-	/** Field data type */
-	type: 'string' | 'int' | 'bool' | 'float' | 'enum' | 'object' | 'array' | 'ports' | 'cache';
+  /** Field data type */
+  type:
+    | "string"
+    | "int"
+    | "bool"
+    | "float"
+    | "enum"
+    | "object"
+    | "array"
+    | "ports"
+    | "cache";
 
-	/** Human-readable description */
-	description: string;
+  /** Human-readable description */
+  description: string;
 
-	/** Default value for the field */
-	default?: PropertyDefaultValue;
+  /** Default value for the field */
+  default?: PropertyDefaultValue;
 
-	/** Valid enum values (for type: 'enum') */
-	enum?: string[];
+  /** Valid enum values (for type: 'enum') */
+  enum?: string[];
 
-	/** Minimum value (for numeric types) */
-	minimum?: number;
+  /** Minimum value (for numeric types) */
+  minimum?: number;
 
-	/** Maximum value (for numeric types) */
-	maximum?: number;
+  /** Maximum value (for numeric types) */
+  maximum?: number;
 
-	/** Field category: 'basic' (shown first) or 'advanced' (collapsible section) */
-	category?: 'basic' | 'advanced';
+  /** Field category: 'basic' (shown first) or 'advanced' (collapsible section) */
+  category?: "basic" | "advanced";
 
-	/**
-	 * Port field metadata (for type: 'ports' only)
-	 * Describes which PortDefinition fields are editable vs read-only
-	 * Matches backend: pkg/component/discovery.go PropertySchema.PortFields
-	 */
-	portFields?: Record<string, PortFieldInfo>;
+  /**
+   * Port field metadata (for type: 'ports' only)
+   * Describes which PortDefinition fields are editable vs read-only
+   * Matches backend: pkg/component/discovery.go PropertySchema.PortFields
+   */
+  portFields?: Record<string, PortFieldInfo>;
 
-	/**
-	 * Cache field metadata (for type: 'cache' only)
-	 * Describes which cache.Config fields are editable and their constraints
-	 * Matches backend: pkg/component/discovery.go PropertySchema.CacheFields
-	 */
-	cacheFields?: Record<string, CacheFieldInfo>;
+  /**
+   * Cache field metadata (for type: 'cache' only)
+   * Describes which cache.Config fields are editable and their constraints
+   * Matches backend: pkg/component/discovery.go PropertySchema.CacheFields
+   */
+  cacheFields?: Record<string, CacheFieldInfo>;
 }
 
 /**
@@ -60,11 +69,11 @@ export interface PropertySchema {
  * Matches backend: pkg/component/schema_tags.go PortFieldInfo
  */
 export interface PortFieldInfo {
-	/** Field data type ('string', 'int', 'bool', etc.) */
-	type: string;
+  /** Field data type ('string', 'int', 'bool', etc.) */
+  type: string;
 
-	/** Whether users can modify this field in the UI */
-	editable: boolean;
+  /** Whether users can modify this field in the UI */
+  editable: boolean;
 }
 
 /**
@@ -73,17 +82,17 @@ export interface PortFieldInfo {
  * Matches backend: pkg/component/schema_tags.go CacheFieldInfo
  */
 export interface CacheFieldInfo {
-	/** Field data type ('string', 'int', 'bool', 'enum', etc.) */
-	type: string;
+  /** Field data type ('string', 'int', 'bool', 'enum', etc.) */
+  type: string;
 
-	/** Whether users can modify this field in the UI */
-	editable: boolean;
+  /** Whether users can modify this field in the UI */
+  editable: boolean;
 
-	/** Valid enum values (for strategy field) */
-	enum?: string[];
+  /** Valid enum values (for strategy field) */
+  enum?: string[];
 
-	/** Minimum value (for numeric fields like max_size) */
-	min?: number;
+  /** Minimum value (for numeric fields like max_size) */
+  min?: number;
 }
 
 /**
@@ -91,11 +100,11 @@ export interface CacheFieldInfo {
  * Matches backend: pkg/component/discovery.go ConfigSchema
  */
 export interface ConfigSchema {
-	/** Map of field name to PropertySchema */
-	properties: Record<string, PropertySchema>;
+  /** Map of field name to PropertySchema */
+  properties: Record<string, PropertySchema>;
 
-	/** Array of required field names */
-	required: string[];
+  /** Array of required field names */
+  required: string[];
 }
 
 /**
@@ -104,29 +113,29 @@ export interface ConfigSchema {
  * Response structure (lines 413-422)
  */
 export interface SchemaResponse {
-	/** Component type identifier (e.g., 'udp-input', 'websocket', etc.) */
-	id: string;
+  /** Component type identifier (e.g., 'udp-input', 'websocket', etc.) */
+  id: string;
 
-	/** Human-readable display name (e.g., 'UDP Input', 'WebSocket Output') */
-	name: string;
+  /** Human-readable display name (e.g., 'UDP Input', 'WebSocket Output') */
+  name: string;
 
-	/** Component category: 'input', 'processor', 'output', 'storage' */
-	type: string;
+  /** Component category: 'input', 'processor', 'output', 'storage' */
+  type: string;
 
-	/** Communication protocol (e.g., 'nats', 'http', etc.) */
-	protocol: string;
+  /** Communication protocol (e.g., 'nats', 'http', etc.) */
+  protocol: string;
 
-	/** Human-readable component description */
-	description: string;
+  /** Human-readable component description */
+  description: string;
 
-	/** Component version (e.g., '1.0.0') */
-	version: string;
+  /** Component version (e.g., '1.0.0') */
+  version: string;
 
-	/** Category for frontend (same as type, for compatibility) */
-	category: string;
+  /** Category for frontend (same as type, for compatibility) */
+  category: string;
 
-	/** The configuration schema definition */
-	schema: ConfigSchema;
+  /** The configuration schema definition */
+  schema: ConfigSchema;
 }
 
 /**
@@ -134,12 +143,12 @@ export interface SchemaResponse {
  * Matches backend: pkg/component/schema.go ValidationError
  */
 export interface ValidationError {
-	/** Field name that failed validation */
-	field: string;
+  /** Field name that failed validation */
+  field: string;
 
-	/** Human-readable error message */
-	message: string;
+  /** Human-readable error message */
+  message: string;
 
-	/** Error code for programmatic handling */
-	code: 'required' | 'min' | 'max' | 'pattern' | 'enum' | 'type';
+  /** Error code for programmatic handling */
+  code: "required" | "min" | "max" | "pattern" | "enum" | "type";
 }

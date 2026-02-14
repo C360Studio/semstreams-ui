@@ -3,6 +3,7 @@
 ## Overview
 
 The semstreams-ui E2E tests run against a **full Docker stack** including:
+
 - NATS server (message broker)
 - Backend (semstreams or semmem - configurable)
 - UI (SvelteKit in dev mode)
@@ -20,6 +21,7 @@ task test:e2e:semstreams
 ```
 
 This automatically:
+
 - Sets BACKEND_CONTEXT=../semstreams
 - Sets BACKEND_CONFIG=protocol-flow.json
 - Starts Docker stack via docker-compose.e2e.yml
@@ -68,14 +70,15 @@ npm run test:e2e:cleanup
 
 ### Service Details
 
-| Service | Purpose | Health Check | Exposed Port |
-|---------|---------|--------------|--------------|
-| **nats** | Message broker with JetStream | http://localhost:8222/healthz | (internal only) |
-| **backend** | SemStreams/semmem backend | http://localhost:8080/health | (internal only) |
-| **ui** | SvelteKit dev server | N/A | (internal only) |
-| **caddy** | Reverse proxy | http://localhost:3000/health | **3000** (host) |
+| Service     | Purpose                       | Health Check                  | Exposed Port    |
+| ----------- | ----------------------------- | ----------------------------- | --------------- |
+| **nats**    | Message broker with JetStream | http://localhost:8222/healthz | (internal only) |
+| **backend** | SemStreams/semmem backend     | http://localhost:8080/health  | (internal only) |
+| **ui**      | SvelteKit dev server          | N/A                           | (internal only) |
+| **caddy**   | Reverse proxy                 | http://localhost:3000/health  | **3000** (host) |
 
 **Key Point**: Only Caddy is exposed to the host. It routes:
+
 - `/flowbuilder/*` → backend:8080
 - `/*` → ui:5173
 
@@ -86,12 +89,14 @@ npm run test:e2e:cleanup
 The E2E stack is **backend-agnostic**. Configure via environment variables:
 
 **For semstreams backend:**
+
 ```bash
 export BACKEND_CONTEXT=../semstreams
 export BACKEND_CONFIG=protocol-flow.json
 ```
 
 **For semmem backend:**
+
 ```bash
 export BACKEND_CONTEXT=../semstreams  # Still semstreams repo
 export BACKEND_DOCKERFILE=semmem/Dockerfile
@@ -99,6 +104,7 @@ export BACKEND_CONFIG=semmem-flow.json
 ```
 
 **For custom backend:**
+
 ```bash
 export BACKEND_CONTEXT=/path/to/your-backend
 export BACKEND_CONFIG=your-config.json
@@ -133,6 +139,7 @@ webServer: {
 ```
 
 **Important**: Playwright automatically manages the Docker stack:
+
 - **Before tests**: Starts `docker compose up`
 - **During tests**: Keeps stack running
 - **After tests**: Runs `playwright.teardown.ts` to cleanup
@@ -141,8 +148,8 @@ webServer: {
 
 ```typescript
 export default async function globalTeardown() {
-  execSync('docker compose -f docker-compose.e2e.yml down', {
-    stdio: 'inherit',
+  execSync("docker compose -f docker-compose.e2e.yml down", {
+    stdio: "inherit",
   });
 }
 ```
@@ -152,8 +159,8 @@ export default async function globalTeardown() {
 ### ✅ DO: Test Against Real Backend
 
 ```typescript
-test('should create and run flow', async ({ page }) => {
-  await page.goto('/');
+test("should create and run flow", async ({ page }) => {
+  await page.goto("/");
 
   // Real backend API call happens here
   await page.click('[data-testid="create-flow"]');
@@ -165,7 +172,7 @@ test('should create and run flow', async ({ page }) => {
   await page.click('[data-testid="run-flow"]');
 
   // Backend reports status via real endpoint
-  await expect(page.locator('[data-testid="status"]')).toHaveText('Running');
+  await expect(page.locator('[data-testid="status"]')).toHaveText("Running");
 });
 ```
 
@@ -186,8 +193,8 @@ test('should create flow', async ({ page }) => {
 All runtime endpoints are REAL and functional:
 
 ```typescript
-test('should stream logs via SSE', async ({ page }) => {
-  await page.goto('/flows/test-flow-id');
+test("should stream logs via SSE", async ({ page }) => {
+  await page.goto("/flows/test-flow-id");
 
   // Open runtime panel
   await page.click('[data-testid="runtime-panel-toggle"]');
@@ -196,10 +203,14 @@ test('should stream logs via SSE', async ({ page }) => {
   await page.click('[data-testid="tab-logs"]');
 
   // SSE connection to backend:8080/flowbuilder/flows/{id}/runtime/logs
-  await expect(page.locator('[data-testid="logs-status"]')).toHaveText('Connected');
+  await expect(page.locator('[data-testid="logs-status"]')).toHaveText(
+    "Connected",
+  );
 
   // Real logs stream from backend
-  await expect(page.locator('[data-testid="log-entry"]')).toHaveCount(greaterThan(0));
+  await expect(page.locator('[data-testid="log-entry"]')).toHaveCount(
+    greaterThan(0),
+  );
 });
 ```
 
@@ -207,17 +218,17 @@ test('should stream logs via SSE', async ({ page }) => {
 
 ### Required (via Taskfile or manual)
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `BACKEND_CONTEXT` | Path to backend directory | `../semstreams` |
-| `BACKEND_CONFIG` | Config file in backend/configs/ | `protocol-flow.json` |
+| Variable          | Purpose                         | Example              |
+| ----------------- | ------------------------------- | -------------------- |
+| `BACKEND_CONTEXT` | Path to backend directory       | `../semstreams`      |
+| `BACKEND_CONFIG`  | Config file in backend/configs/ | `protocol-flow.json` |
 
 ### Optional
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `BACKEND_DOCKERFILE` | Custom Dockerfile path | `Dockerfile` |
-| `CI` | Running in CI environment | (unset) |
+| Variable             | Purpose                   | Default      |
+| -------------------- | ------------------------- | ------------ |
+| `BACKEND_DOCKERFILE` | Custom Dockerfile path    | `Dockerfile` |
+| `CI`                 | Running in CI environment | (unset)      |
 
 ## Troubleshooting
 
@@ -287,13 +298,13 @@ docker compose -f docker-compose.e2e.yml down -v
 ### Test with Flow Creation
 
 ```typescript
-test('should test runtime panel with real flow', async ({ page }) => {
+test("should test runtime panel with real flow", async ({ page }) => {
   // Navigate to app
-  await page.goto('/');
+  await page.goto("/");
 
   // Create flow (real backend API)
   await page.click('[data-testid="create-flow"]');
-  await page.fill('[data-testid="flow-name"]', 'Test Flow');
+  await page.fill('[data-testid="flow-name"]', "Test Flow");
   await page.click('[data-testid="save-flow"]');
 
   // Add components (real backend API)
@@ -304,7 +315,7 @@ test('should test runtime panel with real flow', async ({ page }) => {
   await page.click('[data-testid="run-flow"]');
 
   // Wait for real backend to report running
-  await expect(page.locator('[data-testid="status"]')).toHaveText('Running');
+  await expect(page.locator('[data-testid="status"]')).toHaveText("Running");
 
   // Open runtime panel (real backend endpoints)
   await page.click('[data-testid="runtime-panel-toggle"]');
@@ -373,6 +384,7 @@ test('should poll metrics', async ({ page }) => {
 - ❌ Don't forget BACKEND_CONTEXT environment variable
 
 For questions, see:
+
 - `docker-compose.e2e.yml` - Docker stack definition
 - `playwright.config.ts` - Playwright configuration
 - `Taskfile.yml` - Task automation

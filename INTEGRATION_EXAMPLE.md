@@ -43,12 +43,14 @@ func main() {
 Your application must expose these endpoints for the UI to work:
 
 #### 1. Health Check
+
 ```
 GET /health
 → {"healthy": true, "status": "healthy"}
 ```
 
 #### 2. Component Types (Discovery)
+
 ```
 GET /components/types
 → [
@@ -66,6 +68,7 @@ GET /components/types
 ```
 
 #### 3. Flow Management
+
 ```
 GET    /flowbuilder/flows           # List flows
 POST   /flowbuilder/flows           # Create flow
@@ -75,6 +78,7 @@ DELETE /flowbuilder/flows/:id       # Delete flow
 ```
 
 #### 4. OpenAPI Spec (for type generation)
+
 ```
 GET /openapi.yaml
 → OpenAPI 3.0 spec with all endpoints and schemas
@@ -138,7 +142,7 @@ npm run dev
 
 ```yaml
 # myapp/docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   # NATS message broker
@@ -166,14 +170,14 @@ services:
 
   # SemStreams UI
   ui:
-    image: semstreams/ui:latest  # Or build from local
+    image: semstreams/ui:latest # Or build from local
     environment:
       - BACKEND_HOST=myapp:8080
     depends_on:
       myapp:
         condition: service_healthy
     volumes:
-      - ./ui/src:/app/src  # For development hot-reload
+      - ./ui/src:/app/src # For development hot-reload
 
   # Reverse proxy
   caddy:
@@ -291,14 +295,16 @@ Now your UI code has full TypeScript autocomplete for your custom components:
 
 ```typescript
 // UI code automatically knows about your custom processor!
-import type { ComponentType } from '$lib/types/api.generated';
+import type { ComponentType } from "$lib/types/api.generated";
 
-const components: ComponentType[] = await fetch('/components/types').then(r => r.json());
+const components: ComponentType[] = await fetch("/components/types").then((r) =>
+  r.json(),
+);
 
 // TypeScript knows the exact shape of your config
-const myProcessor = components.find(c => c.id === 'my-custom-processor');
+const myProcessor = components.find((c) => c.id === "my-custom-processor");
 if (myProcessor.schema) {
-    // Full autocomplete for InputPattern, OutputPattern, BufferSize
+  // Full autocomplete for InputPattern, OutputPattern, BufferSize
 }
 ```
 
@@ -381,8 +387,8 @@ Override CSS custom properties:
 ```css
 /* src/styles/custom-theme.css */
 :root {
-    --ui-interactive-primary: #your-brand-color;
-    --domain-custom: #your-domain-color;
+  --ui-interactive-primary: #your-brand-color;
+  --domain-custom: #your-domain-color;
 }
 ```
 

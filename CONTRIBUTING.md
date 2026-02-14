@@ -26,6 +26,7 @@ git checkout -b fix/bug-description
 Keep changes focused and related to a single issue or feature.
 
 **Key Principles:**
+
 - **Backend-agnostic**: The UI should work with ANY SemStreams-based backend
 - **Runtime discovery**: Discover capabilities from the backend at runtime, not compile-time
 - **No hardcoded backends**: Never hardcode references to specific backends (semstreams, semmem, etc.)
@@ -71,6 +72,7 @@ Use conventional commit format:
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -80,6 +82,7 @@ Use conventional commit format:
 - `chore`: Maintenance tasks
 
 **Examples:**
+
 ```
 feat(palette): add drag-and-drop for component palette
 
@@ -146,6 +149,7 @@ Follow Svelte 5 best practices:
 - Mobile-first responsive design
 
 **Example:**
+
 ```css
 .error-message {
   color: var(--status-error);
@@ -161,20 +165,20 @@ Follow Svelte 5 best practices:
 Test component behavior, not implementation:
 
 ```typescript
-import { render, screen } from '@testing-library/svelte';
-import { expect, test } from 'vitest';
-import ComponentCard from './ComponentCard.svelte';
+import { render, screen } from "@testing-library/svelte";
+import { expect, test } from "vitest";
+import ComponentCard from "./ComponentCard.svelte";
 
-test('displays component name and description', () => {
+test("displays component name and description", () => {
   const component = {
-    name: 'UDP Source',
-    description: 'Receives UDP packets'
+    name: "UDP Source",
+    description: "Receives UDP packets",
   };
 
   render(ComponentCard, { props: { component } });
 
-  expect(screen.getByText('UDP Source')).toBeInTheDocument();
-  expect(screen.getByText('Receives UDP packets')).toBeInTheDocument();
+  expect(screen.getByText("UDP Source")).toBeInTheDocument();
+  expect(screen.getByText("Receives UDP packets")).toBeInTheDocument();
 });
 ```
 
@@ -183,22 +187,22 @@ test('displays component name and description', () => {
 Test real user workflows:
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('create and save flow', async ({ page }) => {
-  await page.goto('/');
+test("create and save flow", async ({ page }) => {
+  await page.goto("/");
 
   // Drag component from palette
   await page.dragAndDrop(
     '[data-testid="component-udp"]',
-    '[data-testid="canvas"]'
+    '[data-testid="canvas"]',
   );
 
   // Save flow
   await page.click('[data-testid="save-flow"]');
 
   // Verify saved
-  await expect(page.getByText('Flow saved successfully')).toBeVisible();
+  await expect(page.getByText("Flow saved successfully")).toBeVisible();
 });
 ```
 
@@ -215,7 +219,7 @@ let { onclick } = $props();
 
 // ❌ Bad: States the obvious
 // Set the color variable
-const color = 'red';
+const color = "red";
 ```
 
 ### Markdown Documentation
@@ -239,6 +243,7 @@ BACKEND_CONTEXT=/path/to/backend task test:e2e
 ```
 
 Ensure your changes work with:
+
 - Different component types
 - Various schema structures
 - Different protocol domains
@@ -246,6 +251,7 @@ Ensure your changes work with:
 ## Accessibility
 
 All UI components must:
+
 - Support keyboard navigation
 - Have proper ARIA labels
 - Maintain 4.5:1 contrast ratio
@@ -253,6 +259,7 @@ All UI components must:
 - Not rely solely on color for information
 
 Test with:
+
 ```bash
 # Run accessibility checks
 npm run test -- --grep accessibility
@@ -267,6 +274,7 @@ npm run test -- --grep accessibility
 ## Review Process
 
 Pull requests are reviewed for:
+
 1. **Functionality**: Does it work as intended?
 2. **Tests**: Are there adequate tests?
 3. **Backend-agnostic**: Does it avoid hardcoding specific backends?

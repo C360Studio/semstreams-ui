@@ -5,6 +5,7 @@
 ## Overview
 
 SemStreams UI is a standalone visual flow builder that works with **any** application built on the SemStreams framework, including:
+
 - **semstreams** - Core stream processing framework
 - **semmem** - Semantic memory management
 - **semops** - Operations and monitoring
@@ -53,12 +54,14 @@ task dev:full
 ```
 
 This starts:
+
 - **Caddy** at `localhost:3001` (reverse proxy - unified access point)
 - **NATS** (internal Docker network - message broker)
 - **Backend** (internal Docker network - API server)
 - **Vite** at `localhost:5173` (dev server with HMR)
 
 **Manage backend separately:**
+
 ```bash
 task dev:backend:start   # Start NATS + backend in background
 task dev                 # Start frontend (in another terminal)
@@ -67,6 +70,7 @@ task dev:backend:stop    # Stop backend when done
 ```
 
 **Custom ports (avoid collisions):**
+
 ```bash
 DEV_UI_PORT=3002 DEV_VITE_PORT=5174 task dev:full
 ```
@@ -109,6 +113,7 @@ task dev:with-caddy
 The UI connects to backends via environment variables:
 
 **`.env` file:**
+
 ```bash
 # Backend URL (for native dev)
 BACKEND_URL=http://localhost:8080
@@ -122,6 +127,7 @@ OPENAPI_SPEC_PATH=/path/to/your-backend/specs/openapi.v3.yaml
 ```
 
 **Example paths:**
+
 ```bash
 # Local backend
 OPENAPI_SPEC_PATH=/home/user/myapp/specs/openapi.v3.yaml
@@ -289,6 +295,7 @@ docker push your-registry/semstreams-ui:latest
 ```
 
 The production image:
+
 - Builds the static SPA using `adapter-static`
 - Serves files via Caddy web server (~15MB total)
 - Proxies API requests to backend via `BACKEND_URL` environment variable
@@ -301,6 +308,7 @@ The UI container accepts:
 - `BACKEND_URL` - Backend service URL (default: `http://backend:8080`)
 
 Example from backend project's docker-compose:
+
 ```yaml
 services:
   ui:
@@ -351,23 +359,27 @@ semstreams-ui/
 ## Task Commands
 
 ### Development
+
 - `task dev` - Start dev server (expects backend at localhost:8080)
 - `task dev:docker` - Start UI in Docker
 - `task dev:with-caddy` - Start UI + Caddy in Docker
 
 ### Type Generation
+
 - `task generate-types` - Generate from configured spec
 - `task generate-types:semstreams` - Generate from semstreams
 - `task generate-types:semmem` - Generate from semmem
 - `task generate-types:from-url` - Generate from running backend
 
 ### Testing
+
 - `task test` - Run unit tests
 - `task test:e2e` - Run E2E tests
 - `task test:e2e:semstreams` - E2E against semstreams backend
 - `task test:e2e:semmem` - E2E against semmem backend
 
 ### Cleanup
+
 - `task clean` - Clean Docker volumes and containers
 
 ## Troubleshooting
@@ -416,6 +428,7 @@ docker compose -f docker-compose.e2e.yml down -v
 ## CI/CD
 
 The UI includes CI workflows for:
+
 - Type checking and linting
 - Unit tests (Vitest)
 - E2E tests (Playwright with Docker)

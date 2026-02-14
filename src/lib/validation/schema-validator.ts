@@ -1,7 +1,7 @@
 // Client-side validation matching backend schema validation
 // Must match: pkg/component/schema.go ValidateConfig
 
-import type { PropertySchema, ValidationError } from '$lib/types/schema';
+import type { PropertySchema, ValidationError } from "$lib/types/schema";
 
 /**
  * Validates a single field value against its schema definition.
@@ -14,78 +14,79 @@ import type { PropertySchema, ValidationError } from '$lib/types/schema';
  * @returns ValidationError if invalid, null if valid
  */
 export function validateField(
-	fieldName: string,
-	value: unknown,
-	schema: PropertySchema,
-	isRequired: boolean
+  fieldName: string,
+  value: unknown,
+  schema: PropertySchema,
+  isRequired: boolean,
 ): ValidationError | null {
-	// T077: Required validation
-	if (isRequired && (value === undefined || value === null || value === '')) {
-		return {
-			field: fieldName,
-			message: 'This field is required',
-			code: 'required'
-		};
-	}
+  // T077: Required validation
+  if (isRequired && (value === undefined || value === null || value === "")) {
+    return {
+      field: fieldName,
+      message: "This field is required",
+      code: "required",
+    };
+  }
 
-	// Skip further validation if value is empty and not required
-	if (value === undefined || value === null || value === '') {
-		return null;
-	}
+  // Skip further validation if value is empty and not required
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
 
-	// T078: Min/max validation for numeric types
-	if (schema.type === 'int' || schema.type === 'float') {
-		const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
+  // T078: Min/max validation for numeric types
+  if (schema.type === "int" || schema.type === "float") {
+    const numValue =
+      typeof value === "string" ? parseFloat(value) : Number(value);
 
-		if (isNaN(numValue)) {
-			return {
-				field: fieldName,
-				message: 'Must be a valid number',
-				code: 'type'
-			};
-		}
+    if (isNaN(numValue)) {
+      return {
+        field: fieldName,
+        message: "Must be a valid number",
+        code: "type",
+      };
+    }
 
-		if (schema.minimum !== undefined && numValue < schema.minimum) {
-			return {
-				field: fieldName,
-				message: `Must be >= ${schema.minimum}`,
-				code: 'min'
-			};
-		}
+    if (schema.minimum !== undefined && numValue < schema.minimum) {
+      return {
+        field: fieldName,
+        message: `Must be >= ${schema.minimum}`,
+        code: "min",
+      };
+    }
 
-		if (schema.maximum !== undefined && numValue > schema.maximum) {
-			return {
-				field: fieldName,
-				message: `Must be <= ${schema.maximum}`,
-				code: 'max'
-			};
-		}
-	}
+    if (schema.maximum !== undefined && numValue > schema.maximum) {
+      return {
+        field: fieldName,
+        message: `Must be <= ${schema.maximum}`,
+        code: "max",
+      };
+    }
+  }
 
-	// T079: Enum validation
-	if (schema.type === 'enum' && schema.enum) {
-		const strValue = String(value);
-		if (!schema.enum.includes(strValue)) {
-			return {
-				field: fieldName,
-				message: `Must be one of: ${schema.enum.join(', ')}`,
-				code: 'enum'
-			};
-		}
-	}
+  // T079: Enum validation
+  if (schema.type === "enum" && schema.enum) {
+    const strValue = String(value);
+    if (!schema.enum.includes(strValue)) {
+      return {
+        field: fieldName,
+        message: `Must be one of: ${schema.enum.join(", ")}`,
+        code: "enum",
+      };
+    }
+  }
 
-	// Type validation for boolean
-	if (schema.type === 'bool') {
-		if (typeof value !== 'boolean' && value !== 'true' && value !== 'false') {
-			return {
-				field: fieldName,
-				message: 'Must be true or false',
-				code: 'type'
-			};
-		}
-	}
+  // Type validation for boolean
+  if (schema.type === "bool") {
+    if (typeof value !== "boolean" && value !== "true" && value !== "false") {
+      return {
+        field: fieldName,
+        message: "Must be true or false",
+        code: "type",
+      };
+    }
+  }
 
-	return null;
+  return null;
 }
 
 /**
@@ -97,21 +98,21 @@ export function validateField(
  * @returns Array of ValidationErrors (empty if valid)
  */
 export function validateConfig(
-	config: Record<string, unknown>,
-	schema: { properties: Record<string, PropertySchema>; required: string[] }
+  config: Record<string, unknown>,
+  schema: { properties: Record<string, PropertySchema>; required: string[] },
 ): ValidationError[] {
-	const errors: ValidationError[] = [];
+  const errors: ValidationError[] = [];
 
-	// Validate all properties
-	for (const [fieldName, propSchema] of Object.entries(schema.properties)) {
-		const isRequired = schema.required.includes(fieldName);
-		const value = config[fieldName];
-		const error = validateField(fieldName, value, propSchema, isRequired);
+  // Validate all properties
+  for (const [fieldName, propSchema] of Object.entries(schema.properties)) {
+    const isRequired = schema.required.includes(fieldName);
+    const value = config[fieldName];
+    const error = validateField(fieldName, value, propSchema, isRequired);
 
-		if (error) {
-			errors.push(error);
-		}
-	}
+    if (error) {
+      errors.push(error);
+    }
+  }
 
-	return errors;
+  return errors;
 }

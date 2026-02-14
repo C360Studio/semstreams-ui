@@ -1,7 +1,7 @@
 // UI State Types for Visual Flow Builder
 // Feature: spec 005-we-just-completed
 
-import type { ValidationResult } from './port';
+import type { ValidationResult } from "./port";
 
 /**
  * Save status for flow persistence
@@ -11,23 +11,23 @@ import type { ValidationResult } from './port';
  * - saving: Save operation in progress
  * - error: Save operation failed
  */
-export type SaveStatus = 'clean' | 'dirty' | 'draft' | 'saving' | 'error';
+export type SaveStatus = "clean" | "dirty" | "draft" | "saving" | "error";
 
 /**
  * Save state tracking
  */
 export interface SaveState {
-	/** Current save status */
-	status: SaveStatus;
+  /** Current save status */
+  status: SaveStatus;
 
-	/** Timestamp of last successful save to server */
-	lastSaved: Date | null;
+  /** Timestamp of last successful save to server */
+  lastSaved: Date | null;
 
-	/** Error message if save failed */
-	error: string | null;
+  /** Error message if save failed */
+  error: string | null;
 
-	/** Validation result from last save (if any) */
-	validationResult?: ValidationResult | null;
+  /** Validation result from last save (if any) */
+  validationResult?: ValidationResult | null;
 }
 
 /**
@@ -38,20 +38,24 @@ export interface SaveState {
  * - running: Flow actively processing data
  * - error: Runtime failure (component crash, validation error)
  */
-export type RuntimeState = 'not_deployed' | 'deployed_stopped' | 'running' | 'error';
+export type RuntimeState =
+  | "not_deployed"
+  | "deployed_stopped"
+  | "running"
+  | "error";
 
 /**
  * Runtime state information
  */
 export interface RuntimeStateInfo {
-	/** Current runtime state */
-	state: RuntimeState;
+  /** Current runtime state */
+  state: RuntimeState;
 
-	/** Error message if state === 'error' */
-	message: string | null;
+  /** Error message if state === 'error' */
+  message: string | null;
 
-	/** When state last changed */
-	lastTransition: Date | null;
+  /** When state last changed */
+  lastTransition: Date | null;
 }
 
 /**
@@ -59,17 +63,17 @@ export interface RuntimeStateInfo {
  * Used by NavigationGuard component to manage user choices
  */
 export interface NavigationGuardState {
-	/** Has unsaved changes */
-	isDirty: boolean;
+  /** Has unsaved changes */
+  isDirty: boolean;
 
-	/** Currently blocking navigation (dialog shown) */
-	isBlocking: boolean;
+  /** Currently blocking navigation (dialog shown) */
+  isBlocking: boolean;
 
-	/** Destination URL if navigation was blocked */
-	pendingNavigation: string | null;
+  /** Destination URL if navigation was blocked */
+  pendingNavigation: string | null;
 
-	/** User's choice from the dialog */
-	userChoice: 'save' | 'discard' | 'cancel' | null;
+  /** User's choice from the dialog */
+  userChoice: "save" | "discard" | "cancel" | null;
 }
 
 /**
@@ -86,7 +90,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {};
 /**
  * Explorer panel tab types
  */
-export type ExplorerTab = 'components' | 'palette';
+export type ExplorerTab = "components" | "palette";
 
 /**
  * Properties panel display mode
@@ -94,71 +98,71 @@ export type ExplorerTab = 'components' | 'palette';
  * - type-preview: Hovering/selecting in Palette, show component type info
  * - edit: Editing a flow node's configuration
  */
-export type PropertiesPanelMode = 'empty' | 'type-preview' | 'edit';
+export type PropertiesPanelMode = "empty" | "type-preview" | "edit";
 
 /**
  * View mode for the flow page
  * - flow: Flow editor canvas (default)
  * - data: Knowledge graph visualization (only when flow is running)
  */
-export type ViewMode = 'flow' | 'data';
+export type ViewMode = "flow" | "data";
 
 /**
  * Panel layout state for three-panel VS Code-style layout
  * Manages panel visibility, widths, and responsive behavior
  */
 export interface PanelLayoutState {
-	/** Left panel (Explorer) visibility */
-	leftPanelOpen: boolean;
+  /** Left panel (Explorer) visibility */
+  leftPanelOpen: boolean;
 
-	/** Right panel (Properties) visibility */
-	rightPanelOpen: boolean;
+  /** Right panel (Properties) visibility */
+  rightPanelOpen: boolean;
 
-	/** Left panel width in pixels */
-	leftPanelWidth: number;
+  /** Left panel width in pixels */
+  leftPanelWidth: number;
 
-	/** Right panel width in pixels */
-	rightPanelWidth: number;
+  /** Right panel width in pixels */
+  rightPanelWidth: number;
 
-	/** Whether left panel was auto-collapsed due to viewport size (vs user action) */
-	autoCollapsedLeft: boolean;
+  /** Whether left panel was auto-collapsed due to viewport size (vs user action) */
+  autoCollapsedLeft: boolean;
 
-	/** Whether right panel was auto-collapsed due to viewport size (vs user action) */
-	autoCollapsedRight: boolean;
+  /** Whether right panel was auto-collapsed due to viewport size (vs user action) */
+  autoCollapsedRight: boolean;
 
-	/** Currently active Explorer tab */
-	explorerTab: ExplorerTab;
+  /** Currently active Explorer tab */
+  explorerTab: ExplorerTab;
 
-	/** Monitor mode - full-screen runtime panel view */
-	monitorMode: boolean;
+  /** Monitor mode - full-screen runtime panel view */
+  monitorMode: boolean;
 
-	/** Current view mode (flow editor or data visualization) */
-	viewMode: ViewMode;
+  /** Current view mode (flow editor or data visualization) */
+  viewMode: ViewMode;
 }
 
 /**
  * Default panel layout state
  */
 export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {
-	leftPanelOpen: true,
-	rightPanelOpen: true,
-	leftPanelWidth: 280,
-	rightPanelWidth: 320,
-	autoCollapsedLeft: false,
-	autoCollapsedRight: false,
-	explorerTab: 'components',
-	monitorMode: false,
-	viewMode: 'flow'
+  leftPanelOpen: true,
+  rightPanelOpen: true,
+  leftPanelWidth: 280,
+  rightPanelWidth: 320,
+  autoCollapsedLeft: false,
+  autoCollapsedRight: false,
+  explorerTab: "components",
+  monitorMode: false,
+  viewMode: "flow",
 };
 
 /**
  * Panel layout responsive breakpoints
  */
 export const PANEL_BREAKPOINTS = {
-	/** Full three-panel layout */
-	FULL: 1200,
-	/** Right panel auto-collapses */
-	MEDIUM: 900,
-	/** Both panels auto-collapse */
-	SMALL: 600
+  /** Full three-panel layout */
+  FULL: 1200,
+  /** Right panel auto-collapses */
+  MEDIUM: 900,
+  /** Both panels auto-collapse */
+  SMALL: 600,
 } as const;

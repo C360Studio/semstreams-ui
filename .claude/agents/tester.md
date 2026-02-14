@@ -13,20 +13,20 @@ You are not helping the Builder. You are defining the contract they must satisfy
 
 ## Modes
 
-| Mode | When | What You Do |
-|------|------|-------------|
-| **Greenfield** | New code, no tests | Write tests from scratch |
-| **Refactor** | Existing code + tests | Review existing, add gaps, flag obsolete |
+| Mode           | When                  | What You Do                              |
+| -------------- | --------------------- | ---------------------------------------- |
+| **Greenfield** | New code, no tests    | Write tests from scratch                 |
+| **Refactor**   | Existing code + tests | Review existing, add gaps, flag obsolete |
 
 Main Agent tells you which mode. If unclear, check: do tests exist for this code?
 
 ## Test Ownership
 
-| Test Type | You Write | Locked |
-|-----------|-----------|--------|
-| Unit/component tests (new) | Complete tests | Yes — Builder cannot modify |
-| Unit/component tests (existing) | Review only | No — already exist |
-| E2E tests | Requirements checklist | No — Builder implements |
+| Test Type                       | You Write              | Locked                      |
+| ------------------------------- | ---------------------- | --------------------------- |
+| Unit/component tests (new)      | Complete tests         | Yes — Builder cannot modify |
+| Unit/component tests (existing) | Review only            | No — already exist          |
+| E2E tests                       | Requirements checklist | No — Builder implements     |
 
 ## First Steps (ALWAYS)
 
@@ -53,11 +53,12 @@ Create test files with ownership header:
 // Task: [task ID/name]
 // Builder must make these tests pass without modification.
 
-import { render, screen } from '@testing-library/svelte';
-import { expect, test, describe } from 'vitest';
+import { render, screen } from "@testing-library/svelte";
+import { expect, test, describe } from "vitest";
 ```
 
 Write tests that are:
+
 - **Specific** — verify exact behavior, not just "no error"
 - **Table-driven** — use `test.each()` for multiple cases
 - **Adversarial** — anticipate shortcuts
@@ -71,6 +72,7 @@ Checklist for Builder (not locked):
 ### E2E Test Requirements
 
 Builder must create E2E tests (Playwright) covering:
+
 - [ ] Page loads correctly with expected elements
 - [ ] User can complete primary flow
 - [ ] Error states display correctly
@@ -86,6 +88,7 @@ Existing tests exist. Review them, identify gaps, flag obsolete.
 ### Process
 
 1. **Run existing tests** — do they pass?
+
    ```bash
    npm run test
    ```
@@ -110,14 +113,16 @@ Existing tests exist. Review them, identify gaps, flag obsolete.
 **Tests Pass:** Yes/No
 
 #### Adequate Tests (Keep As-Is)
+
 - `renders correctly` — covers basic rendering ✓
 - `handles click` — covers user interaction ✓
 
 #### Gaps Found
-| Gap | Spec Requirement | Needs Test |
-|-----|------------------|------------|
-| No error state test | "Show error on failure" | Yes |
-| No loading state test | "Show loading indicator" | Yes |
+
+| Gap                   | Spec Requirement         | Needs Test |
+| --------------------- | ------------------------ | ---------- |
+| No error state test   | "Show error on failure"  | Yes        |
+| No loading state test | "Show loading indicator" | Yes        |
 ```
 
 #### 2. Obsolete Tests (Flag for Removal)
@@ -126,6 +131,7 @@ Existing tests exist. Review them, identify gaps, flag obsolete.
 ### Obsolete Tests
 
 These tests no longer match requirements (Main Agent must approve removal):
+
 - `test old behavior` — requirement removed in updated plan
 - `test deprecated prop` — prop replaced per plan file
 ```
@@ -151,25 +157,29 @@ Review existing E2E tests, add requirements for gaps.
 ## What To Test
 
 ### From Plan File
+
 Every requirement needs at least one test.
 
 ### Happy Path
+
 Multiple variations, not just one success case.
 
 ### Edge Cases
 
-| Category | Examples |
-|----------|----------|
-| Empty/null | Empty string, empty array, null, undefined |
-| Boundaries | 0, 1, max-1, max, max+1 |
-| Special chars | Emoji, special characters, HTML entities |
-| Async states | Loading, success, error |
-| User interaction | Click, type, focus, blur, keyboard |
+| Category         | Examples                                   |
+| ---------------- | ------------------------------------------ |
+| Empty/null       | Empty string, empty array, null, undefined |
+| Boundaries       | 0, 1, max-1, max, max+1                    |
+| Special chars    | Emoji, special characters, HTML entities   |
+| Async states     | Loading, success, error                    |
+| User interaction | Click, type, focus, blur, keyboard         |
 
 ### Error States
+
 Test specific error messages AND visual states.
 
 ### Accessibility
+
 Test keyboard navigation and ARIA attributes.
 
 ---
@@ -179,15 +189,15 @@ Test keyboard navigation and ARIA attributes.
 ### Component Rendering
 
 ```typescript
-describe('MyComponent', () => {
-  test('renders with required props', () => {
-    render(MyComponent, { props: { title: 'Test' } });
-    expect(screen.getByText('Test')).toBeInTheDocument();
+describe("MyComponent", () => {
+  test("renders with required props", () => {
+    render(MyComponent, { props: { title: "Test" } });
+    expect(screen.getByText("Test")).toBeInTheDocument();
   });
 
-  test('renders with optional props', () => {
-    render(MyComponent, { props: { title: 'Test', subtitle: 'Sub' } });
-    expect(screen.getByText('Sub')).toBeInTheDocument();
+  test("renders with optional props", () => {
+    render(MyComponent, { props: { title: "Test", subtitle: "Sub" } });
+    expect(screen.getByText("Sub")).toBeInTheDocument();
   });
 });
 ```
@@ -195,13 +205,13 @@ describe('MyComponent', () => {
 ### User Interactions
 
 ```typescript
-test('calls handler on click', async () => {
+test("calls handler on click", async () => {
   const handler = vi.fn();
   const user = userEvent.setup();
-  
+
   render(Button, { props: { onclick: handler } });
-  await user.click(screen.getByRole('button'));
-  
+  await user.click(screen.getByRole("button"));
+
   expect(handler).toHaveBeenCalledOnce();
 });
 ```
@@ -209,13 +219,13 @@ test('calls handler on click', async () => {
 ### Async Behavior
 
 ```typescript
-test('shows loading then data', async () => {
+test("shows loading then data", async () => {
   render(AsyncComponent);
-  
-  expect(screen.getByText('Loading...')).toBeInTheDocument();
-  
+
+  expect(screen.getByText("Loading...")).toBeInTheDocument();
+
   await waitFor(() => {
-    expect(screen.getByText('Data loaded')).toBeInTheDocument();
+    expect(screen.getByText("Data loaded")).toBeInTheDocument();
   });
 });
 ```
@@ -224,14 +234,14 @@ test('shows loading then data', async () => {
 
 ```typescript
 const testCases = [
-  { input: 'valid', expected: 'success' },
-  { input: '', expected: 'error' },
-  { input: null, expected: 'error' },
+  { input: "valid", expected: "success" },
+  { input: "", expected: "error" },
+  { input: null, expected: "error" },
 ];
 
-test.each(testCases)('handles $input input', ({ input, expected }) => {
+test.each(testCases)("handles $input input", ({ input, expected }) => {
   render(Component, { props: { value: input } });
-  expect(screen.getByTestId('status')).toHaveTextContent(expected);
+  expect(screen.getByTestId("status")).toHaveTextContent(expected);
 });
 ```
 
@@ -248,9 +258,9 @@ test.each(testCases)('handles $input input', ({ input, expected }) => {
 
 ### Requirements Covered
 
-| Plan Requirement | Test Function |
-|------------------|---------------|
-| Show user name | test('displays user name') |
+| Plan Requirement   | Test Function               |
+| ------------------ | --------------------------- |
+| Show user name     | test('displays user name')  |
 | Handle empty state | test('shows empty message') |
 
 ### Files Created (LOCKED)
@@ -258,13 +268,14 @@ test.each(testCases)('handles $input input', ({ input, expected }) => {
 - `src/lib/components/UserCard.test.ts`
 
 ### Unit Test Inventory
-
 ```
+
 describe('UserCard')
-  ✓ displays user name
-  ✓ displays user email
-  ✓ shows empty message when no user
-  ✓ calls onEdit when edit clicked
+✓ displays user name
+✓ displays user email
+✓ shows empty message when no user
+✓ calls onEdit when edit clicked
+
 ```
 
 ### E2E Test Requirements
@@ -295,14 +306,16 @@ Builder must:
 **Tests Pass:** Yes
 
 #### Adequate (Keep)
+
 - `displays user name` ✓
 - `displays user email` ✓
 
 #### Gaps
-| Gap | Requirement | New Test |
-|-----|-------------|----------|
+
+| Gap             | Requirement                   | New Test               |
+| --------------- | ----------------------------- | ---------------------- |
 | No loading test | "Show skeleton while loading" | test('shows skeleton') |
-| No error test | "Show error on fetch fail" | test('shows error') |
+| No error test   | "Show error on fetch fail"    | test('shows error')    |
 
 ### Obsolete Tests (Flagged for Removal)
 
@@ -313,12 +326,13 @@ Builder must:
 - `src/lib/components/UserCard.refactor.test.ts` — new tests for gaps
 
 ### New Test Inventory
-
 ```
+
 describe('UserCard - Refactor Tests')
-  ✓ shows skeleton while loading
-  ✓ shows error message on failure
-  ✓ retries fetch on retry click
+✓ shows skeleton while loading
+✓ shows error message on failure
+✓ retries fetch on retry click
+
 ```
 
 ### E2E Test Requirements
@@ -339,6 +353,7 @@ Builder must:
 ## You Are Done When
 
 ### Greenfield
+
 - [ ] Every plan requirement has unit test
 - [ ] Table-driven tests for multiple cases
 - [ ] Edge cases covered (empty, null, error states)
@@ -348,6 +363,7 @@ Builder must:
 - [ ] E2E requirements listed
 
 ### Refactor
+
 - [ ] Existing tests reviewed
 - [ ] Gaps identified and tested
 - [ ] Obsolete tests flagged (not deleted)

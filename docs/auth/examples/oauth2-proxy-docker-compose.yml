@@ -14,7 +14,7 @@
 # Usage:
 #   docker compose -f oauth2-proxy-docker-compose.yml up
 
-version: '3.8'
+version: "3.8"
 
 services:
   # NATS message broker
@@ -28,7 +28,7 @@ services:
 
   # Your SemStreams backend
   backend:
-    image: your-backend:latest  # Replace with your backend image
+    image: your-backend:latest # Replace with your backend image
     depends_on:
       - nats
     environment:
@@ -64,7 +64,7 @@ services:
     command:
       # Provider configuration
       - --provider=google
-      - --email-domain=example.com  # CHANGE: Your organization's domain
+      - --email-domain=example.com # CHANGE: Your organization's domain
 
       # Upstream (what OAuth2-Proxy protects)
       - --upstream=http://caddy:3000
@@ -73,19 +73,19 @@ services:
       # OAuth credentials (from Google Cloud Console)
       - --client-id=${GOOGLE_CLIENT_ID}
       - --client-secret=${GOOGLE_CLIENT_SECRET}
-      - --cookie-secret=${OAUTH2_PROXY_COOKIE_SECRET}  # Generate: openssl rand -base64 32
+      - --cookie-secret=${OAUTH2_PROXY_COOKIE_SECRET} # Generate: openssl rand -base64 32
 
       # Redirect configuration
       - --redirect-url=http://localhost:4180/oauth2/callback
 
       # Cookie settings
-      - --cookie-secure=false  # Set to true with HTTPS
+      - --cookie-secure=false # Set to true with HTTPS
       - --cookie-httponly=true
       - --cookie-name=_oauth2_proxy
 
       # Session settings
       - --session-store-type=cookie
-      - --cookie-expire=168h  # 7 days
+      - --cookie-expire=168h # 7 days
 
       # Pass user info to upstream
       - --set-xauthrequest=true

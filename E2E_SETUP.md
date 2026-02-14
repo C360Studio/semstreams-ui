@@ -7,6 +7,7 @@ SemStreams UI uses Playwright for end-to-end testing with a full Docker stack (N
 ## Important: Port Management
 
 **The E2E tests use these ports:**
+
 - **3000**: Caddy (UI access point)
 - **4222**: NATS (message broker)
 - **5173**: Vite (UI dev server, inside Docker)
@@ -35,6 +36,7 @@ task clean
 ### Automated Stack Management
 
 Playwright automatically:
+
 1. **Starts** `docker-compose.e2e.yml` when tests begin
 2. **Waits** for health checks (backend, NATS, Caddy)
 3. **Runs** tests against http://localhost:3000
@@ -46,10 +48,10 @@ Playwright automatically:
 
 ```yaml
 services:
-  nats:          # Message broker (port 4222)
-  backend:       # SemStreams backend (configurable)
-  ui:            # SvelteKit dev server (port 5173)
-  caddy:         # Reverse proxy (port 3000)
+  nats: # Message broker (port 4222)
+  backend: # SemStreams backend (configurable)
+  ui: # SvelteKit dev server (port 5173)
+  caddy: # Reverse proxy (port 3000)
 ```
 
 ### Backend Selection
@@ -238,7 +240,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install dependencies
         run: npm ci
@@ -349,7 +351,7 @@ task test:e2e:semmem
 services:
   backend:
     build:
-      context: ${BACKEND_CONTEXT}  # Path to your backend repo
+      context: ${BACKEND_CONTEXT} # Path to your backend repo
       dockerfile: ${BACKEND_DOCKERFILE:-Dockerfile}
     environment:
       - STREAMKIT_CONFIG=/app/configs/${BACKEND_CONFIG:-protocol-flow.json}

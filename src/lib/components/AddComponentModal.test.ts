@@ -226,11 +226,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Click UDP Input component card
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -251,15 +255,21 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Click component card
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
-      const nameInput = container.querySelector('input[name="name"]') as HTMLInputElement;
+      const nameInput = container.querySelector(
+        'input[name="name"]',
+      ) as HTMLInputElement;
 
       // Should auto-populate name
       expect(nameInput.value).toMatch(/^udp-input-\d+$/);
@@ -277,11 +287,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select UDP Input
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -307,11 +321,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select UDP Input
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -339,11 +357,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select UDP Input
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -365,14 +387,18 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Initially no back button
       expect(container.querySelector(".back-button")).not.toBeInTheDocument();
 
       // Select component
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -393,11 +419,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -405,13 +435,17 @@ describe("AddComponentModal", () => {
       expect(container.querySelector('input[name="name"]')).toBeInTheDocument();
 
       // Click back button
-      const backButton = container.querySelector(".back-button") as HTMLButtonElement;
+      const backButton = container.querySelector(
+        ".back-button",
+      ) as HTMLButtonElement;
       await fireEvent.click(backButton);
       await tick();
 
       // Should return to palette
       expect(container.querySelector(".palette-container")).toBeInTheDocument();
-      expect(container.querySelector('input[name="name"]')).not.toBeInTheDocument();
+      expect(
+        container.querySelector('input[name="name"]'),
+      ).not.toBeInTheDocument();
     });
 
     it("should reset name when selecting same component type again", async () => {
@@ -426,19 +460,27 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component first time
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
 
       // Wait for config form to appear
       await waitFor(() => {
-        expect(container.querySelector('input[name="name"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('input[name="name"]'),
+        ).toBeInTheDocument();
       });
 
-      const nameInput = container.querySelector('input[name="name"]') as HTMLInputElement;
+      const nameInput = container.querySelector(
+        'input[name="name"]',
+      ) as HTMLInputElement;
       const firstGeneratedName = nameInput.value;
 
       // Verify it's auto-generated
@@ -478,15 +520,21 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component type
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
-      const nameInput = container.querySelector('input[name="name"]') as HTMLInputElement;
+      const nameInput = container.querySelector(
+        'input[name="name"]',
+      ) as HTMLInputElement;
 
       // Clear the auto-generated name
       await fireEvent.input(nameInput, { target: { value: "" } });
@@ -512,11 +560,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select UDP Input (port is required)
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -548,11 +600,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component type (auto-generates name and default config)
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -576,11 +632,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select UDP Input
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -610,11 +670,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select UDP Input
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -729,15 +793,21 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component type
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
-      const nameInput = container.querySelector('input[name="name"]') as HTMLInputElement;
+      const nameInput = container.querySelector(
+        'input[name="name"]',
+      ) as HTMLInputElement;
 
       // Customize name
       await fireEvent.input(nameInput, { target: { value: "my-udp-input" } });
@@ -782,11 +852,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component type
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -800,7 +874,9 @@ describe("AddComponentModal", () => {
 
       // Should return to palette view
       expect(container.querySelector(".palette-container")).toBeInTheDocument();
-      expect(container.querySelector('input[name="name"]')).not.toBeInTheDocument();
+      expect(
+        container.querySelector('input[name="name"]'),
+      ).not.toBeInTheDocument();
     });
 
     it("should hide modal when closed", async () => {
@@ -823,7 +899,9 @@ describe("AddComponentModal", () => {
       await tick();
 
       // Verify modal is closed
-      expect(container.querySelector('[role="dialog"]')).not.toBeInTheDocument();
+      expect(
+        container.querySelector('[role="dialog"]'),
+      ).not.toBeInTheDocument();
 
       // Reopen modal
       await rerender({ isOpen: true });
@@ -911,11 +989,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Get component card
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
 
       // Simulate Enter key press
       await fireEvent.keyDown(componentCard, { key: "Enter" });
@@ -973,11 +1055,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -1000,11 +1086,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -1024,11 +1114,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select UDP Input
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -1055,10 +1149,14 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
-      const componentCard = container.querySelector('[data-component-id="udp-input"]');
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      );
 
       // Should have role and be keyboard accessible
       expect(componentCard).toHaveAttribute("role", "button");
@@ -1143,17 +1241,23 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="simple-component"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="simple-component"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component
-      const componentCard = container.querySelector('[data-component-id="simple-component"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="simple-component"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
       // Should show name input but not config section
       expect(container.querySelector('input[name="name"]')).toBeInTheDocument();
-      expect(container.querySelector(".config-section")).not.toBeInTheDocument();
+      expect(
+        container.querySelector(".config-section"),
+      ).not.toBeInTheDocument();
     });
 
     it("should handle missing onAdd callback", async () => {
@@ -1167,11 +1271,15 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="udp-input"]')).toBeInTheDocument();
+        expect(
+          container.querySelector('[data-component-id="udp-input"]'),
+        ).toBeInTheDocument();
       });
 
       // Select component type
-      const componentCard = container.querySelector('[data-component-id="udp-input"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="udp-input"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
@@ -1229,15 +1337,23 @@ describe("AddComponentModal", () => {
 
       await tick();
       await waitFor(() => {
-        expect(container.querySelector('[data-component-id="special-component-@#$"]')).toBeInTheDocument();
+        expect(
+          container.querySelector(
+            '[data-component-id="special-component-@#$"]',
+          ),
+        ).toBeInTheDocument();
       });
 
       // Select component
-      const componentCard = container.querySelector('[data-component-id="special-component-@#$"]') as HTMLElement;
+      const componentCard = container.querySelector(
+        '[data-component-id="special-component-@#$"]',
+      ) as HTMLElement;
       await fireEvent.dblClick(componentCard);
       await tick();
 
-      const nameInput = container.querySelector('input[name="name"]') as HTMLInputElement;
+      const nameInput = container.querySelector(
+        'input[name="name"]',
+      ) as HTMLInputElement;
 
       // Name should be sanitized (alphanumeric, dashes, underscores only)
       expect(nameInput.value).toMatch(/^[a-z0-9-_]+$/);

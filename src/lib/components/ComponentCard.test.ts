@@ -24,7 +24,10 @@ describe("ComponentCard", () => {
     });
 
     it("should render node type", () => {
-      const node = createMockNode({ component: "websocket-output", type: "output" });
+      const node = createMockNode({
+        component: "websocket-output",
+        type: "output",
+      });
 
       render(ComponentCard, { props: { node } });
 
@@ -63,7 +66,11 @@ describe("ComponentCard", () => {
       ];
 
       nodeTypes.forEach(({ component, type }) => {
-        const node = createMockNode({ component, type, name: `${component}-instance` });
+        const node = createMockNode({
+          component,
+          type,
+          name: `${component}-instance`,
+        });
         const { container } = render(ComponentCard, { props: { node } });
 
         expect(screen.getByText(`${component}-instance`)).toBeInTheDocument();
@@ -81,7 +88,6 @@ describe("ComponentCard", () => {
       // Should fall back to showing node ID or type
       expect(screen.getByText("Type: udp-input")).toBeInTheDocument();
     });
-
   });
 
   describe("selection", () => {
@@ -249,7 +255,10 @@ describe("ComponentCard", () => {
 
   describe("domain colors", () => {
     it("should apply robotics domain color for MAVLink components", () => {
-      const node = createMockNode({ component: "mavlink-decoder", type: "processor" });
+      const node = createMockNode({
+        component: "mavlink-decoder",
+        type: "processor",
+      });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -268,7 +277,10 @@ describe("ComponentCard", () => {
     });
 
     it("should apply semantic domain color for processing components", () => {
-      const node = createMockNode({ component: "json-transform", type: "processor" });
+      const node = createMockNode({
+        component: "json-transform",
+        type: "processor",
+      });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -277,7 +289,10 @@ describe("ComponentCard", () => {
     });
 
     it("should apply storage domain color for storage components", () => {
-      const node = createMockNode({ component: "storage-writer", type: "storage" });
+      const node = createMockNode({
+        component: "storage-writer",
+        type: "storage",
+      });
 
       const { container } = render(ComponentCard, { props: { node } });
 
@@ -286,7 +301,10 @@ describe("ComponentCard", () => {
     });
 
     it("should use fallback color for unknown component types", () => {
-      const node = createMockNode({ component: "unknown-component", type: "processor" });
+      const node = createMockNode({
+        component: "unknown-component",
+        type: "processor",
+      });
 
       const { container } = render(ComponentCard, { props: { node } });
 

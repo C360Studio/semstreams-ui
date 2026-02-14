@@ -1,6 +1,7 @@
 # Authentication Options for SemStreams UI
 
 ## Current State
+
 - **No authentication** - UI is completely open
 - **Backend-agnostic** - Must work with any SemStreams-based backend
 - **Container-first** - Deployed via Docker + Caddy
@@ -8,6 +9,7 @@
 ## Requirements Analysis
 
 ### Enterprise Expectations (2025)
+
 - ✅ OAuth 2.0 / OpenID Connect (OIDC) - Industry standard
 - ✅ SSO integration (Google Workspace, Azure AD, Okta)
 - ✅ Passwordless options (passkeys, magic links, biometrics)
@@ -15,6 +17,7 @@
 - ⚠️ Session-based auth - Legacy but still common
 
 ### Architecture Constraints
+
 - **Backend-agnostic**: Auth solution shouldn't assume specific backend
 - **Optional deployment**: Some users may not need auth (internal networks)
 - **Multiple deployment models**: Docker, npm, standalone
@@ -27,6 +30,7 @@
 ### Pattern 1: Reverse Proxy Authentication ⭐ (RECOMMENDED)
 
 **How it works:**
+
 ```
 Browser → Caddy (auth) → SvelteKit UI → Backend API
                 ↓
@@ -34,6 +38,7 @@ Browser → Caddy (auth) → SvelteKit UI → Backend API
 ```
 
 **Implementation with Caddy:**
+
 ```caddyfile
 :3000 {
     # Forward auth to authentication service
@@ -70,6 +75,7 @@ Browser → Caddy (auth) → SvelteKit UI → Backend API
    - JWT validation
 
 **Pros:**
+
 - ✅ **Zero UI code changes** - Auth handled at infrastructure level
 - ✅ **Backend-agnostic** - Works with any backend
 - ✅ **Enterprise SSO support** - OIDC integrates with Azure AD, Okta, etc.
@@ -78,11 +84,13 @@ Browser → Caddy (auth) → SvelteKit UI → Backend API
 - ✅ **Headers passed to backend** - Backend sees user identity
 
 **Cons:**
+
 - ⚠️ Requires external auth service (Authelia, OAuth2-Proxy)
 - ⚠️ More infrastructure to manage
 - ⚠️ Harder for local development (can disable auth locally)
 
 **Best for:**
+
 - Production enterprise deployments
 - Organizations with existing SSO
 - Docker-based deployments
@@ -92,6 +100,7 @@ Browser → Caddy (auth) → SvelteKit UI → Backend API
 ### Pattern 2: Backend-Managed Authentication
 
 **How it works:**
+
 ```
 Browser → SvelteKit UI → Backend API (validates auth)
                            ↓
@@ -99,12 +108,14 @@ Browser → SvelteKit UI → Backend API (validates auth)
 ```
 
 **Implementation:**
+
 - Backend provides `/auth/login`, `/auth/logout`, `/auth/session` endpoints
 - UI calls backend auth endpoints
 - Backend issues session cookies or JWT tokens
 - UI includes tokens in all API requests
 
 **Example (Backend provides auth):**
+
 ```yaml
 # Backend exposes auth endpoints
 POST /auth/login        # Login with credentials/OAuth
@@ -117,40 +128,44 @@ GET /components/types   # Requires valid session/token
 ```
 
 **SvelteKit implementation:**
+
 ```typescript
 // hooks.server.ts
 export async function handle({ event, resolve }) {
-    // Check session cookie or token
-    const session = await event.cookies.get('session');
+  // Check session cookie or token
+  const session = await event.cookies.get("session");
 
-    if (!session && !isPublicRoute(event.url.pathname)) {
-        return Response.redirect('/login');
-    }
+  if (!session && !isPublicRoute(event.url.pathname)) {
+    return Response.redirect("/login");
+  }
 
-    // Pass user info to backend
-    event.fetch('/api/...', {
-        headers: {
-            'Authorization': `Bearer ${session}`,
-        }
-    });
+  // Pass user info to backend
+  event.fetch("/api/...", {
+    headers: {
+      Authorization: `Bearer ${session}`,
+    },
+  });
 
-    return resolve(event);
+  return resolve(event);
 }
 ```
 
 **Pros:**
+
 - ✅ **Backend controls auth** - Each backend can have its own auth strategy
 - ✅ **Flexible** - Supports various auth methods per backend
 - ✅ **Unified API** - Auth and business logic in same service
 - ✅ **Works in all deployments** - Docker, npm, standalone
 
 **Cons:**
+
 - ⚠️ **Backend-specific** - Each backend must implement auth
 - ⚠️ **UI code changes needed** - Auth logic in SvelteKit
 - ⚠️ **Breaks backend-agnostic design** - UI assumes auth endpoints exist
 - ⚠️ **More complex** - Auth distributed across UI + backend
 
 **Best for:**
+
 - Backends with existing auth systems
 - Microservices with per-service auth
 - Custom authentication requirements
@@ -160,6 +175,7 @@ export async function handle({ event, resolve }) {
 ### Pattern 3: SvelteKit-Managed Authentication (Auth.js)
 
 **How it works:**
+
 ```
 Browser → SvelteKit (Auth.js) → Backend API
               ↓
@@ -167,33 +183,35 @@ Browser → SvelteKit (Auth.js) → Backend API
 ```
 
 **Implementation with Auth.js:**
+
 ```typescript
 // src/hooks.server.ts
-import { SvelteKitAuth } from '@auth/sveltekit';
-import Google from '@auth/sveltekit/providers/google';
-import GitHub from '@auth/sveltekit/providers/github';
+import { SvelteKitAuth } from "@auth/sveltekit";
+import Google from "@auth/sveltekit/providers/google";
+import GitHub from "@auth/sveltekit/providers/github";
 
 export const handle = SvelteKitAuth({
-    providers: [
-        Google({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET
-        }),
-        GitHub({
-            clientId: process.env.GITHUB_CLIENT_ID,
-            clientSecret: process.env.GITHUB_CLIENT_SECRET
-        })
-    ],
-    callbacks: {
-        async jwt({ token, user }) {
-            // Pass user info to backend API calls
-            return token;
-        }
-    }
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+    GitHub({
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      // Pass user info to backend API calls
+      return token;
+    },
+  },
 });
 ```
 
 **Pros:**
+
 - ✅ **Easy to implement** - Auth.js handles OAuth flow
 - ✅ **68+ providers** - Google, Microsoft, GitHub, etc.
 - ✅ **SvelteKit-native** - Designed for SvelteKit
@@ -201,12 +219,14 @@ export const handle = SvelteKitAuth({
 - ✅ **CSRF protection** - Built-in security
 
 **Cons:**
+
 - ⚠️ **UI code changes** - Auth logic in SvelteKit app
 - ⚠️ **Breaks backend-agnostic design** - Auth becomes UI responsibility
 - ⚠️ **Backend needs to trust UI tokens** - Requires JWT validation
 - ⚠️ **Harder to configure** - Each deployment needs OAuth credentials
 
 **Best for:**
+
 - SaaS deployments with known auth providers
 - Apps where UI manages user identity
 - Rapid prototyping
@@ -216,6 +236,7 @@ export const handle = SvelteKitAuth({
 ### Pattern 4: Hybrid - API Gateway Authentication
 
 **How it works:**
+
 ```
 Browser → API Gateway (auth) → SvelteKit UI
               ↓                      ↓
@@ -223,23 +244,27 @@ Browser → API Gateway (auth) → SvelteKit UI
 ```
 
 **Example with Kong, Traefik, or AWS API Gateway:**
+
 - API Gateway sits in front of everything
 - Validates OAuth tokens, API keys, or sessions
 - Passes user identity headers downstream
 - Works like Pattern 1 but at infrastructure level
 
 **Pros:**
+
 - ✅ **Enterprise-grade** - Mature API gateway solutions
 - ✅ **Centralized auth** - One place for all auth
 - ✅ **Rate limiting, monitoring** - Additional features
 - ✅ **Works with existing infrastructure** - Many orgs have API gateways
 
 **Cons:**
+
 - ⚠️ **Heavy infrastructure** - Requires API gateway deployment
 - ⚠️ **Complexity** - More moving parts
 - ⚠️ **Vendor lock-in** - If using cloud API gateways
 
 **Best for:**
+
 - Large enterprises with existing API gateways
 - Multi-service deployments
 - Cloud-native architectures (AWS, Azure, GCP)
@@ -251,6 +276,7 @@ Browser → API Gateway (auth) → SvelteKit UI
 ### For semstreams-ui: **Pattern 1 (Reverse Proxy Auth)** + **Optional Backend Validation**
 
 **Why:**
+
 1. **Maintains backend-agnostic design** - Auth is infrastructure, not code
 2. **Optional by default** - Users can deploy without auth for internal use
 3. **Enterprise-ready** - OIDC/SSO support via Authelia or OAuth2-Proxy
@@ -260,17 +286,20 @@ Browser → API Gateway (auth) → SvelteKit UI
 ### Implementation Strategy
 
 **Phase 1: Document reverse proxy auth (no code changes)**
+
 - Create example docker-compose with Authelia
 - Create example docker-compose with OAuth2-Proxy
 - Document Caddy forward_auth configuration
 - Provide examples for: Google OAuth, Azure AD, Okta
 
 **Phase 2: Optional - Backend auth headers**
+
 - Document how backends can read auth headers
 - Provide optional middleware for user validation
 - Examples: `Remote-User`, `Remote-Email`, `Remote-Groups`
 
 **Phase 3: Optional - SvelteKit auth hooks (if needed)**
+
 - Add optional Auth.js integration for users who want it
 - Keep as optional plugin, not core feature
 - Document how to enable/disable
@@ -282,6 +311,7 @@ Browser → API Gateway (auth) → SvelteKit UI
 ### Option A: Authelia + Caddy (Full SSO)
 
 **docker-compose.auth.yml:**
+
 ```yaml
 services:
   authelia:
@@ -307,6 +337,7 @@ services:
 ```
 
 **Caddyfile.auth:**
+
 ```caddyfile
 :3000 {
     # Protect entire site with Authelia
@@ -323,6 +354,7 @@ services:
 ```
 
 **authelia/configuration.yml:**
+
 ```yaml
 authentication_backend:
   file:
@@ -358,13 +390,14 @@ identity_providers:
 ### Option B: OAuth2-Proxy + Google (Simple OAuth)
 
 **docker-compose.oauth.yml:**
+
 ```yaml
 services:
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:latest
     command:
       - --provider=google
-      - --email-domain=example.com  # Allow only your domain
+      - --email-domain=example.com # Allow only your domain
       - --upstream=http://caddy:3000
       - --http-address=0.0.0.0:4180
       - --cookie-secret=${OAUTH2_PROXY_COOKIE_SECRET}
@@ -389,6 +422,7 @@ services:
 ### Option C: No Auth (Development / Internal Networks)
 
 **docker-compose.yml:**
+
 ```yaml
 services:
   caddy:
@@ -410,6 +444,7 @@ services:
 ## Security Considerations
 
 ### Reverse Proxy Auth (Pattern 1)
+
 - ✅ Tokens never in browser localStorage (more secure)
 - ✅ HTTPS enforced by reverse proxy
 - ✅ CSRF protection via SameSite cookies
@@ -418,6 +453,7 @@ services:
 - ⚠️ Use secure cookie flags (HttpOnly, Secure, SameSite)
 
 ### Backend-Managed Auth (Pattern 2)
+
 - ✅ Backend controls authorization
 - ✅ Can integrate with backend's user database
 - ⚠️ CSRF protection needed in UI
@@ -425,6 +461,7 @@ services:
 - ⚠️ Logout must invalidate tokens
 
 ### SvelteKit Auth.js (Pattern 3)
+
 - ✅ Built-in CSRF protection
 - ✅ Server-only cookies (secure)
 - ⚠️ OAuth credentials must be protected
@@ -435,21 +472,22 @@ services:
 
 ## Decision Matrix
 
-| Factor | Reverse Proxy | Backend-Managed | SvelteKit Auth.js |
-|--------|--------------|-----------------|-------------------|
-| **Maintains backend-agnostic design** | ✅ Yes | ⚠️ No (assumes auth API) | ⚠️ No (UI owns auth) |
-| **No UI code changes** | ✅ Yes | ❌ No | ❌ No |
-| **Enterprise SSO** | ✅ Easy (Authelia, OAuth2-Proxy) | ✅ Possible | ✅ Possible (68+ providers) |
-| **Optional deployment** | ✅ Yes (skip Caddy auth) | ⚠️ Harder | ⚠️ Harder |
-| **Setup complexity** | ⚠️ Medium (infrastructure) | ⚠️ Medium (backend code) | ⚠️ Medium (UI code + OAuth app) |
-| **Best for** | Docker deployments | Custom auth backends | SaaS apps |
-| **2025 best practice** | ✅ Yes (OIDC at edge) | ✅ Yes (BFF pattern) | ✅ Yes (Auth.js) |
+| Factor                                | Reverse Proxy                    | Backend-Managed          | SvelteKit Auth.js               |
+| ------------------------------------- | -------------------------------- | ------------------------ | ------------------------------- |
+| **Maintains backend-agnostic design** | ✅ Yes                           | ⚠️ No (assumes auth API) | ⚠️ No (UI owns auth)            |
+| **No UI code changes**                | ✅ Yes                           | ❌ No                    | ❌ No                           |
+| **Enterprise SSO**                    | ✅ Easy (Authelia, OAuth2-Proxy) | ✅ Possible              | ✅ Possible (68+ providers)     |
+| **Optional deployment**               | ✅ Yes (skip Caddy auth)         | ⚠️ Harder                | ⚠️ Harder                       |
+| **Setup complexity**                  | ⚠️ Medium (infrastructure)       | ⚠️ Medium (backend code) | ⚠️ Medium (UI code + OAuth app) |
+| **Best for**                          | Docker deployments               | Custom auth backends     | SaaS apps                       |
+| **2025 best practice**                | ✅ Yes (OIDC at edge)            | ✅ Yes (BFF pattern)     | ✅ Yes (Auth.js)                |
 
 ---
 
 ## Next Steps (No Code Changes Yet)
 
 ### Immediate: Documentation
+
 1. Create `docs/auth/` directory with examples
 2. Document Authelia integration
 3. Document OAuth2-Proxy integration
@@ -457,12 +495,14 @@ services:
 5. Add auth examples to INTEGRATION_EXAMPLE.md
 
 ### Future: Optional Implementation
+
 1. Add optional Auth.js integration (feature flag)
 2. Create example backends with auth endpoints
 3. Add auth header documentation for backends
 4. Create Caddy plugin examples
 
 ### For Users to Decide
+
 - Which auth pattern fits their deployment?
 - Do they need enterprise SSO?
 - Is auth required or optional?
@@ -473,21 +513,26 @@ services:
 ## Recommendations by Use Case
 
 ### Internal Tool (No Auth Needed)
+
 → **Option C**: Deploy without auth, rely on network security
 
 ### Small Team (Simple OAuth)
+
 → **Option B**: OAuth2-Proxy + Google/GitHub OAuth
 → Setup time: 15 minutes
 
 ### Enterprise (SSO Required)
+
 → **Option A**: Authelia + Azure AD / Okta OIDC
 → Setup time: 30 minutes, full 2FA + session management
 
 ### Custom Backend with Auth
+
 → **Pattern 2**: Let backend handle auth
 → UI calls backend auth endpoints
 
 ### Multi-tenant SaaS
+
 → **Pattern 3**: SvelteKit Auth.js with per-tenant providers
 → Or **Pattern 4**: API Gateway with tenant isolation
 
@@ -505,6 +550,7 @@ services:
 6. ✅ 2025 best practice - OAuth at edge, OIDC federation
 
 **Implementation path:**
+
 - Phase 1: Document reverse proxy auth (this document)
 - Phase 2: Provide docker-compose examples
 - Phase 3: Create tutorials for common providers

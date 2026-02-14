@@ -10,7 +10,12 @@
 
 import * as d3 from "d3";
 import type { FlowNode, FlowConnection } from "$lib/types/flow";
-import type { GraphEntity, GraphLayoutNode, GraphLayoutEdge, GraphRelationship } from "$lib/types/graph";
+import type {
+  GraphEntity,
+  GraphLayoutNode,
+  GraphLayoutEdge,
+  GraphRelationship,
+} from "$lib/types/graph";
 import { getEntityColor } from "$lib/utils/entity-colors";
 
 /** Node with computed layout position */
@@ -608,7 +613,14 @@ export function layoutGraphEdges(
 export function calculateGraphBounds(
   layoutNodes: GraphLayoutNode[],
   padding: number = 50,
-): { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number } {
+): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  width: number;
+  height: number;
+} {
   if (layoutNodes.length === 0) {
     return { minX: 0, minY: 0, maxX: 800, maxY: 600, width: 800, height: 600 };
   }

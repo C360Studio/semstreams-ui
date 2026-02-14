@@ -5,11 +5,13 @@
 **Goal**: Add runtime flow visualization for debugging purposes
 
 **Current Setup**:
+
 - Bottom status bar with Deploy/Start/Stop controls
 - Shows runtime state: `not_deployed`, `deployed_stopped`, `running`, `error`
 - No visibility into actual runtime behavior once deployed
 
 **Need**: When flow is running, users need to see:
+
 - Component health status (running, error, stopped)
 - Message throughput (msgs/sec per component)
 - Error messages and stack traces
@@ -34,16 +36,18 @@
 ```
 
 **Layout code:**
+
 ```css
 .editor-layout {
-    display: grid;
-    grid-template-columns: 250px 1fr auto;
-    height: 100vh;
-    overflow: hidden;
+  display: grid;
+  grid-template-columns: 250px 1fr auto;
+  height: 100vh;
+  overflow: hidden;
 }
 ```
 
 **Current panels:**
+
 - **Left**: Component palette (fixed 250px)
 - **Center**: Canvas + header + status bar
 - **Right**: Config panel (auto width, conditional)
@@ -72,6 +76,7 @@
 ### Implementation Approach
 
 **HTML Structure:**
+
 ```svelte
 <div class="canvas-area">
     <header class="editor-header">...</header>
@@ -96,37 +101,38 @@
 ```
 
 **CSS (resizable panel):**
+
 ```css
 .canvas-area {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
 }
 
 .runtime-panel {
-    position: relative;
-    height: var(--runtime-panel-height, 300px);
-    min-height: 150px;
-    max-height: 60vh;
-    border-top: 1px solid var(--ui-border-emphasis);
-    background: var(--ui-surface-primary);
-    resize: vertical;
-    overflow: auto;
+  position: relative;
+  height: var(--runtime-panel-height, 300px);
+  min-height: 150px;
+  max-height: 60vh;
+  border-top: 1px solid var(--ui-border-emphasis);
+  background: var(--ui-surface-primary);
+  resize: vertical;
+  overflow: auto;
 }
 
 .runtime-panel-resize-handle {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    cursor: ns-resize;
-    background: var(--ui-border-subtle);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+  background: var(--ui-border-subtle);
 }
 
 .runtime-panel-resize-handle:hover {
-    background: var(--ui-interactive-primary);
+  background: var(--ui-interactive-primary);
 }
 ```
 
@@ -150,6 +156,7 @@
 ### User Experience
 
 **Opening the panel:**
+
 ```
 User clicks "Debug" button in status bar
   → Panel slides up from bottom (300px default)
@@ -158,6 +165,7 @@ User clicks "Debug" button in status bar
 ```
 
 **Resizing:**
+
 ```
 User drags resize handle at top of panel
   → Panel height adjusts (150px min, 60vh max)
@@ -166,6 +174,7 @@ User drags resize handle at top of panel
 ```
 
 **Closing:**
+
 ```
 User clicks X or presses Esc
   → Panel slides down
@@ -175,6 +184,7 @@ User clicks X or presses Esc
 ### Content Tabs
 
 **Tab 1: Logs** (default)
+
 ```
 ┌────────────────────────────────────────────┐
 │ [Filter] [▼ Level] [Clear]                │
@@ -188,6 +198,7 @@ User clicks X or presses Esc
 ```
 
 **Tab 2: Metrics**
+
 ```
 ┌────────────────────────────────────────────┐
 │ Component         Msg/sec   Errors   CPU   │
@@ -199,6 +210,7 @@ User clicks X or presses Esc
 ```
 
 **Tab 3: Health**
+
 ```
 ┌────────────────────────────────────────────┐
 │ Component         Status      Uptime       │
@@ -234,6 +246,7 @@ User clicks X or presses Esc
 ### Implementation Approach
 
 **HTML Structure:**
+
 ```svelte
 {#if selectedComponent || showRuntimePanel}
     <aside class="right-panel" style="width: {rightPanelWidth}px;">
@@ -263,48 +276,49 @@ User clicks X or presses Esc
 ```
 
 **CSS (resizable sidebar):**
+
 ```css
 .right-panel {
-    min-width: 300px;
-    max-width: 50vw;
-    width: var(--right-panel-width, 400px);
-    border-left: 1px solid var(--ui-border-subtle);
-    position: relative;
-    display: flex;
-    flex-direction: column;
+  min-width: 300px;
+  max-width: 50vw;
+  width: var(--right-panel-width, 400px);
+  border-left: 1px solid var(--ui-border-subtle);
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .resize-handle {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    cursor: ew-resize;
-    background: var(--ui-border-subtle);
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background: var(--ui-border-subtle);
 }
 
 .resize-handle:hover {
-    background: var(--ui-interactive-primary);
+  background: var(--ui-interactive-primary);
 }
 
 .panel-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--ui-border-subtle);
-    background: var(--ui-surface-secondary);
+  display: flex;
+  border-bottom: 1px solid var(--ui-border-subtle);
+  background: var(--ui-surface-secondary);
 }
 
 .panel-tabs button {
-    flex: 1;
-    padding: 0.75rem;
-    border: none;
-    background: transparent;
-    cursor: pointer;
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 .panel-tabs button.active {
-    background: var(--ui-surface-primary);
-    border-bottom: 2px solid var(--ui-interactive-primary);
+  background: var(--ui-surface-primary);
+  border-bottom: 2px solid var(--ui-interactive-primary);
 }
 ```
 
@@ -329,18 +343,18 @@ User clicks X or presses Esc
 
 ## Detailed Comparison
 
-| Factor | Bottom Panel | Right Panel Tab |
-|--------|--------------|-----------------|
-| **Canvas Impact** | Reduces height | Reduces width |
-| **Log Readability** | ✅ Better (wider) | ⚠️ Narrower |
-| **Config Access** | ✅ Independent | ⚠️ Must switch tabs |
-| **Runtime Metrics** | ⚠️ Needs horizontal scroll | ✅ More vertical space |
-| **Standard Pattern** | ✅ VSCode, Chrome | ⚠️ Less common |
-| **Implementation** | ✅ Simpler | ⚠️ More complex |
-| **Mobile/Small Screen** | ⚠️ Very cramped | ⚠️ Cramped |
-| **Keyboard Shortcuts** | ✅ Natural (Ctrl+`) | ⚠️ Need new pattern |
-| **Resizing** | ✅ Vertical drag | ⚠️ Horizontal drag |
-| **Multiple Data Views** | ✅ Tabs fit well | ⚠️ Nested tabs confusing |
+| Factor                  | Bottom Panel               | Right Panel Tab          |
+| ----------------------- | -------------------------- | ------------------------ |
+| **Canvas Impact**       | Reduces height             | Reduces width            |
+| **Log Readability**     | ✅ Better (wider)          | ⚠️ Narrower              |
+| **Config Access**       | ✅ Independent             | ⚠️ Must switch tabs      |
+| **Runtime Metrics**     | ⚠️ Needs horizontal scroll | ✅ More vertical space   |
+| **Standard Pattern**    | ✅ VSCode, Chrome          | ⚠️ Less common           |
+| **Implementation**      | ✅ Simpler                 | ⚠️ More complex          |
+| **Mobile/Small Screen** | ⚠️ Very cramped            | ⚠️ Cramped               |
+| **Keyboard Shortcuts**  | ✅ Natural (Ctrl+`)        | ⚠️ Need new pattern      |
+| **Resizing**            | ✅ Vertical drag           | ⚠️ Horizontal drag       |
+| **Multiple Data Views** | ✅ Tabs fit well           | ⚠️ Nested tabs confusing |
 
 ---
 
@@ -365,6 +379,7 @@ User clicks X or presses Esc
    - No context switching required
 
 4. **Natural Information Hierarchy**:
+
    ```
    Top:    Flow structure (canvas)
    Bottom: Flow runtime (debugging)
@@ -378,30 +393,35 @@ User clicks X or presses Esc
 ### Recommended Implementation Plan
 
 **Phase 1: Basic Panel** (MVP)
+
 - [ ] Add toggle button to StatusBar
 - [ ] Create RuntimePanel component (slides up from bottom)
 - [ ] Canvas height adjustment logic
 - [ ] Show placeholder content
 
 **Phase 2: Logs Tab**
+
 - [ ] WebSocket connection to backend logs
 - [ ] Real-time log streaming
 - [ ] Log filtering (level, component)
 - [ ] Auto-scroll toggle
 
 **Phase 3: Metrics Tab**
+
 - [ ] Poll backend for metrics data
 - [ ] Component throughput table
 - [ ] Error rate visualization
 - [ ] CPU/Memory usage (if available)
 
 **Phase 4: Health Tab**
+
 - [ ] Component health status
 - [ ] Connection health (edge activity)
 - [ ] Uptime tracking
 - [ ] Alert/warning indicators
 
 **Phase 5: Polish**
+
 - [ ] Resizable panel with drag handle
 - [ ] Persist panel height to localStorage
 - [ ] Keyboard shortcuts (Ctrl+` toggle, Esc close)
@@ -424,6 +444,7 @@ User clicks X or presses Esc
    - Optional, power-user feature
 
 This gives:
+
 - Quick log access (bottom)
 - Detailed analysis (right)
 - Config stays accessible (right)
@@ -435,6 +456,7 @@ This gives:
 ### StatusBar Integration
 
 **Add toggle button:**
+
 ```svelte
 <!-- StatusBar.svelte -->
 <div class="button-section">
@@ -456,6 +478,7 @@ This gives:
 ### RuntimePanel Component
 
 **Create new component:**
+
 ```svelte
 <!-- RuntimePanel.svelte -->
 <script lang="ts">
@@ -502,6 +525,7 @@ This gives:
 ### Canvas Height Adjustment
 
 **In +page.svelte:**
+
 ```svelte
 <script>
     let showRuntimePanel = $state(false);
@@ -526,6 +550,7 @@ This gives:
 ### Backend API Needs
 
 **Runtime Logs Endpoint:**
+
 ```
 GET /flows/{id}/runtime/logs
   ?since=timestamp
@@ -536,6 +561,7 @@ Returns: Server-Sent Events (SSE) stream
 ```
 
 **Runtime Metrics Endpoint:**
+
 ```
 GET /flows/{id}/runtime/metrics
 
@@ -560,6 +586,7 @@ Returns: {
 ```
 
 **Runtime Health Endpoint:**
+
 ```
 GET /flows/{id}/runtime/health
 
@@ -586,6 +613,7 @@ Returns: {
 ## Summary
 
 **Choose Bottom Panel because:**
+
 - ✅ Industry standard for runtime/debugging info
 - ✅ Logs need horizontal space
 - ✅ Doesn't interfere with config panel
@@ -594,12 +622,14 @@ Returns: {
 - ✅ Natural information hierarchy
 
 **Implementation timeline:**
+
 - Week 1: Basic panel structure, toggle, resize
 - Week 2: Logs tab with real-time streaming
 - Week 3: Metrics tab with polling
 - Week 4: Health tab + polish
 
 **Next steps:**
+
 1. Confirm bottom panel approach
 2. Design backend API endpoints for runtime data
 3. Create RuntimePanel component
