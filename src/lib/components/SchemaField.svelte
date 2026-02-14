@@ -13,6 +13,8 @@
 	interface SchemaFieldProps {
 		/** Field name */
 		name: string;
+		/** Display label (optional, defaults to name) */
+		label?: string;
 		/** PropertySchema definition */
 		schema: PropertySchema;
 		/** Current value (type varies by field type) */
@@ -25,23 +27,23 @@
 		onChange?: (value: any) => void;
 	}
 
-	let { name, schema, value = $bindable(undefined), error, isRequired = false, onChange }: SchemaFieldProps = $props();
+	let { name, label, schema, value = $bindable(undefined), error, isRequired = false, onChange }: SchemaFieldProps = $props();
 </script>
 
 {#if schema.type === 'string'}
-	<StringField {name} {schema} bind:value {error} {isRequired} {onChange} />
+	<StringField {name} {label} {schema} bind:value {error} {isRequired} {onChange} />
 {:else if schema.type === 'int' || schema.type === 'float'}
-	<NumberField {name} {schema} bind:value {error} {isRequired} {onChange} />
+	<NumberField {name} {label} {schema} bind:value {error} {isRequired} {onChange} />
 {:else if schema.type === 'bool'}
-	<BooleanField {name} {schema} bind:value {error} {isRequired} {onChange} />
+	<BooleanField {name} {label} {schema} bind:value {error} {isRequired} {onChange} />
 {:else if schema.type === 'enum'}
-	<EnumField {name} {schema} bind:value {error} {isRequired} {onChange} />
+	<EnumField {name} {label} {schema} bind:value {error} {isRequired} {onChange} />
 {:else if schema.type === 'ports'}
 	<PortConfigEditor {name} {schema} bind:value {error} {isRequired} {onChange} />
 {:else if schema.type === 'object' || schema.type === 'array'}
 	<div class="field complex-field-fallback">
 		<label for={name}>
-			{name}
+			{label ?? name}
 			{#if isRequired}
 				<span class="required">*</span>
 			{/if}
@@ -58,7 +60,7 @@
 	</div>
 {:else}
 	<div class="field unknown-field-type">
-		<label for={name}>{name}</label>
+		<label for={name}>{label ?? name}</label>
 		<div class="fallback-message">
 			<p>⚠️ Unknown field type: {schema.type}</p>
 		</div>

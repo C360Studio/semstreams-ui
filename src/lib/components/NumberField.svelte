@@ -8,6 +8,8 @@
 	interface NumberFieldProps {
 		/** Field name (used for id, label association) */
 		name: string;
+		/** Display label (optional, defaults to name) */
+		label?: string;
 		/** PropertySchema definition for this field */
 		schema: PropertySchema;
 		/** Current field value */
@@ -20,7 +22,10 @@
 		onChange?: (value: number | undefined) => void;
 	}
 
-	let { name, schema, value = $bindable(), error, isRequired = false, onChange }: NumberFieldProps = $props();
+	let { name, label, schema, value = $bindable(), error, isRequired = false, onChange }: NumberFieldProps = $props();
+
+	// Use label if provided, otherwise fall back to name
+	const displayLabel = $derived(label ?? name);
 
 	// Determine step based on type
 	let step = $derived(schema.type === 'float' ? 'any' : '1');
@@ -31,7 +36,7 @@
 
 <div class="field">
 	<label for={name}>
-		{name}
+		{displayLabel}
 		{#if isRequired}
 			<span class="required">*</span>
 		{/if}

@@ -8,6 +8,8 @@
 	interface EnumFieldProps {
 		/** Field name (used for id, label association) */
 		name: string;
+		/** Display label (optional, defaults to name) */
+		label?: string;
 		/** PropertySchema definition for this field */
 		schema: PropertySchema;
 		/** Current field value */
@@ -20,7 +22,10 @@
 		onChange?: (value: string) => void;
 	}
 
-	let { name, schema, value = $bindable(), error, isRequired = false, onChange }: EnumFieldProps = $props();
+	let { name, label, schema, value = $bindable(), error, isRequired = false, onChange }: EnumFieldProps = $props();
+
+	// Use label if provided, otherwise fall back to name
+	const displayLabel = $derived(label ?? name);
 
 	// Get enum options from schema
 	let options = $derived(schema.enum || []);
@@ -31,7 +36,7 @@
 
 <div class="field">
 	<label for={name}>
-		{name}
+		{displayLabel}
 		{#if isRequired}
 			<span class="required">*</span>
 		{/if}

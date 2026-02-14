@@ -9,10 +9,12 @@
 	 */
 
 	import type { FlowNode } from '$lib/types/flow';
-	import type { ComponentType, PropertySchema } from '$lib/types/component';
+	import type { ComponentType } from '$lib/types/component';
+	import type { PropertySchema } from '$lib/types/schema';
 	import type { PropertiesPanelMode } from '$lib/types/ui-state';
 	import { getTypeColor } from '$lib/utils/category-colors';
-	import PortsEditor from './PortsEditor.svelte';
+	import { humanizeFieldName } from '$lib/utils/humanize';
+	import SchemaField from './SchemaField.svelte';
 
 	interface PropertiesPanelProps {
 		/** Panel display mode */
@@ -42,6 +44,7 @@
 	let editedName = $state('');
 	let editedConfig = $state<Record<string, unknown>>({});
 	let showDeleteConfirm = $state(false);
+	let searchQuery = $state('');
 
 	// Initialize form when node changes
 	$effect(() => {
@@ -53,7 +56,41 @@
 			editedConfig = {};
 		}
 		showDeleteConfirm = false;
+		searchQuery = '';
 	});
+
+	// Categorize and filter fields - cast to PropertySchema (schema.ts) for type compatibility
+	const allConfigFields = $derived.by(() => {
+		if (!nodeComponentType?.schema) return [] as [string, PropertySchema][];
+		return Object.entries(nodeComponentType.schema.properties) as [string, PropertySchema][];
+	});
+
+	const basicFields = $derived.by(() => {
+		return allConfigFields
+			.filter(([_, schema]) => schema.category === 'basic')
+			.sort(([a], [b]) => a.localeCompare(b));
+	});
+
+	const advancedFields = $derived.by(() => {
+		return allConfigFields
+			.filter(([_, schema]) => schema.category !== 'basic')
+			.sort(([a], [b]) => a.localeCompare(b));
+	});
+
+	const filteredFields = $derived.by(() => {
+		if (!searchQuery.trim()) return [] as [string, PropertySchema][];
+		const query = searchQuery.toLowerCase();
+		return allConfigFields
+			.filter(([fieldName, schema]) => {
+				const nameMatch = fieldName.toLowerCase().includes(query);
+				const descMatch = schema.description?.toLowerCase().includes(query) ?? false;
+				return nameMatch || descMatch;
+			})
+			.sort(([a], [b]) => a.localeCompare(b));
+	});
+
+	const isSearching = $derived(searchQuery.trim().length > 0);
+	const hasSearchResults = $derived(filteredFields.length > 0);
 
 	// Dirty state - check if form has changes
 	const isDirty = $derived.by(() => {
@@ -84,7 +121,7 @@
 				if (value === undefined || value === null || value === '') return false;
 
 				const schema = nodeComponentType.schema.properties[field];
-				if (schema?.type === 'number') {
+				if (schema?.type === 'int' || schema?.type === 'float') {
 					const numValue = Number(value);
 					if (isNaN(numValue)) return false;
 					if (schema.minimum !== undefined && numValue < schema.minimum) return false;
@@ -99,11 +136,11 @@
 	const canSave = $derived(isFormValid && isDirty);
 
 	// Get validation error for a field
-	function getFieldError(fieldName: string, schema: PropertySchema): string | null {
+	function getFieldError(fieldName: string, schema: PropertySchema): string | undefined {
 		const value = editedConfig[fieldName];
-		if (value === undefined || value === null || value === '') return null;
+		if (value === undefined || value === null || value === '') return undefined;
 
-		if (schema.type === 'number') {
+		if (schema.type === 'int' || schema.type === 'float') {
 			const numValue = Number(value);
 			if (isNaN(numValue)) return 'Must be a valid number';
 			if (schema.minimum !== undefined && numValue < schema.minimum) {
@@ -114,7 +151,7 @@
 			}
 		}
 
-		return null;
+		return undefined;
 	}
 
 	// Handlers
@@ -149,6 +186,15 @@
 		if (canSave && node) {
 			onSave?.(node.id, editedName, editedConfig);
 		}
+	}
+
+	function handleClearSearch() {
+		searchQuery = '';
+	}
+
+	function handleFieldChange(fieldName: string, value: unknown) {
+		editedConfig[fieldName] = value;
+		handleBlur();
 	}
 </script>
 
@@ -271,100 +317,88 @@
 				<!-- Config Fields -->
 				{#if nodeComponentType?.schema}
 					<div class="config-section">
-						<h4>Configuration</h4>
-						{#each Object.entries(nodeComponentType.schema.properties) as [fieldName, schema] (fieldName)}
-							{@const isRequired = nodeComponentType.schema.required?.includes(fieldName)}
-							{@const error = getFieldError(fieldName, schema)}
-
-							<div class="form-group" class:has-error={error}>
-								<label for="prop-{fieldName}">
-									{fieldName}
-									{#if isRequired}<span class="required-marker">*</span>{/if}
-								</label>
-								{#if schema.description}
-									<p class="field-hint">{schema.description}</p>
-								{/if}
-
-								{#if schema.type === 'string'}
-									<input
-										id="prop-{fieldName}"
-										type="text"
-										bind:value={editedConfig[fieldName]}
-										onblur={handleBlur}
-										required={isRequired}
-										data-testid="prop-{fieldName}-input"
-									/>
-								{:else if schema.type === 'int' || schema.type === 'integer' || schema.type === 'number'}
-									<input
-										id="prop-{fieldName}"
-										type="number"
-										bind:value={editedConfig[fieldName]}
-										onblur={handleBlur}
-										required={isRequired}
-										min={schema.minimum}
-										max={schema.maximum}
-										data-testid="prop-{fieldName}-input"
-									/>
-								{:else if schema.type === 'bool' || schema.type === 'boolean'}
-									<label class="checkbox-label">
-										<input
-											id="prop-{fieldName}"
-											type="checkbox"
-											checked={editedConfig[fieldName] === true}
-											onchange={(e) => {
-												editedConfig[fieldName] = e.currentTarget.checked;
-												handleBlur();
-											}}
-											data-testid="prop-{fieldName}-input"
-										/>
-										<span>Enabled</span>
-									</label>
-								{:else if schema.type === 'enum' && schema.enum}
-									<select
-										id="prop-{fieldName}"
-										bind:value={editedConfig[fieldName]}
-										onchange={handleBlur}
-										required={isRequired}
-										data-testid="prop-{fieldName}-input"
-									>
-										<option value="">Select...</option>
-										{#each schema.enum as option (option)}
-											<option value={option}>{option}</option>
-										{/each}
-									</select>
-								{:else if schema.type === 'ports'}
-									<!-- Ports editor -->
-									<PortsEditor
-										value={(editedConfig[fieldName] ?? { inputs: [], outputs: [] }) as { inputs?: Record<string, unknown>[]; outputs?: Record<string, unknown>[] }}
-										portFields={schema.portFields}
-										onChange={(v) => {
-											editedConfig[fieldName] = v;
-											handleBlur();
-										}}
-									/>
-								{:else}
-									<!-- object, array - JSON editor -->
-									<textarea
-										id="prop-{fieldName}"
-										class="json-editor"
-										value={JSON.stringify(editedConfig[fieldName] ?? {}, null, 2)}
-										onchange={(e) => {
-											try {
-												editedConfig[fieldName] = JSON.parse(e.currentTarget.value);
-												handleBlur();
-											} catch {
-												// Invalid JSON - keep current value
-											}
-										}}
-										data-testid="prop-{fieldName}-input"
-									></textarea>
-								{/if}
-
-								{#if error}
-									<p class="field-error">{error}</p>
-								{/if}
+						<div class="search-header">
+							<h4>Configuration</h4>
+							<div class="search-controls">
+								<input
+									type="text"
+									placeholder="Search fields..."
+									bind:value={searchQuery}
+									data-testid="field-search"
+									class="field-search-input"
+								/>
+								<button
+									type="button"
+									onclick={handleClearSearch}
+									disabled={!searchQuery.trim()}
+									data-testid="clear-search"
+									class="clear-search-button"
+								>
+									Clear
+								</button>
 							</div>
-						{/each}
+						</div>
+
+						{#if isSearching}
+							<!-- Search Results -->
+							{#if hasSearchResults}
+								{#each filteredFields as [fieldName, schema] (fieldName)}
+									{@const isRequired = nodeComponentType.schema.required?.includes(fieldName)}
+									{@const error = getFieldError(fieldName, schema)}
+									<SchemaField
+										name={fieldName}
+										label={humanizeFieldName(fieldName)}
+										{schema}
+										bind:value={editedConfig[fieldName]}
+										{error}
+										{isRequired}
+										onChange={(v) => handleFieldChange(fieldName, v)}
+									/>
+								{/each}
+							{:else}
+								<div data-testid="no-search-results" class="no-results">
+									No fields match your search
+								</div>
+							{/if}
+						{:else}
+							<!-- Categorized Fields -->
+							{#if basicFields.length > 0}
+								<div data-testid="basic-fields" class="basic-fields-section">
+									{#each basicFields as [fieldName, schema] (fieldName)}
+										{@const isRequired = nodeComponentType.schema.required?.includes(fieldName)}
+										{@const error = getFieldError(fieldName, schema)}
+										<SchemaField
+											name={fieldName}
+											label={humanizeFieldName(fieldName)}
+											{schema}
+											bind:value={editedConfig[fieldName]}
+											{error}
+											{isRequired}
+											onChange={(v) => handleFieldChange(fieldName, v)}
+										/>
+									{/each}
+								</div>
+							{/if}
+
+							{#if advancedFields.length > 0}
+								<details data-testid="advanced-fields" class="advanced-fields-section">
+									<summary>Advanced Configuration</summary>
+									{#each advancedFields as [fieldName, schema] (fieldName)}
+										{@const isRequired = nodeComponentType.schema.required?.includes(fieldName)}
+										{@const error = getFieldError(fieldName, schema)}
+										<SchemaField
+											name={fieldName}
+											label={humanizeFieldName(fieldName)}
+											{schema}
+											bind:value={editedConfig[fieldName]}
+											{error}
+											{isRequired}
+											onChange={(v) => handleFieldChange(fieldName, v)}
+										/>
+									{/each}
+								</details>
+							{/if}
+						{/if}
 					</div>
 				{/if}
 			</form>
@@ -664,78 +698,6 @@
 		color: var(--ui-text-primary);
 	}
 
-	.required-marker {
-		color: var(--status-error);
-		margin-left: 0.25rem;
-	}
-
-	.field-hint {
-		margin: 0 0 0.375rem;
-		font-size: 0.75rem;
-		color: var(--ui-text-tertiary);
-	}
-
-	.form-group input[type='text'],
-	.form-group input[type='number'],
-	.form-group select {
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--ui-border-subtle);
-		border-radius: 4px;
-		font-size: 0.875rem;
-		background: var(--ui-surface-primary);
-		color: var(--ui-text-primary);
-	}
-
-	.form-group input:focus,
-	.form-group select:focus {
-		outline: none;
-		border-color: var(--ui-interactive-primary);
-		box-shadow: 0 0 0 2px var(--ui-focus-ring);
-	}
-
-	.json-editor {
-		width: 100%;
-		min-height: 100px;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--ui-border-subtle);
-		border-radius: 4px;
-		font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-		font-size: 0.75rem;
-		background: var(--ui-surface-primary);
-		color: var(--ui-text-primary);
-		resize: vertical;
-		white-space: pre;
-		tab-size: 2;
-	}
-
-	.json-editor:focus {
-		outline: none;
-		border-color: var(--ui-interactive-primary);
-		box-shadow: 0 0 0 2px var(--ui-focus-ring);
-	}
-
-	.form-group.has-error input {
-		border-color: var(--status-error);
-	}
-
-	.checkbox-label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		cursor: pointer;
-	}
-
-	.checkbox-label input {
-		width: auto;
-	}
-
-	.field-error {
-		margin: 0.375rem 0 0;
-		font-size: 0.75rem;
-		color: var(--status-error);
-	}
-
 	.config-section {
 		margin-top: 1.5rem;
 		padding-top: 1rem;
@@ -748,6 +710,90 @@
 		font-weight: 600;
 		color: var(--ui-text-secondary);
 		text-transform: uppercase;
+	}
+
+	.search-header {
+		margin-bottom: 1rem;
+	}
+
+	.search-controls {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 0.75rem;
+	}
+
+	.field-search-input {
+		flex: 1;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: 4px;
+		font-size: 0.875rem;
+		background: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
+	}
+
+	.field-search-input:focus {
+		outline: none;
+		border-color: var(--ui-interactive-primary);
+		box-shadow: 0 0 0 2px var(--ui-focus-ring);
+	}
+
+	.clear-search-button {
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: 4px;
+		font-size: 0.875rem;
+		background: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
+		cursor: pointer;
+		transition: all 150ms ease;
+	}
+
+	.clear-search-button:hover:not(:disabled) {
+		background: var(--ui-surface-secondary);
+	}
+
+	.clear-search-button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.basic-fields-section,
+	.advanced-fields-section {
+		margin-top: 1rem;
+	}
+
+	.advanced-fields-section {
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: 4px;
+		padding: 0.75rem;
+	}
+
+	.advanced-fields-section summary {
+		cursor: pointer;
+		font-weight: 600;
+		padding: 0.5rem;
+		margin: -0.75rem -0.75rem 0.75rem -0.75rem;
+		user-select: none;
+		border-radius: 4px;
+	}
+
+	.advanced-fields-section summary:hover {
+		background: var(--ui-surface-secondary);
+	}
+
+	.advanced-fields-section[open] summary {
+		margin-bottom: 1rem;
+	}
+
+	.no-results {
+		padding: 1.5rem;
+		text-align: center;
+		color: var(--ui-text-tertiary);
+		font-size: 0.875rem;
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: 4px;
+		background: var(--ui-surface-secondary);
 	}
 
 	/* Footer */

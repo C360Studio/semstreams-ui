@@ -210,7 +210,7 @@
 	let allFieldNames = $derived(Object.keys(schema.portFields || {}));
 </script>
 
-<div class="port-config-editor">
+<div class="port-config-editor" data-testid="port-config-editor">
 	<label for={name}>
 		{name}
 		{#if isRequired}

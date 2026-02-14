@@ -8,6 +8,8 @@
 	interface BooleanFieldProps {
 		/** Field name (used for id, label association) */
 		name: string;
+		/** Display label (optional, defaults to name) */
+		label?: string;
 		/** PropertySchema definition for this field */
 		schema: PropertySchema;
 		/** Current field value */
@@ -20,7 +22,10 @@
 		onChange?: (value: boolean) => void;
 	}
 
-	let { name, schema, value = $bindable(), error, isRequired = false, onChange }: BooleanFieldProps = $props();
+	let { name, label, schema, value = $bindable(), error, isRequired = false, onChange }: BooleanFieldProps = $props();
+
+	// Use label if provided, otherwise fall back to name
+	const displayLabel = $derived(label ?? name);
 
 	// Ensure value defaults to false if undefined
 	let checked = $derived(value ?? false);
@@ -40,7 +45,7 @@
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={error ? `${name}-error` : schema.description ? `${name}-description` : undefined}
 		/>
-		{name}
+		{displayLabel}
 		{#if isRequired}
 			<span class="required">*</span>
 		{/if}
