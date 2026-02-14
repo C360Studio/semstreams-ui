@@ -19,12 +19,22 @@ async function globalTeardown() {
 
 	console.log('[Playwright] Cleaning up Docker Compose stack...');
 
+	const composePath = join(__dirname, 'docker-compose.e2e.yml');
+	const projectName = process.env.E2E_PROJECT_NAME;
+
 	try {
-		// Stop docker-compose.e2e.yml stack
-		const composePath = join(__dirname, 'docker-compose.e2e.yml');
-		execSync(`docker compose -f ${composePath} down`, {
-			stdio: 'inherit'
-		});
+		// If a project name was set by global-setup, use it for cleanup
+		if (projectName) {
+			console.log(`[Playwright] Stopping project: ${projectName}`);
+			execSync(`docker compose -p ${projectName} -f ${composePath} down`, {
+				stdio: 'inherit'
+			});
+		} else {
+			// Fall back to default compose down
+			execSync(`docker compose -f ${composePath} down`, {
+				stdio: 'inherit'
+			});
+		}
 		console.log('[Playwright] Docker cleanup completed');
 	} catch (error) {
 		console.warn('[Playwright] Docker cleanup failed (may already be stopped):', error);

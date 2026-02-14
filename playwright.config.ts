@@ -20,6 +20,9 @@ export default defineConfig({
 	// Reporter to use
 	reporter: process.env.CI ? 'github' : 'list',
 
+	// Global setup to check port availability and detect conflicts
+	globalSetup: './e2e/global-setup.ts',
+
 	// Global teardown to cleanup Docker after tests
 	globalTeardown: './playwright.teardown.ts',
 
