@@ -8,7 +8,7 @@
  * Consumers read state directly via getters — no .subscribe() needed.
  */
 
-import { SvelteMap, SvelteSet } from "svelte/reactivity";
+import { SvelteDate, SvelteMap, SvelteSet } from "svelte/reactivity";
 import {
   type GraphEntity,
   type GraphRelationship,
@@ -29,12 +29,12 @@ function createGraphStore() {
   // Reactive state — use SvelteMap/SvelteSet for deep reactivity on
   // collection mutations without needing to replace the entire reference.
   // ---------------------------------------------------------------------------
-  let entities = $state(new SvelteMap<string, GraphEntity>());
-  let relationships = $state(new SvelteMap<string, GraphRelationship>());
-  let communities = $state(new SvelteMap<string, GraphCommunity>());
+  let entities = new SvelteMap<string, GraphEntity>();
+  let relationships = new SvelteMap<string, GraphRelationship>();
+  let communities = new SvelteMap<string, GraphCommunity>();
   let selectedEntityId = $state<string | null>(null);
   let hoveredEntityId = $state<string | null>(null);
-  let expandedEntityIds = $state(new SvelteSet<string>());
+  let expandedEntityIds = new SvelteSet<string>();
   let filters = $state<GraphFilters>({ ...DEFAULT_GRAPH_FILTERS });
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -275,7 +275,7 @@ function createGraphStore() {
      * Get filtered relationships based on current filters.
      */
     getFilteredRelationships(): GraphRelationship[] {
-      const visibleEntityIds = new Set(
+      const visibleEntityIds = new SvelteSet(
         this.getFilteredEntities().map((e) => e.id),
       );
 
@@ -304,7 +304,7 @@ function createGraphStore() {
      * Get unique entity types from current data.
      */
     getEntityTypes(): string[] {
-      const types = new Set<string>();
+      const types = new SvelteSet<string>();
       for (const entity of entities.values()) {
         types.add(entity.idParts.type);
       }
@@ -315,7 +315,7 @@ function createGraphStore() {
      * Get unique domains from current data.
      */
     getDomains(): string[] {
-      const domains = new Set<string>();
+      const domains = new SvelteSet<string>();
       for (const entity of entities.values()) {
         domains.add(entity.idParts.domain);
       }
@@ -330,12 +330,12 @@ function createGraphStore() {
      * Reset store to initial state.
      */
     reset() {
-      entities = new SvelteMap();
-      relationships = new SvelteMap();
-      communities = new SvelteMap();
+      entities.clear();
+      relationships.clear();
+      communities.clear();
       selectedEntityId = null;
       hoveredEntityId = null;
-      expandedEntityIds = new SvelteSet();
+      expandedEntityIds.clear();
       filters = { ...DEFAULT_GRAPH_FILTERS };
       loading = false;
       error = null;
@@ -387,7 +387,7 @@ export function buildGraphEntity(data: {
     source: p.source || "unknown",
     timestamp:
       typeof p.timestamp === "string"
-        ? new Date(p.timestamp).getTime()
+        ? new SvelteDate(p.timestamp).getTime()
         : p.timestamp,
   }));
 
@@ -399,7 +399,7 @@ export function buildGraphEntity(data: {
     confidence: r.confidence,
     timestamp: r.timestamp
       ? typeof r.timestamp === "string"
-        ? new Date(r.timestamp).getTime()
+        ? new SvelteDate(r.timestamp).getTime()
         : r.timestamp
       : Date.now(),
   }));
@@ -412,7 +412,7 @@ export function buildGraphEntity(data: {
     confidence: r.confidence,
     timestamp: r.timestamp
       ? typeof r.timestamp === "string"
-        ? new Date(r.timestamp).getTime()
+        ? new SvelteDate(r.timestamp).getTime()
         : r.timestamp
       : Date.now(),
   }));

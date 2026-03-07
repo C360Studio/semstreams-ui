@@ -41,7 +41,7 @@ test.describe.skip("Schema-Driven Configuration", () => {
 
   // Schema form rendering (general test)
   test("should display schema-driven form for UDP component", async ({
-    page,
+    page: _page,
   }) => {
     // Add UDP component to flow
     await palette.addComponentToCanvas("UDP Input");
@@ -64,7 +64,7 @@ test.describe.skip("Schema-Driven Configuration", () => {
   });
 
   // Basic Configuration section rendering
-  test("should render Basic Configuration section", async ({ page }) => {
+  test("should render Basic Configuration section", async ({ page: _page }) => {
     // Add UDP component
     await palette.addComponentToCanvas("UDP Input");
     await canvas.expectNodeCount(1);

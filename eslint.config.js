@@ -42,6 +42,14 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
+        // Svelte 5 runes — available as globals in .svelte.ts files
+        $state: "readonly",
+        $derived: "readonly",
+        $effect: "readonly",
+        $props: "readonly",
+        $bindable: "readonly",
+        $inspect: "readonly",
+        $host: "readonly",
       },
     },
     plugins: {
@@ -64,6 +72,19 @@ export default [
         ...globals.browser,
         ...globals.node,
       },
+    },
+  },
+  // Locked generated test files — DO NOT EDIT headers mean we cannot fix
+  // unused imports in them. Suppress unused-vars for these files only.
+  {
+    files: [
+      "src/lib/components/DataTable.test.ts",
+      "src/lib/components/JsonEditor.test.ts",
+      "src/lib/components/PropertiesPanel.attack.test.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
   prettier,

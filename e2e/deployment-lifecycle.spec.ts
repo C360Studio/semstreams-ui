@@ -1,8 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { FlowCanvasPage } from "./pages/FlowCanvasPage";
-import { ComponentPalettePage } from "./pages/ComponentPalettePage";
 import { StatusBarPage } from "./pages/StatusBarPage";
-import { FlowListPage } from "./pages/FlowListPage";
 import {
   createTestFlow,
   deleteTestFlow,

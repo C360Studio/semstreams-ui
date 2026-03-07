@@ -515,7 +515,6 @@ describe("DataView GraphQL Integration", () => {
 
       // Simulate entity expand by calling the component's handler directly
       // This tests that the integration logic is correctly set up
-      // @ts-expect-error - accessing internal method for testing
       await component.handleEntityExpand("c360.ops.robotics.gcs.drone.001");
 
       await waitFor(() => {
@@ -543,7 +542,6 @@ describe("DataView GraphQL Integration", () => {
         edges: [],
       });
 
-      // @ts-expect-error - accessing internal method for testing
       await component.handleEntityExpand("c360.ops.robotics.gcs.fleet.alpha");
 
       await waitFor(() => {
@@ -570,7 +568,6 @@ describe("DataView GraphQL Integration", () => {
       const expansionError = new GraphApiError("Failed to expand entity", 500);
       mockPathSearchFn.mockRejectedValueOnce(expansionError);
 
-      // @ts-expect-error - accessing internal method for testing
       await component.handleEntityExpand("c360.ops.robotics.gcs.drone.001");
 
       // Should display error

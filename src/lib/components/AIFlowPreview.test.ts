@@ -909,8 +909,8 @@ describe("AIFlowPreview", () => {
     it("should handle malformed validation result", () => {
       const malformedValidation = {
         validation_status: "valid" as const,
-        errors: null as any,
-        warnings: undefined as any,
+        errors: null as unknown as [],
+        warnings: undefined as unknown as [],
       };
 
       render(AIFlowPreview, {

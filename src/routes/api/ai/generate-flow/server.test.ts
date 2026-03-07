@@ -15,6 +15,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "./+server";
 import type { RequestEvent } from "./$types";
+import type { MCPServer } from "$lib/server/mcp/server";
+import type { ClaudeClient } from "$lib/server/mcp/claude";
 
 // Define mock class using vi.hoisted so it's available for vi.mock
 const { MockClaudeApiError } = vi.hoisted(() => {
@@ -72,9 +74,9 @@ vi.mock("$lib/server/middleware/rateLimit", () => ({
 }));
 
 describe("AI Flow Generation API Route", () => {
-  let mockMCPServer: any;
-  let mockClaudeClient: any;
-  let mockFetch: any;
+  let mockMCPServer: Record<string, ReturnType<typeof vi.fn>>;
+  let mockClaudeClient: Record<string, ReturnType<typeof vi.fn>>;
+  let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     // Reset mocks
@@ -101,8 +103,12 @@ describe("AI Flow Generation API Route", () => {
     const { createMCPServer } = await import("$lib/server/mcp/server");
     const { createClaudeClient } = await import("$lib/server/mcp/claude");
 
-    vi.mocked(createMCPServer).mockReturnValue(mockMCPServer);
-    vi.mocked(createClaudeClient).mockReturnValue(mockClaudeClient);
+    vi.mocked(createMCPServer).mockReturnValue(
+      mockMCPServer as unknown as MCPServer,
+    );
+    vi.mocked(createClaudeClient).mockReturnValue(
+      mockClaudeClient as unknown as ClaudeClient,
+    );
   });
 
   describe("Request Validation", () => {

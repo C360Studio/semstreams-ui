@@ -20,7 +20,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Test fixture for flow page with AI integration
 // This would be a simplified version of the actual page component
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _testFlowPageHTML = `
 <script lang="ts">
 	import AIPromptInput from '$lib/components/AIPromptInput.svelte';
@@ -93,7 +92,7 @@ const _testFlowPageHTML = `
 `;
 
 describe("Flow Page AI Integration", () => {
-  let mockFetch: any;
+  let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // Mock global fetch
