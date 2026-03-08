@@ -11,6 +11,7 @@
   interface Props {
     onSearch: (query: string) => void;
     onClear: () => void;
+    onCancel?: () => void;
     loading?: boolean;
     inSearchMode?: boolean;
     error?: string | null;
@@ -21,6 +22,7 @@
   let {
     onSearch,
     onClear,
+    onCancel = undefined,
     loading = false,
     inSearchMode = false,
     error = null,
@@ -31,6 +33,23 @@
   // Local state: the current input value and a local error flag that clears on typing
   let query = $state("");
   let localErrorDismissed = $state(false);
+
+  // Elapsed time counter for long-running queries
+  let elapsedSeconds = $state(0);
+
+  $effect(() => {
+    if (loading) {
+      elapsedSeconds = 0;
+      const intervalId = setInterval(() => {
+        elapsedSeconds += 1;
+      }, 1000);
+      return () => {
+        clearInterval(intervalId);
+      };
+    } else {
+      elapsedSeconds = 0;
+    }
+  });
 
   // Show error only when prop is set and user hasn't started typing since
   const visibleError = $derived(error && !localErrorDismissed ? error : null);
@@ -123,8 +142,20 @@
   </div>
 
   {#if loading}
-    <div class="nlq-loading" data-testid="nlq-loading-indicator" aria-live="polite">
-      Searching…
+    <div class="nlq-loading-row">
+      <div class="nlq-loading" data-testid="nlq-loading-indicator" aria-live="polite">
+        Searching…
+      </div>
+      <span class="nlq-elapsed" data-testid="nlq-elapsed-time">{elapsedSeconds}s</span>
+      <button
+        type="button"
+        class="nlq-cancel-button"
+        data-testid="nlq-cancel-button"
+        onclick={() => onCancel?.()}
+        aria-label="Cancel"
+      >
+        Cancel
+      </button>
     </div>
   {/if}
 
@@ -212,10 +243,36 @@
     cursor: not-allowed;
   }
 
+  .nlq-loading-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .nlq-loading {
     font-size: 12px;
     color: var(--ui-text-secondary, #888);
     font-style: italic;
+  }
+
+  .nlq-elapsed {
+    font-size: 12px;
+    color: var(--ui-text-secondary, #888);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nlq-cancel-button {
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--ui-border-subtle, #ccc);
+    cursor: pointer;
+    font-size: 12px;
+    background: transparent;
+    color: var(--ui-text-secondary, #888);
+  }
+
+  .nlq-cancel-button:hover {
+    background: var(--ui-surface-secondary, #f5f5f5);
   }
 
   .nlq-error {

@@ -102,6 +102,7 @@ async function executeQueryWithExtensions<T>(
   query: string,
   variables: Record<string, unknown>,
   operationName: string,
+  signal?: AbortSignal,
 ): Promise<QueryResultWithExtensions<T>> {
   const request: GraphQLRequest = {
     query,
@@ -116,8 +117,13 @@ async function executeQueryWithExtensions<T>(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(request),
+      ...(signal !== undefined ? { signal } : {}),
     });
   } catch (error) {
+    // AbortError must propagate as-is — do not wrap in GraphApiError
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
     throw new GraphApiError(
       `Network error during ${operationName}: ${error instanceof Error ? error.message : "Unknown error"}`,
       0,
@@ -271,6 +277,7 @@ export const graphApi = {
     query: string,
     level?: number,
     maxCommunities?: number,
+    signal?: AbortSignal,
   ): Promise<GlobalSearchResult> {
     const gqlQuery = `
       query GlobalSearch($query: String!, $level: Int, $maxCommunities: Int) {
@@ -330,6 +337,7 @@ export const graphApi = {
         gqlQuery,
         variables,
         "globalSearch",
+        signal,
       );
 
     const gs = data.globalSearch;

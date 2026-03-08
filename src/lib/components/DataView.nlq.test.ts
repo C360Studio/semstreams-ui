@@ -142,8 +142,10 @@ describe("DataView NLQ Integration", () => {
 
       await waitFor(() => {
         expect(mockGlobalSearchFn).toHaveBeenCalledOnce();
+        // Phase 4 added AbortSignal as 4th parameter — updated to match new signature
         expect(mockGlobalSearchFn).toHaveBeenCalledWith(
           "show me all drones",
+          expect.anything(),
           expect.anything(),
           expect.anything(),
         );

@@ -57,6 +57,9 @@
 	let nlqClassification = $state<ClassificationMeta | null>(null);
 	let searchMode = $state<SearchMode>('replace');
 
+	// AbortController for in-flight NLQ searches
+	let searchController: AbortController | null = null;
+
 	// Kick off the initial data load after mount
 	$effect(() => {
 		loadGraphData();
@@ -108,10 +111,17 @@
 
 	// NLQ search handlers
 	async function handleSearch(query: string) {
+		// Abort any in-flight search before starting a new one
+		if (searchController) {
+			searchController.abort();
+		}
+		searchController = new AbortController();
+		const signal = searchController.signal;
+
 		nlqError = null;
 		nlqLoading = true;
 		try {
-			const result = await graphApi.globalSearch(query, 2, 10);
+			const result = await graphApi.globalSearch(query, 2, 10, signal);
 			const entities = transformGlobalSearchResult(result);
 			if (searchMode === 'replace') {
 				graphStore.clearEntities();
@@ -121,6 +131,11 @@
 			nlqClassification = result.classification ?? null;
 			nlqInSearchMode = true;
 		} catch (error) {
+			// AbortError means the user cancelled — clear loading, do NOT set nlqError
+			if (error instanceof DOMException && error.name === 'AbortError') {
+				nlqLoading = false;
+				return;
+			}
 			let errorMessage = 'Search failed';
 			if (error instanceof GraphApiError) {
 				errorMessage = error.message;
@@ -133,8 +148,21 @@
 		}
 	}
 
+	function handleCancelSearch() {
+		if (searchController) {
+			searchController.abort();
+			searchController = null;
+		}
+	}
+
 	async function handleClearSearch() {
+		// Abort any in-flight search before reloading
+		if (searchController) {
+			searchController.abort();
+			searchController = null;
+		}
 		nlqError = null;
+		nlqLoading = false;
 		nlqInSearchMode = false;
 		nlqSummaries = [];
 		nlqClassification = null;
@@ -272,6 +300,7 @@
 		<NlqSearchBar
 			onSearch={handleSearch}
 			onClear={handleClearSearch}
+			onCancel={handleCancelSearch}
 			loading={nlqLoading}
 			inSearchMode={nlqInSearchMode}
 			error={nlqError}

@@ -102,6 +102,9 @@ describe("AI Flow Generation API Route", () => {
     // Setup mock factories
     const { createMCPServer } = await import("$lib/server/mcp/server");
     const { createClaudeClient } = await import("$lib/server/mcp/claude");
+    const { checkRateLimit } = await import(
+      "$lib/server/middleware/rateLimit"
+    );
 
     vi.mocked(createMCPServer).mockReturnValue(
       mockMCPServer as unknown as MCPServer,
@@ -109,6 +112,12 @@ describe("AI Flow Generation API Route", () => {
     vi.mocked(createClaudeClient).mockReturnValue(
       mockClaudeClient as unknown as ClaudeClient,
     );
+    // Re-apply rate limit mock after global vi.resetAllMocks() in setup.ts
+    vi.mocked(checkRateLimit).mockReturnValue({
+      allowed: true,
+      remaining: 10,
+      limit: 10,
+    });
   });
 
   describe("Request Validation", () => {
