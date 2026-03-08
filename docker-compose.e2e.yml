@@ -116,14 +116,14 @@ services:
     container_name: semstreams-ui-e2e-semsource
     volumes:
       - ./e2e/fixtures/semsource:/data/fixture:ro
-      - ./e2e/fixtures/semsource/semsource-e2e.json:/etc/semsource/config.json:ro
+      - ./e2e/fixtures/semsource/semsource-e2e.json:/etc/semsource/semsource.json:ro
     networks:
       - e2e-net
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7890/health"]
-      interval: 3s
-      timeout: 2s
-      retries: 15
+      test: ["CMD", "semsource", "version"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
 networks:
   e2e-net:
