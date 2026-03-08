@@ -1,7 +1,7 @@
 <script lang="ts">
 	import FlowCanvas from '$lib/components/FlowCanvas.svelte';
 	import ThreePanelLayout from '$lib/components/layout/ThreePanelLayout.svelte';
-	import ExplorerPanel from '$lib/components/ExplorerPanel.svelte';
+	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
 	import PropertiesPanel from '$lib/components/PropertiesPanel.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
 	import RuntimePanel from '$lib/components/RuntimePanel.svelte';
@@ -11,15 +11,14 @@
 	import ValidationErrorDialog from '$lib/components/ValidationErrorDialog.svelte';
 	import DeployErrorModal from '$lib/components/DeployErrorModal.svelte';
 	import ValidationStatusModal from '$lib/components/ValidationStatusModal.svelte';
-	import AIPromptInput from '$lib/components/AIPromptInput.svelte';
-	import AIFlowPreview from '$lib/components/AIFlowPreview.svelte';
 	import ViewSwitcher from '$lib/components/ViewSwitcher.svelte';
 	import DataView from '$lib/components/DataView.svelte';
+	import { chatStore } from '$lib/stores/chatStore.svelte';
+	import { streamChat } from '$lib/services/chatApi';
 	import type { PageData } from './$types';
 	import type { ComponentInstance, FlowNode, FlowConnection, Flow } from '$lib/types/flow';
-	import type { SaveState, RuntimeStateInfo, ExplorerTab, PropertiesPanelMode, ViewMode } from '$lib/types/ui-state';
+	import type { SaveState, RuntimeStateInfo, PropertiesPanelMode, ViewMode } from '$lib/types/ui-state';
 	import type { ValidationResult as PortValidationResult, ValidatedPort } from '$lib/types/port';
-	import type { ValidationResult as SimpleValidationResult } from '$lib/types/validation';
 	import type { ComponentType } from '$lib/types/component';
 	import { saveFlow, deployFlow, startFlow, stopFlow, isValidationError } from '$lib/api/flows';
 	import { flowHistory } from '$lib/stores/flowHistory.svelte';
@@ -43,13 +42,8 @@
 	// Panel layout store
 	const panelLayout = createPanelLayoutStore();
 
-	// Explorer panel state
-	let explorerTab = $state<ExplorerTab>('components');
-	let hoveredComponentType = $state<ComponentType | null>(null);
-
 	// Properties panel state
 	const propertiesPanelMode = $derived.by((): PropertiesPanelMode => {
-		if (hoveredComponentType) return 'type-preview';
 		if (selectedComponent) return 'edit';
 		return 'empty';
 	});
@@ -60,8 +54,6 @@
 		if (!selected) return null;
 		return componentTypes.find((ct) => ct.id === selected.component) ?? null;
 	});
-
-	// Note: Add/Edit modals replaced by ExplorerPanel and PropertiesPanel
 
 	// Navigation dialog state
 	let showNavigationDialog = $state(false);
@@ -77,14 +69,6 @@
 
 	// Validation status modal state (Feature 015 - T014)
 	let showValidationStatusModal = $state(false);
-
-	// AI flow generation state
-	let showAIPreview = $state(false);
-	let aiLoading = $state(false);
-	let aiGeneratedFlow = $state<Partial<Flow> | null>(null);
-	let aiValidationResult = $state<SimpleValidationResult | null>(null);
-	let aiError = $state<string | null>(null);
-	let lastAIPrompt = $state<string>('');
 
 	// Real-time validation state (for port visualization)
 	let validationResult = $state<PortValidationResult | null>(null);
@@ -170,41 +154,11 @@
 		panelLayout.handleViewportResize(window.innerWidth);
 	}
 
-	// Handle keyboard shortcuts for explorer tabs and deselection
+	// Handle keyboard shortcuts for deselection
 	function handleKeyDown(event: KeyboardEvent) {
-		const isMod = event.metaKey || event.ctrlKey;
-
-		// Escape: Deselect component or exit palette tab
-		if (event.key === 'Escape') {
-			if (selectedComponent) {
-				selectedComponent = null;
-				return;
-			}
-			if (explorerTab === 'palette') {
-				explorerTab = 'components';
-				hoveredComponentType = null;
-				return;
-			}
-		}
-
-		// Cmd/Ctrl + Shift + E: Switch to Components tab
-		if (isMod && event.shiftKey && event.key === 'E') {
-			event.preventDefault();
-			explorerTab = 'components';
-			if (!panelLayout.state.leftPanelOpen) {
-				panelLayout.toggleLeft();
-			}
-			return;
-		}
-
-		// Cmd/Ctrl + Shift + P: Switch to Palette tab
-		if (isMod && event.shiftKey && event.key === 'P') {
-			event.preventDefault();
-			explorerTab = 'palette';
-			if (!panelLayout.state.leftPanelOpen) {
-				panelLayout.toggleLeft();
-			}
-			return;
+		// Escape: Deselect component
+		if (event.key === 'Escape' && selectedComponent) {
+			selectedComponent = null;
 		}
 	}
 
@@ -412,13 +366,6 @@
 		}
 	}
 
-	// ExplorerPanel handlers
-	function handleSelectNode(nodeId: string) {
-		handleNodeClick(nodeId);
-		// Clear any hovered type when selecting a node
-		hoveredComponentType = null;
-	}
-
 	function handleDeleteNode(nodeId: string) {
 		flowNodes = flowNodes.filter((n) => n.id !== nodeId);
 		// Also remove connections involving this node
@@ -433,54 +380,6 @@
 		saveState = { ...saveState, status: 'dirty' };
 	}
 
-	function handleExplorerTabChange(tab: ExplorerTab) {
-		explorerTab = tab;
-		// Clear hovered type when switching tabs
-		if (tab === 'components') {
-			hoveredComponentType = null;
-		}
-	}
-
-	function handleHoverType(type: ComponentType | null) {
-		hoveredComponentType = type;
-	}
-
-	function handleAddComponentFromPalette(componentType: ComponentType) {
-		const nodeId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-		const timestamp = Date.now();
-		const sanitizedId = componentType.id.replace(/[^a-z0-9-_]/gi, '-');
-
-		// Build default config from schema
-		const defaultConfig: Record<string, unknown> = {};
-		if (componentType.schema?.properties) {
-			for (const [key, propSchema] of Object.entries(componentType.schema.properties)) {
-				if (propSchema.default !== undefined) {
-					defaultConfig[key] = propSchema.default;
-				}
-			}
-		}
-
-		const flowNode: FlowNode = {
-			id: nodeId,
-			component: componentType.id,
-			type: componentType.type,
-			name: `${sanitizedId}-${timestamp}`,
-			position: {
-				x: 400 + (flowNodes.length % 3) * 200,
-				y: 300 + Math.floor(flowNodes.length / 3) * 150
-			},
-			config: defaultConfig
-		};
-
-		flowNodes = [...flowNodes, flowNode];
-		dirty = true;
-		saveState = { ...saveState, status: 'dirty' };
-
-		// Auto-select the new node and switch to Components tab
-		handleNodeClick(nodeId);
-		explorerTab = 'components';
-		hoveredComponentType = null;
-	}
 
 	// PropertiesPanel handlers
 	function handlePropertiesSave(nodeId: string, name: string, config: Record<string, unknown>) {
@@ -524,49 +423,53 @@
 	}
 
 
-	// Note: Add/Edit modal handlers removed - now using ExplorerPanel and PropertiesPanel
+	// Chat handlers
+	let chatAbortController = $state<AbortController | null>(null);
 
-	// AI Flow Generation handlers
-	async function handleAISubmit(prompt: string) {
-		aiLoading = true;
-		aiError = null;
-		lastAIPrompt = prompt;
+	function handleChatSubmit(content: string) {
+		chatStore.setError(null);
+		chatStore.addUserMessage(content);
+		chatStore.setStreaming(true);
 
-		try {
-			// Prepare existing flow context for modification
-			const existingFlow = flowNodes.length > 0 ? {
-				id: backendFlow.id,
-				nodes: flowNodes,
-				connections: flowConnections
-			} : undefined;
+		chatAbortController = new AbortController();
 
-			const response = await fetch('/api/ai/generate-flow', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ prompt, existingFlow })
-			});
-
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || 'Failed to generate flow');
-			}
-
-			const data = await response.json();
-			aiGeneratedFlow = data.flow;
-			aiValidationResult = data.validationResult;
-			showAIPreview = true;
-		} catch (err) {
-			aiError = err instanceof Error ? err.message : 'Failed to generate flow';
-			aiGeneratedFlow = null;
-			aiValidationResult = null;
-			showAIPreview = true; // Show preview with error
-		} finally {
-			aiLoading = false;
-		}
+		streamChat(
+			{
+				messages: chatStore.messages
+					.filter((m) => m.role !== 'system')
+					.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+				currentFlow: {
+					nodes: flowNodes,
+					connections: flowConnections
+				}
+			},
+			{
+				onText: (chunk: string) => {
+					chatStore.appendStreamContent(chunk);
+				},
+				onDone: ({ flow }: { flow?: Partial<Flow>; validationResult?: unknown }) => {
+					chatStore.finalizeStream(chatStore.streamingContent, flow);
+					chatAbortController = null;
+				},
+				onError: (errorMsg: string) => {
+					chatStore.setStreaming(false);
+					chatStore.setError(errorMsg);
+					chatAbortController = null;
+				}
+			},
+			chatAbortController.signal
+		);
 	}
 
-	function handleAIApply() {
-		if (!aiGeneratedFlow) return;
+	function handleChatCancel() {
+		chatAbortController?.abort();
+		chatStore.setStreaming(false);
+		chatAbortController = null;
+	}
+
+	function handleApplyFlow(messageId: string) {
+		const message = chatStore.messages.find((m) => m.id === messageId);
+		if (!message?.flow) return;
 
 		// Save current state to history for undo
 		flowHistory.push({
@@ -575,44 +478,63 @@
 			connections: flowConnections
 		});
 
-		// Apply AI-generated flow to canvas
-		if (aiGeneratedFlow.nodes) {
-			flowNodes = [...aiGeneratedFlow.nodes];
+		// Apply flow to canvas
+		if (message.flow.nodes) {
+			flowNodes = [...message.flow.nodes];
 		}
-		if (aiGeneratedFlow.connections) {
-			flowConnections = [...aiGeneratedFlow.connections];
+		if (message.flow.connections) {
+			flowConnections = [...message.flow.connections];
 		}
 
-		// Mark as dirty
+		// Mark as dirty and applied
 		dirty = true;
 		saveState = { ...saveState, status: 'dirty' };
-
-		// Close preview
-		showAIPreview = false;
-		aiGeneratedFlow = null;
-		aiValidationResult = null;
-		aiError = null;
+		chatStore.markFlowApplied(messageId);
 	}
 
-	function handleAIReject() {
-		showAIPreview = false;
-		aiGeneratedFlow = null;
-		aiValidationResult = null;
-		aiError = null;
-	}
+	function handleLoadJson(data: unknown) {
+		const flowData = data as Partial<Flow>;
+		if (!flowData) return;
 
-	async function handleAIRetry() {
-		showAIPreview = false;
-		if (lastAIPrompt) {
-			await handleAISubmit(lastAIPrompt);
+		// Save current state to history
+		flowHistory.push({
+			...backendFlow,
+			nodes: flowNodes,
+			connections: flowConnections
+		});
+
+		if (flowData.nodes) {
+			flowNodes = [...flowData.nodes];
 		}
+		if (flowData.connections) {
+			flowConnections = [...flowData.connections];
+		}
+
+		dirty = true;
+		saveState = { ...saveState, status: 'dirty' };
+		chatStore.addSystemMessage('Flow loaded from JSON file.');
 	}
 
-	function handleAIClose() {
-		showAIPreview = false;
-		aiGeneratedFlow = null;
-		aiValidationResult = null;
-		aiError = null;
+	function handleExportJson() {
+		const flowData = {
+			id: backendFlow.id,
+			name: backendFlow.name,
+			description: backendFlow.description,
+			nodes: flowNodes,
+			connections: flowConnections
+		};
+
+		const blob = new Blob([JSON.stringify(flowData, null, 2)], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `${backendFlow.name || 'flow'}.json`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function handleNewChat() {
+		chatStore.clearConversation();
 	}
 
 	// Track if operations are in progress to prevent concurrent mutations
@@ -897,18 +819,6 @@
 	onClose={handleValidationStatusModalClose}
 />
 
-<!-- AI Flow Preview Modal -->
-<AIFlowPreview
-	isOpen={showAIPreview}
-	flow={aiGeneratedFlow}
-	validationResult={aiValidationResult}
-	loading={aiLoading}
-	error={aiError}
-	onApply={handleAIApply}
-	onReject={handleAIReject}
-	onRetry={handleAIRetry}
-	onClose={handleAIClose}
-/>
 
 <div class="editor-layout">
 	<!-- Header -->
@@ -955,26 +865,18 @@
 				onToggleRight={handleToggleRightPanel}
 			>
 				{#snippet leftPanel()}
-					<ExplorerPanel
-						nodes={flowNodes}
-						selectedNodeId={selectedComponent?.id || null}
-						activeTab={explorerTab}
-						hoveredType={hoveredComponentType}
-						onSelectNode={handleSelectNode}
-						onAddComponent={handleAddComponentFromPalette}
-						onHoverType={handleHoverType}
-						onTabChange={handleExplorerTabChange}
-					>
-						{#snippet aiAssistant()}
-							<div class="ai-section-content">
-								<AIPromptInput
-									loading={aiLoading}
-									disabled={aiLoading}
-									onSubmit={handleAISubmit}
-								/>
-							</div>
-						{/snippet}
-					</ExplorerPanel>
+					<ChatPanel
+						messages={chatStore.messages}
+						isStreaming={chatStore.isStreaming}
+						streamingContent={chatStore.streamingContent}
+						error={chatStore.error}
+						onSubmit={handleChatSubmit}
+						onCancel={handleChatCancel}
+						onApplyFlow={handleApplyFlow}
+						onLoadJson={handleLoadJson}
+						onExportJson={handleExportJson}
+						onNewChat={handleNewChat}
+					/>
 				{/snippet}
 
 				{#snippet centerPanel()}
@@ -1015,7 +917,6 @@
 				{#snippet rightPanel()}
 					<PropertiesPanel
 						mode={propertiesPanelMode}
-						componentType={hoveredComponentType}
 						node={selectedComponent}
 						nodeComponentType={selectedNodeComponentType}
 						onSave={handlePropertiesSave}
@@ -1098,7 +999,4 @@
 		transition: height 300ms ease-out;
 	}
 
-	.ai-section-content {
-		padding: 0.75rem;
-	}
 </style>

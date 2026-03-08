@@ -97,6 +97,14 @@ export default [
       "no-undef": "off",
     },
   },
+  // chat/server.test.ts contains an async generator that only throws (no yield)
+  // as an intentional attack test fixture. This is a DO NOT EDIT locked test file.
+  {
+    files: ["src/routes/api/ai/chat/server.test.ts"],
+    rules: {
+      "require-yield": "off",
+    },
+  },
   prettier,
   {
     ignores: [

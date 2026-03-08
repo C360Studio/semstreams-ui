@@ -65,6 +65,7 @@
     "graphology": "^0.26.0",
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-types": "^0.24.8",
+    "openai": "^6.27.0",
     "sigma": "^3.0.2",
     "svelte-hero-icons": "^5.2.0"
   }
