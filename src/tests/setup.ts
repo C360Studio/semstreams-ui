@@ -1,4 +1,37 @@
 import "@testing-library/jest-dom/vitest";
+import { vi } from "vitest";
+
+// graphology-layout-forceatlas2/worker uses Web Workers + URL.createObjectURL
+// which jsdom doesn't support. Mock the worker module globally.
+vi.mock("graphology-layout-forceatlas2/worker", () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      start: vi.fn(),
+      stop: vi.fn(),
+      kill: vi.fn(),
+    })),
+  };
+});
+
+// Sigma.js requires WebGL2RenderingContext which jsdom doesn't provide.
+// Mock the sigma module so components that import it can load in tests.
+// Real WebGL rendering is tested via Playwright E2E.
+vi.mock("sigma", () => {
+  const mockCamera = {
+    animatedZoom: vi.fn(),
+    animatedUnzoom: vi.fn(),
+    animatedReset: vi.fn(),
+  };
+  const MockSigma = vi.fn().mockImplementation(() => ({
+    on: vi.fn(),
+    off: vi.fn(),
+    refresh: vi.fn(),
+    kill: vi.fn(),
+    getCamera: vi.fn().mockReturnValue(mockCamera),
+    getGraph: vi.fn(),
+  }));
+  return { default: MockSigma };
+});
 
 // d3-zoom calls SVGSVGElement.width.baseVal.value and height.baseVal.value
 // inside its defaultExtent() function when a zoom gesture fires. jsdom does

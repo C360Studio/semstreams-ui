@@ -4,7 +4,7 @@
 	 *
 	 * Three-column layout for exploring the semantic knowledge graph:
 	 * - Left: GraphFilters (search, type/domain filters, confidence)
-	 * - Center: GraphCanvas (D3 force-directed visualization)
+	 * - Center: SigmaCanvas (WebGL Sigma.js visualization)
 	 * - Right: GraphDetailPanel (selected entity details)
 	 *
 	 * This view is shown when the user switches from Flow to Data view
@@ -17,7 +17,7 @@
 	import { transformPathSearchResult } from '$lib/services/graphTransform';
 
 	import GraphFiltersPanel from './runtime/GraphFilters.svelte';
-	import GraphCanvas from './runtime/GraphCanvas.svelte';
+	import SigmaCanvas from './runtime/SigmaCanvas.svelte';
 	import GraphDetailPanel from './runtime/GraphDetailPanel.svelte';
 
 	interface DataViewProps {
@@ -189,7 +189,7 @@
 
 	<!-- Center Panel: Canvas -->
 	<main class="data-view-center">
-		<GraphCanvas
+		<SigmaCanvas
 			{entities}
 			{relationships}
 			selectedEntityId={graphStore.selectedEntityId}
