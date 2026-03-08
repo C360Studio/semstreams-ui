@@ -81,25 +81,6 @@ test.describe("Graph Interaction - SemSource Entities", () => {
   test("entity detail panel shows 6-part ID breakdown when an entity is selected", async ({
     page,
   }) => {
-    // Use page.route to intercept the GraphQL call and return a controlled
-    // entity set. Then trigger a node click via graphStore evaluation so we
-    // can assert the detail panel without depending on Sigma pixel positions.
-    //
-    // We mock the GraphQL response to include a single known entity with a
-    // semsource ID, giving us full control over the ID breakdown sections.
-
-    // First: wait for real semsource data to be in the backend (done by beforeEach).
-    // Then: assert that the detail panel ID breakdown labels are correct by
-    // selecting a known entity via graphStore dispatch.
-
-    // Simulate selecting an entity by calling the store through evaluate.
-    // graphStore is a module-level singleton accessible via window.__graphStore
-    // if exported, but since it is not globally exposed, we trigger selection
-    // by intercepting the pathSearch result to include our target entity and
-    // then clicking it through page.evaluate-driven Sigma dispatch.
-    //
-    // Practical approach: intercept GraphQL, return a single semsource entity,
-    // reload data, confirm the detail panel renders with correct ID parts.
     const knownId = KNOWN_ENTITIES.mainFunc;
     // e2e.semsource.code.go.function.main
     // org=e2e, platform=semsource, domain=code, system=go, type=function, instance=main
@@ -142,59 +123,38 @@ test.describe("Graph Interaction - SemSource Entities", () => {
       .locator(".loading-overlay")
       .waitFor({ state: "hidden", timeout: 5000 });
 
-    // Now click the sigma canvas — with only one node, it should be roughly
-    // centred. Click the canvas centre.
-    const sigmaCanvas = page.locator('[data-testid="sigma-canvas"]');
-    await expect(sigmaCanvas).toBeVisible();
-    const box = await sigmaCanvas.boundingBox();
-    if (box) {
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    }
+    // Use the programmatic seam to select the known entity deterministically,
+    // bypassing WebGL canvas coordinate uncertainty entirely.
+    await page.evaluate((id) => window.__e2eSelectEntity?.(id), knownId);
 
-    // Allow Sigma click event to propagate
-    await page.waitForTimeout(500);
-
-    // If the node was clicked, the detail panel should appear.
-    // Because SigmaCanvas layout places nodes randomly and we may miss the
-    // click, we check for either state and skip the detail assertion if no
-    // node was hit (canvas is probabilistic without Sigma internals access).
     const detailPanel = page.locator('[data-testid="graph-detail-panel"]');
-    const isDetailVisible = await detailPanel.isVisible();
+    await expect(detailPanel).toBeVisible({ timeout: 3000 });
 
-    if (isDetailVisible) {
-      // Verify all 6 ID breakdown labels are present
-      const idSection = detailPanel.locator(".id-breakdown");
-      await expect(idSection).toBeVisible();
-      await expect(idSection.locator(".id-label").nth(0)).toContainText("org");
-      await expect(idSection.locator(".id-label").nth(1)).toContainText(
-        "platform",
-      );
-      await expect(idSection.locator(".id-label").nth(2)).toContainText(
-        "domain",
-      );
-      await expect(idSection.locator(".id-label").nth(3)).toContainText(
-        "system",
-      );
-      await expect(idSection.locator(".id-label").nth(4)).toContainText("type");
-      await expect(idSection.locator(".id-label").nth(5)).toContainText(
-        "instance",
-      );
+    // Verify all 6 ID breakdown labels are present
+    const idSection = detailPanel.locator(".id-breakdown");
+    await expect(idSection).toBeVisible();
+    await expect(idSection.locator(".id-label").nth(0)).toContainText("org");
+    await expect(idSection.locator(".id-label").nth(1)).toContainText(
+      "platform",
+    );
+    await expect(idSection.locator(".id-label").nth(2)).toContainText("domain");
+    await expect(idSection.locator(".id-label").nth(3)).toContainText("system");
+    await expect(idSection.locator(".id-label").nth(4)).toContainText("type");
+    await expect(idSection.locator(".id-label").nth(5)).toContainText(
+      "instance",
+    );
 
-      // Verify the values match the known entity ID parts
-      await expect(idSection.locator(".id-value").nth(0)).toContainText("e2e");
-      await expect(idSection.locator(".id-value").nth(1)).toContainText(
-        "semsource",
-      );
-      await expect(idSection.locator(".id-value").nth(2)).toContainText("code");
-      await expect(idSection.locator(".id-value").nth(3)).toContainText("go");
-      await expect(idSection.locator(".id-value").nth(4)).toContainText(
-        "function",
-      );
-      await expect(idSection.locator(".id-value").nth(5)).toContainText("main");
-    }
-    // If not visible, the canvas click missed the node — this is acceptable
-    // given WebGL layout randomness. The detail panel structure is tested by
-    // the unit tests; this test documents the integration path.
+    // Verify the values match the known entity ID parts
+    await expect(idSection.locator(".id-value").nth(0)).toContainText("e2e");
+    await expect(idSection.locator(".id-value").nth(1)).toContainText(
+      "semsource",
+    );
+    await expect(idSection.locator(".id-value").nth(2)).toContainText("code");
+    await expect(idSection.locator(".id-value").nth(3)).toContainText("go");
+    await expect(idSection.locator(".id-value").nth(4)).toContainText(
+      "function",
+    );
+    await expect(idSection.locator(".id-value").nth(5)).toContainText("main");
   });
 
   test("entity detail panel shows properties from ingested triples", async ({
@@ -244,23 +204,22 @@ test.describe("Graph Interaction - SemSource Entities", () => {
       .locator(".loading-overlay")
       .waitFor({ state: "hidden", timeout: 5000 });
 
-    const sigmaCanvas = page.locator('[data-testid="sigma-canvas"]');
-    const box = await sigmaCanvas.boundingBox();
-    if (box) {
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    }
-
-    await page.waitForTimeout(500);
+    // Use the programmatic seam to select the known entity deterministically.
+    await page.evaluate((id) => window.__e2eSelectEntity?.(id), knownId);
 
     const detailPanel = page.locator('[data-testid="graph-detail-panel"]');
-    if (await detailPanel.isVisible()) {
-      // Properties section should be present with at least one property row
-      const propertiesSection = detailPanel.locator(".properties-list");
-      await expect(propertiesSection).toBeVisible();
-      const propertyRows = propertiesSection.locator(".property-row");
-      const rowCount = await propertyRows.count();
-      expect(rowCount).toBeGreaterThan(0);
-    }
+    await expect(detailPanel).toBeVisible({ timeout: 3000 });
+
+    // Properties section should show both triples ingested from semsource
+    const propertiesSection = detailPanel.locator(".properties-list");
+    await expect(propertiesSection).toBeVisible();
+    const propertyRows = propertiesSection.locator(".property-row");
+    const rowCount = await propertyRows.count();
+    expect(rowCount).toBeGreaterThan(0);
+
+    // Both "has.name" and "has.kind" triples should appear in the panel
+    await expect(propertiesSection).toContainText("Handler");
+    await expect(propertiesSection).toContainText("interface");
   });
 
   test("zoom controls are present and operable in the canvas", async ({

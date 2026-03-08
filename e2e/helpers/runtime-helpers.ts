@@ -322,6 +322,57 @@ export async function getCanvasHeight(page: Page): Promise<number> {
 }
 
 /**
+ * Stop a running flow via backend API
+ *
+ * @param page - Playwright Page object
+ * @param flowId - Flow ID to stop
+ * @returns true if stop succeeded, false if endpoint not ready
+ *
+ * @example
+ * const stopped = await stopFlow(page, flowId);
+ * if (stopped) {
+ *   await waitForFlowState(page, flowId, 'stopped', 10000);
+ * }
+ */
+export async function stopFlow(page: Page, flowId: string): Promise<boolean> {
+  const response = await page.request.post(
+    `/flowbuilder/deployment/${flowId}/stop`,
+  );
+
+  if (!response.ok()) {
+    const body = await response.text();
+    console.warn(
+      `Warning: Failed to stop flow ${flowId}: ${response.status()} ${response.statusText()}\n${body}`,
+    );
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Start a deployed flow via backend API
+ *
+ * @param page - Playwright Page object
+ * @param flowId - Flow ID to start
+ *
+ * @example
+ * await startFlow(page, flowId);
+ */
+export async function startFlow(page: Page, flowId: string): Promise<void> {
+  const response = await page.request.post(
+    `/flowbuilder/deployment/${flowId}/start`,
+  );
+
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(
+      `Failed to start flow ${flowId}: ${response.status()} ${response.statusText()}\n${body}`,
+    );
+  }
+}
+
+/**
  * Delete a test flow via backend API
  *
  * @param page - Playwright Page object

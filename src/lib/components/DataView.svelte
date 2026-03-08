@@ -158,6 +158,33 @@
 		graphStore.setError(null);
 		loadGraphData();
 	}
+
+	// E2E test seam — expose entity selection on window so Playwright tests can
+	// select graph entities deterministically without relying on WebGL canvas clicks.
+	// Only registered in browser environments; cleaned up on component destroy.
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+
+		window.__e2eSelectEntity = (entityId: string) => {
+			graphStore.selectEntity(entityId);
+		};
+		window.__e2eHoverEntity = (entityId: string | null) => {
+			graphStore.setHoveredEntity(entityId);
+		};
+		window.__e2eSetFilters = (partial) => {
+			graphStore.setFilters(partial);
+		};
+		window.__e2eExpandEntity = async (entityId: string) => {
+			await handleEntityExpand(entityId);
+		};
+
+		return () => {
+			delete window.__e2eSelectEntity;
+			delete window.__e2eHoverEntity;
+			delete window.__e2eSetFilters;
+			delete window.__e2eExpandEntity;
+		};
+	});
 </script>
 
 <div class="data-view" data-testid="data-view">

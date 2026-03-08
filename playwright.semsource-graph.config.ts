@@ -1,14 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Dedicated Playwright config for semsource-graph E2E specs.
+// These tests require a live semsource Docker container and are excluded from the
+// default `npm run test:e2e` run via testIgnore in playwright.config.ts.
+// Use `task test:e2e:semsource-graph` to run them.
+
 const E2E_UI_PORT = process.env.E2E_UI_PORT || "3000";
 
 export default defineConfig({
-  testDir: "e2e",
-
-  // Exclude semsource-graph specs from the default run — they require a live semsource
-  // Docker container and will hang for 30 s per test without it.
-  // Use `task test:e2e:semsource-graph` (playwright.semsource-graph.config.ts) instead.
-  testIgnore: ["**/semsource-graph/**"],
+  testDir: "e2e/semsource-graph",
 
   // Run tests in files in parallel
   fullyParallel: true,
@@ -31,7 +31,7 @@ export default defineConfig({
   // Global teardown to cleanup Docker after tests
   globalTeardown: "./playwright.teardown.ts",
 
-  // Start Docker Compose stack automatically
+  // Start Docker Compose stack automatically (with semsource profile)
   webServer: {
     command: `E2E_UI_PORT=${E2E_UI_PORT} docker compose -f docker-compose.e2e.yml up --build`,
     url: `http://localhost:${E2E_UI_PORT}/health`,

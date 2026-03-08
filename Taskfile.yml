@@ -169,7 +169,7 @@ tasks:
       SEMSOURCE_CONTEXT: ../semsource
       COMPOSE_PROFILES: semsource
     cmds:
-      - npx playwright test e2e/semsource-graph/
+      - npx playwright test --config playwright.semsource-graph.config.ts
 
   test:e2e:semmem:
     desc: Run E2E tests against semmem backend

@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   createRunningFlow,
   deleteTestFlow,
+  stopFlow,
   waitForRuntimePanel,
   clickTab,
 } from "./helpers/runtime-helpers";
@@ -284,10 +285,8 @@ test.describe("Runtime Panel - WebSocket Integration", () => {
     await page.waitForTimeout(1500);
 
     // Stop the flow via backend API
-    const stopResponse = await page.request.post(
-      `/flowbuilder/deployment/${flowId}/stop`,
-    );
-    if (stopResponse.ok()) {
+    const stopped = await stopFlow(page, flowId);
+    if (stopped) {
       // Wait for flow to actually stop
       await waitForFlowState(page, flowId, "stopped", 10000);
 
