@@ -27,6 +27,7 @@
 
   /* Surface Colors */
   --ui-surface-primary: #161616; /* Gray-100 */
+  --ui-surface-primary-rgb: 22, 22, 22; /* RGB triplet for rgba() usage */
   --ui-surface-secondary: #262626; /* Gray-90 */
   --ui-surface-tertiary: #393939; /* Gray-80 */
   --ui-surface-overlay: #262626;
@@ -77,6 +78,7 @@
      ============================================ */
 
   /* Error - Validation failures, critical alerts */
+  --status-error-bg: #2d0709; /* Error background for banners */
   --status-error: #ff8389; /* Red-40 - Contrast: 6.8:1 on dark */
   --status-error-hover: #ffb3b8; /* Red-30 */
   --status-error-active: #fa4d56; /* Red-50 */
@@ -325,6 +327,7 @@
 [data-theme="light"] {
   /* Layer 1: UI Colors (Light) */
   --ui-surface-primary: #ffffff;
+  --ui-surface-primary-rgb: 255, 255, 255; /* RGB triplet for rgba() usage */
   --ui-surface-secondary: #f7f7f7;
   --ui-surface-tertiary: #f3f3f3;
   --ui-surface-overlay: #ffffff;
@@ -362,6 +365,7 @@
   --ui-focus-inverse: #ffffff; /* On dark backgrounds */
 
   /* Layer 2: Status Colors (Light) */
+  --status-error-bg: #fff1f1; /* Error background for banners (light) */
   --status-error: #da1e28; /* Red-60 */
   --status-error-hover: #b81921; /* Red-70 */
   --status-error-active: #750e13; /* Red-90 */
