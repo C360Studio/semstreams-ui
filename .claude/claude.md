@@ -1,37 +1,50 @@
 # SemStreams UI — Project Context
 
-The flow builder and runtime monitoring UI for the SemStreams platform. Svelte 5 + SvelteKit 2 + TypeScript frontend that talks to the semstreams Go backend via a Caddy reverse proxy.
+Graph explorer, flow builder, and runtime monitoring UI for the SemStreams platform. Svelte 5 + SvelteKit 2 + TypeScript frontend that connects to any running SemStreams app via a Caddy reverse proxy.
 
 ## Tech Stack
 
 - Svelte 5 (runes: `$state`, `$derived`, `$effect`, `$props`)
 - SvelteKit 2, Vite 7, TypeScript
-- pico.css (lightweight CSS framework)
-- Vitest + @testing-library/svelte (unit/component tests)
+- Sigma.js + Graphology (WebGL graph visualization)
+- Lightweight CSS (custom design tokens, no framework)
+- Vitest + @testing-library/svelte (3099+ unit/component tests)
 - Playwright (E2E tests)
 
 ## Architecture
 
 ```
-localhost:3001 (Caddy) --+-- /components/* ----> backend:8080 (Docker)
+localhost:3001 (Caddy) --+-- /components/* ----> backend:8080
                          +-- /flowbuilder/* ---> backend:8080
                          +-- /health ----------> backend:8080
-                         +-- /* ---------------> host.docker.internal:5173 (Vite)
+                         +-- /graphql ---------> graphql-gateway
+                         +-- /* ---------------> Vite:5173
 ```
 
-The UI is a flow builder for semstreams pipelines. Users create flows by adding components (input, processor, output, storage, gateway), connecting them, configuring properties, and monitoring runtime state.
+The homepage is a **graph explorer** (DataView) with chat. Users explore the knowledge graph, search entities, and interact with an AI assistant. Flow management is available at `/flows`.
+
+### Pages
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Graph explorer (DataView) — default homepage, auto-discovers active flow |
+| `/flows` | Flow list — create and manage flows |
+| `/flows/[id]` | Flow editor — visual canvas, chat, runtime monitoring |
 
 ## Key Directories
 
-| Path                             | Purpose                                                   |
-| -------------------------------- | --------------------------------------------------------- |
-| `src/lib/components/`            | 51 Svelte components                                      |
-| `src/lib/components/runtime/`    | Runtime monitoring tabs (Health, Logs, Metrics, Messages) |
-| `src/lib/stores/*.svelte.ts`     | Runes-based stores (factory function pattern)             |
-| `src/routes/`                    | SvelteKit pages                                           |
-| `src/hooks.server.ts`            | SSR fetch transformations                                 |
-| `e2e/`                           | Playwright E2E tests                                      |
-| `docs/agents/svelte-patterns.md` | Test patterns, code standards, review checklists          |
+| Path | Purpose |
+|------|---------|
+| `src/lib/components/` | 51 Svelte components |
+| `src/lib/components/chat/` | Chat system (ChatPanel, SlashCommandMenu, ContextChips, attachment cards) |
+| `src/lib/components/runtime/` | Runtime tabs (Health, Logs, Metrics, Messages, SigmaCanvas) |
+| `src/lib/services/` | API clients (chatApi, graphApi, slashCommands) |
+| `src/lib/server/` | SvelteKit server (AI providers, tool registry, MCP, GraphQL client) |
+| `src/lib/stores/*.svelte.ts` | Runes-based stores (graphStore, chatStore, runtimeStore) |
+| `src/lib/types/` | TypeScript types (chat, graph, flow, slashCommand) |
+| `src/routes/` | SvelteKit pages |
+| `e2e/` | Playwright E2E tests |
+| `docs/agents/svelte-patterns.md` | Test patterns, code standards, review checklists |
 
 ## Commands
 
@@ -44,26 +57,32 @@ npm run check       # svelte-check (TypeScript)
 npm run build       # Production build
 ```
 
-## Running the Full Stack
+## Running the App
 
 ```bash
-task dev:full                # Start everything (NATS + backend + UI) at localhost:3001
-task dev:backend:start       # Start backend in background
-task dev                     # Start frontend only (needs backend running)
-task dev:backend:stop        # Stop backend
-```
+# Connect to any running SemStreams app (recommended)
+task dev:connect                                    # localhost:8080
+BACKEND_HOST=myapp:8080 task dev:connect            # remote host
 
-Requires Docker and the semstreams backend at `../semstreams`.
+# Full stack from source (requires Docker + ../semstreams)
+task dev:full                                       # localhost:3001
+
+# Individual control
+task dev:backend:start      # Start backend in background
+task dev                    # Start Vite dev server only
+task dev:backend:stop       # Stop backend
+```
 
 ## Backend API
 
 ```bash
-curl -s http://localhost:3001/components/types | jq   # Component types
+curl -s http://localhost:3001/components/types | jq   # Component catalog
 curl http://localhost:3001/health                       # Health check
 curl http://localhost:3001/flowbuilder/flows             # Flow operations
+curl -X POST http://localhost:3001/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ entitiesByPrefix(prefix: \"\", limit: 5) { id } }"}'  # GraphQL
 ```
-
-Component types return: `id`, `name`, `type` (input/processor/output/storage/gateway), `protocol`, `category`, `description`, `schema`.
 
 ## Store Pattern
 
@@ -73,18 +92,26 @@ Stores use the runes-based factory function pattern:
 function createMyStore() {
   let value = $state<Type>(initial);
   return {
-    get value() {
-      return value;
-    },
-    setValue(v: Type) {
-      value = v;
-    },
+    get value() { return value; },
+    setValue(v: Type) { value = v; },
   };
 }
 export const myStore = createMyStore();
 ```
 
 `graphStore` uses `SvelteMap`/`SvelteSet` from `svelte/reactivity` for reactive collections.
+
+## Chat System
+
+The contextual AI assistant supports:
+
+- **Slash commands** — `/search`, `/flow`, `/explain`, `/debug`, `/health`, `/query`
+- **Context chips** — Pin entities/components to chat via "+Chat" buttons
+- **Page-aware tools** — Different tools on flow-builder vs data-view pages
+- **Attachment-based messages** — `MessageAttachment` union: flow, search-result, entity-detail, error, health, flow-status
+- **Multi-provider AI** — Anthropic or OpenAI-compatible (env: `AI_PROVIDER`)
+
+Key types: `ChatPageContext`, `ContextChip`, `ChatIntent`, `SlashCommand`, `MessageAttachment`
 
 ## Core Workflow
 

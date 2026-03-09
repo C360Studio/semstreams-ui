@@ -119,31 +119,26 @@ describe("ComponentName", () => {
 });
 ```
 
-## Step 5: Style with pico.css
+## Step 5: Style with Design Tokens
 
-This project uses pico.css. Prefer pico's semantic styling over custom CSS:
-
-```svelte
-<!-- pico.css styles semantic elements automatically -->
-<article>
-  <header>Title</header>
-  <p>Content</p>
-  <footer>
-    <button>Action</button>
-    <button class="secondary">Cancel</button>
-  </footer>
-</article>
-```
-
-Add component-specific styles only when pico doesn't cover it:
+This project uses custom CSS design tokens (defined in `src/styles/global.css`). Use semantic variables:
 
 ```svelte
 <style>
   .component-name {
-    /* minimal custom styles */
+    background: var(--ui-surface-primary);
+    color: var(--ui-text-primary);
+    border: 1px solid var(--ui-border-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .component-name:hover {
+    background: var(--ui-surface-secondary);
   }
 </style>
 ```
+
+Common token prefixes: `--ui-surface-*`, `--ui-text-*`, `--ui-border-*`, `--ui-interactive-*`, `--status-*`, `--radius-*`.
 
 ## Verification Checklist
 

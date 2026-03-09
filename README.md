@@ -1,35 +1,35 @@
-# SemStreams UI - Generic Flow Builder
+# SemStreams UI
 
-**Backend-Agnostic** visual flow builder for any SemStreams-compatible application.
+Visual graph explorer and flow builder for any SemStreams-compatible application.
 
 ## Overview
 
-SemStreams UI is a standalone visual flow builder that works with **any** application built on the SemStreams framework, including:
+SemStreams UI is a standalone frontend that works with **any** application built on the SemStreams framework:
 
 - **semstreams** - Core stream processing framework
+- **semsource** - Semantic source analysis
 - **semmem** - Semantic memory management
-- **semops** - Operations and monitoring
 - **Your application** - Any SemStreams-based system
 
-The UI discovers components, schemas, and capabilities **at runtime** from the backend's OpenAPI spec and `/components/types` endpoint. There's no hardcoding of component types or backend-specific logic.
+The UI discovers components, schemas, and graph data **at runtime** from the backend's APIs. No hardcoded component types or backend-specific logic.
 
 ## Features
 
-- **Backend-Agnostic**: Works with any SemStreams-compatible API
-- **Runtime Discovery**: Dynamically loads component schemas from backend
-- **Flow Management**: Create, edit, and deploy processing flows
-- **Visual Canvas**: Drag-and-drop flow editor using Svelte Flow
-- **Type-Safe**: TypeScript types generated from OpenAPI specs
-- **Real-time Updates**: WebSocket integration for live data
-- **Flow Persistence**: NATS KV-backed storage
+- **Graph Explorer** - Interactive knowledge graph visualization (Sigma.js/WebGL) as the default homepage
+- **Contextual Chat** - AI assistant with slash commands, context chips, and tool integration
+- **Flow Builder** - Visual flow editor for creating and deploying processing pipelines
+- **Runtime Monitoring** - Health, logs, metrics, and message tracing tabs
+- **Backend-Agnostic** - Connects to any running SemStreams app via standard API endpoints
+- **Runtime Discovery** - Dynamically loads component schemas from `/components/types`
 
 ## Tech Stack
 
 - **SvelteKit 2** - Full-stack framework
-- **Svelte 5** - Reactive UI with runes system
-- **TypeScript** - Type safety via OpenAPI code generation
-- **Svelte Flow** - Visual flow editor
-- **Pico CSS** - Lightweight styling
+- **Svelte 5** - Reactive UI with runes system (`$state`, `$derived`, `$effect`, `$props`)
+- **TypeScript** - Strict types, generated from OpenAPI specs
+- **Sigma.js** - WebGL graph visualization
+- **Graphology** - Graph data structure
+- **Vitest** + **@testing-library/svelte** - 3099+ unit/component tests
 - **Playwright** - E2E testing
 
 ## Quick Start
@@ -37,286 +37,52 @@ The UI discovers components, schemas, and capabilities **at runtime** from the b
 ### Prerequisites
 
 - Node.js 22+ (see `.nvmrc`)
-- A running SemStreams-compatible backend (semstreams, semmem, etc.)
-- Docker (optional, for containerized deployment)
+- A running SemStreams-compatible backend
+- Caddy (`brew install caddy` on macOS)
+- Docker (optional, for full-stack dev)
 
-### Full Stack Development (Recommended)
+### Connect to a Running App (Recommended)
 
-Start both backend infrastructure and frontend with a single command:
+Point the UI at any running SemStreams application — no Docker needed for the backend:
 
 ```bash
-# Install dependencies first
 npm install
 
-# Start everything (NATS + backend + UI)
+# Connect to a local backend
+task dev:connect
+
+# Connect to a remote backend
+BACKEND_HOST=myapp.example.com:8080 task dev:connect
+
+# With separate GraphQL gateway
+BACKEND_HOST=app:8080 GRAPHQL_HOST=app:8082 task dev:connect
+```
+
+Open `http://localhost:3001` — you'll land on the graph explorer with chat.
+
+### Full Stack Development (Build from Source)
+
+Start NATS + backend + Caddy + Vite from source:
+
+```bash
+# Start everything (requires ../semstreams sibling directory)
 task dev:full
 # Access at http://localhost:3001
 ```
 
-This starts:
-
-- **Caddy** at `localhost:3001` (reverse proxy - unified access point)
-- **NATS** (internal Docker network - message broker)
-- **Backend** (internal Docker network - API server)
-- **Vite** at `localhost:5173` (dev server with HMR)
-
-**Manage backend separately:**
+Manage individually:
 
 ```bash
 task dev:backend:start   # Start NATS + backend in background
-task dev                 # Start frontend (in another terminal)
+task dev                 # Start Vite dev server
 task dev:backend:logs    # View backend logs
-task dev:backend:stop    # Stop backend when done
+task dev:backend:stop    # Stop backend
 ```
 
-**Custom ports (avoid collisions):**
+Custom ports:
 
 ```bash
 DEV_UI_PORT=3002 DEV_VITE_PORT=5174 task dev:full
-```
-
-> **Note:** Requires Docker and the semstreams backend at `../semstreams` (configurable via `BACKEND_CONTEXT`).
-
-### Development Mode (Native)
-
-```bash
-# Install dependencies
-npm install
-
-# Start your SemStreams-based backend application
-# Example: cd /path/to/your-backend && ./your-backend-binary
-# The backend must expose the required API endpoints (see INTEGRATION_EXAMPLE.md)
-
-# In another terminal, start UI dev server
-npm run dev
-# or
-task dev
-```
-
-The UI will be available at `http://localhost:5173` and expects the backend at `http://localhost:8080`.
-
-### Development Mode (Docker)
-
-```bash
-# Start UI in Docker (expects backend at host.docker.internal:8080)
-task dev:docker
-
-# Or with Caddy reverse proxy (production-like)
-task dev:with-caddy
-# Available at http://localhost:3000
-```
-
-## Configuration
-
-### Connecting to Different Backends
-
-The UI connects to backends via environment variables:
-
-**`.env` file:**
-
-```bash
-# Backend URL (for native dev)
-BACKEND_URL=http://localhost:8080
-
-# Backend host (for Docker SSR)
-BACKEND_HOST=backend:8080
-
-# OpenAPI spec for type generation (REQUIRED)
-# Point this to your backend's OpenAPI specification
-OPENAPI_SPEC_PATH=/path/to/your-backend/specs/openapi.v3.yaml
-```
-
-**Example paths:**
-
-```bash
-# Local backend
-OPENAPI_SPEC_PATH=/home/user/myapp/specs/openapi.v3.yaml
-
-# Monorepo structure
-OPENAPI_SPEC_PATH=../my-backend/specs/openapi.v3.yaml
-
-# Absolute path
-OPENAPI_SPEC_PATH=/var/projects/backend/specs/openapi.v3.yaml
-```
-
-### TypeScript Type Generation
-
-Generate TypeScript types from any backend's OpenAPI spec:
-
-```bash
-# From semstreams
-task generate-types:semstreams
-
-# From semmem
-task generate-types:semmem
-
-# From custom spec path
-OPENAPI_SPEC_PATH=/path/to/spec.yaml task generate-types
-
-# From running backend
-BACKEND_URL=http://localhost:8080 task generate-types:from-url
-```
-
-## Development Workflows
-
-### Local Development (Backend + UI)
-
-```bash
-# Terminal 1: Start backend
-cd semstreams && task build && ./bin/streamkit
-
-# Terminal 2: Start UI
-cd semstreams-ui && npm run dev
-```
-
-### Docker Development
-
-```bash
-# UI only (backend running elsewhere)
-task dev:docker
-
-# UI + Caddy (production-like)
-task dev:with-caddy
-```
-
-### Type Checking & Linting
-
-```bash
-# Type checking
-npm run check
-task check
-
-# Linting
-npm run lint
-task lint
-
-# Formatting
-npm run format
-task format
-```
-
-## Testing
-
-### Unit Tests (Vitest)
-
-```bash
-# Run unit tests
-npm test
-task test
-
-# Watch mode
-npm run test:ui
-
-# Coverage
-npm run test:coverage
-```
-
-All 31 component tests passing ✅
-
-### E2E Tests (Playwright)
-
-Playwright automatically manages a full Docker stack (NATS + backend + UI + Caddy):
-
-```bash
-# Run E2E tests (auto-manages Docker)
-npm run test:e2e
-task test:e2e
-
-# Against specific backend
-task test:e2e:semstreams
-task test:e2e:semmem
-
-# UI mode (interactive)
-npm run test:e2e:ui
-
-# Debug mode
-npm run test:e2e:debug
-
-# Cleanup (if tests crash)
-task clean
-```
-
-## Using SemStreams UI with Your Application
-
-### Backend Requirements
-
-Your SemStreams-based application must expose:
-
-1. **OpenAPI Spec** at `/openapi.yaml` (or provide as file)
-2. **Component Types** endpoint: `GET /components/types`
-3. **Flow Management** endpoints:
-   - `GET /flowbuilder/flows` - List flows
-   - `POST /flowbuilder/flows` - Create flow
-   - `GET /flowbuilder/flows/:id` - Get flow
-   - `PUT /flowbuilder/flows/:id` - Update flow
-   - `DELETE /flowbuilder/flows/:id` - Delete flow
-4. **Health Check**: `GET /health`
-
-### Integration Steps
-
-1. **Build your SemStreams application** with the standard API
-2. **Generate OpenAPI spec** using your backend's schema exporter:
-   ```bash
-   cd your-app && task schema:generate
-   ```
-3. **Generate TypeScript types**:
-   ```bash
-   cd semstreams-ui
-   OPENAPI_SPEC_PATH=../your-app/specs/openapi.v3.yaml task generate-types
-   ```
-4. **Start your backend** (native or Docker)
-5. **Start the UI**:
-   ```bash
-   BACKEND_URL=http://localhost:8080 npm run dev
-   # or
-   docker compose up
-   ```
-
-## Production Deployment
-
-For production deployment, see the orchestration configuration in the main backend projects:
-
-- **[semdocs](https://github.com/c360/semdocs)** - Documentation and examples project
-- **[semstreams](https://github.com/c360/semstreams)** - Core stream processing framework
-
-These projects include complete `docker-compose` files that orchestrate the full stack (backend services, NATS, and UI).
-
-### Building the UI Image
-
-This repository provides the UI Docker image for production use:
-
-```bash
-# Build the static UI image
-docker build -t semstreams-ui:latest .
-
-# Push to registry (if needed)
-docker tag semstreams-ui:latest your-registry/semstreams-ui:latest
-docker push your-registry/semstreams-ui:latest
-```
-
-The production image:
-
-- Builds the static SPA using `adapter-static`
-- Serves files via Caddy web server (~15MB total)
-- Proxies API requests to backend via `BACKEND_URL` environment variable
-- Includes health checks and security headers
-
-### Environment Variables
-
-The UI container accepts:
-
-- `BACKEND_URL` - Backend service URL (default: `http://backend:8080`)
-
-Example from backend project's docker-compose:
-
-```yaml
-services:
-  ui:
-    image: semstreams-ui:latest
-    environment:
-      - BACKEND_URL=http://backend:8080
-    ports:
-      - "3000:3000"
 ```
 
 ## Architecture
@@ -324,136 +90,177 @@ services:
 ### Request Flow
 
 ```
-Browser → Caddy → SvelteKit (SSR + Client) → Your Backend API
-                                            → NATS KV
-                                            → Components Registry
+Browser --> Caddy (:3001) --+--> /flowbuilder/*  --> Backend (:8080)
+                            +--> /components/*   --> Backend (:8080)
+                            +--> /health         --> Backend (:8080)
+                            +--> /graphql        --> GraphQL Gateway
+                            +--> /*              --> Vite (:5173)
 ```
 
-- **Caddy** proxies `/flowbuilder/*`, `/components/*`, `/health` to backend
-- **SvelteKit SSR** transforms backend URLs via `hooks.server.ts`
-- **Client-side** navigation using SvelteKit routing
-- **Component Discovery** happens at runtime from `/components/types`
+Caddy eliminates CORS by serving everything from a single origin. The UI makes relative fetch calls; Caddy routes them to the right backend.
 
-### Directory Structure
+### Pages
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Graph explorer (DataView) — default homepage |
+| `/flows` | Flow list — create and manage flows |
+| `/flows/[id]` | Flow editor — visual canvas, chat, runtime monitoring |
+
+### Key Directories
 
 ```
-semstreams-ui/
-├── src/
-│   ├── lib/
-│   │   ├── components/        # Generic Svelte 5 components
-│   │   ├── services/          # API clients (backend-agnostic)
-│   │   ├── types/             # TypeScript types (generated)
-│   │   └── validation/        # Schema validation
-│   ├── routes/                # SvelteKit routes
-│   │   ├── +page.svelte       # Flow list
-│   │   └── flows/[id]/        # Flow editor
-│   └── hooks.server.ts        # SSR fetch transformation
-├── e2e/                       # Playwright E2E tests
-├── docker-compose.yml         # Development compose
-├── docker-compose.e2e.yml     # E2E testing compose
-├── Caddyfile                  # Reverse proxy config
-├── .env                       # Backend configuration
-└── Taskfile.yml              # Task commands
+src/
+├── lib/
+│   ├── components/          # 51 Svelte 5 components
+│   │   ├── chat/            # Chat system (ChatPanel, SlashCommandMenu, ContextChips, etc.)
+│   │   ├── runtime/         # Runtime tabs (Health, Logs, Metrics, Messages, SigmaCanvas)
+│   │   └── layout/          # Three-panel layout
+│   ├── services/            # API clients (chatApi, graphApi, slashCommands)
+│   ├── server/              # SvelteKit server (AI providers, tool registry, MCP)
+│   ├── stores/              # Runes-based stores (graphStore, chatStore, runtimeStore)
+│   └── types/               # TypeScript types (chat, graph, flow, slashCommand)
+├── routes/
+│   ├── +page.svelte         # Graph explorer homepage
+│   ├── flows/+page.svelte   # Flow list
+│   └── flows/[id]/          # Flow editor
+└── hooks.server.ts          # SSR fetch transformation
+e2e/                         # Playwright E2E tests
+docs/                        # Architecture docs
 ```
+
+### Store Pattern
+
+Stores use the runes-based factory function pattern:
+
+```typescript
+function createMyStore() {
+  let value = $state<Type>(initial);
+  return {
+    get value() { return value; },
+    setValue(v: Type) { value = v; },
+  };
+}
+export const myStore = createMyStore();
+```
+
+`graphStore` uses `SvelteMap`/`SvelteSet` from `svelte/reactivity` for reactive collections.
+
+## Chat System
+
+The chat assistant supports:
+
+- **Slash commands** — `/search`, `/flow`, `/explain`, `/debug`, `/health`, `/query`
+- **Context chips** — Pin entities or components to the chat context via "+Chat" buttons
+- **Page-aware tools** — Different tools available on flow-builder vs data-view pages
+- **Attachment-based messages** — Rich responses with search results, entity details, health status, flow diffs
+- **Multi-provider AI** — Anthropic (Claude) or OpenAI-compatible APIs
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Backend connection (used by Caddy and SvelteKit server)
+BACKEND_HOST=localhost:8080        # Backend host:port
+GRAPHQL_HOST=localhost:8082        # GraphQL gateway (defaults to BACKEND_HOST)
+BACKEND_URL=http://localhost:8080  # Full URL for server-side AI/MCP calls
+
+# AI provider
+AI_PROVIDER=anthropic              # "anthropic" or "openai"
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Development ports
+DEV_UI_PORT=3001                   # Caddy listen port
+DEV_VITE_PORT=5173                 # Vite dev server port
+```
+
+### TypeScript Type Generation
+
+Generate types from any backend's OpenAPI spec:
+
+```bash
+task generate-types:semstreams       # From semstreams
+task generate-types:semmem           # From semmem
+OPENAPI_SPEC_PATH=/path/to/spec.yaml task generate-types  # Custom spec
+BACKEND_URL=http://localhost:8080 task generate-types:from-url  # Running backend
+```
+
+## Testing
+
+### Unit Tests (Vitest)
+
+```bash
+npm run test        # Run all tests (3099+ tests, 136 files)
+npm run test:ui     # Watch mode
+```
+
+### E2E Tests (Playwright)
+
+```bash
+npm run test:e2e    # Auto-manages Docker stack
+task test:e2e:semsource-graph  # With semsource graph integration
+```
+
+### Quality Checks
+
+```bash
+npm run check       # TypeScript type checking (0 errors)
+npm run lint        # ESLint
+npm run format      # Prettier
+```
+
+## Backend Requirements
+
+Your SemStreams app must expose:
+
+1. **Component Types**: `GET /components/types`
+2. **Flow Management**: `GET|POST /flowbuilder/flows`, `GET|PUT|DELETE /flowbuilder/flows/:id`
+3. **Health Check**: `GET /health`
+4. **GraphQL** (optional): `POST /graphql` for graph explorer
 
 ## Task Commands
 
-### Development
-
-- `task dev` - Start dev server (expects backend at localhost:8080)
-- `task dev:docker` - Start UI in Docker
-- `task dev:with-caddy` - Start UI + Caddy in Docker
-
-### Type Generation
-
-- `task generate-types` - Generate from configured spec
-- `task generate-types:semstreams` - Generate from semstreams
-- `task generate-types:semmem` - Generate from semmem
-- `task generate-types:from-url` - Generate from running backend
-
-### Testing
-
-- `task test` - Run unit tests
-- `task test:e2e` - Run E2E tests
-- `task test:e2e:semstreams` - E2E against semstreams backend
-- `task test:e2e:semmem` - E2E against semmem backend
-
-### Cleanup
-
-- `task clean` - Clean Docker volumes and containers
-
-## Troubleshooting
-
-### Backend Connection Issues
-
-```bash
-# Check backend is running
-curl http://localhost:8080/health
-
-# Check component discovery
-curl http://localhost:8080/components/types
-
-# Check OpenAPI spec
-curl http://localhost:8080/openapi.yaml
-```
-
-### Type Generation Failures
-
-```bash
-# Verify spec path is correct
-echo $OPENAPI_SPEC_PATH
-ls -la $OPENAPI_SPEC_PATH
-
-# Regenerate backend spec (if your backend supports it)
-# cd /path/to/your-backend && <regenerate-command>
-
-# Regenerate UI types
-task generate-types
-```
-
-### Docker Port Conflicts
-
-```bash
-# Check what's running
-docker ps
-
-# Clean up all compose stacks
-task clean
-
-# Or manually
-docker compose -f docker-compose.yml down -v
-docker compose -f docker-compose.e2e.yml down -v
-```
-
-## CI/CD
-
-The UI includes CI workflows for:
-
-- Type checking and linting
-- Unit tests (Vitest)
-- E2E tests (Playwright with Docker)
-- Contract validation (OpenAPI compliance)
-
-See `.github/workflows/ci.yml` for details.
-
-## Contributing
-
-1. Create a branch
-2. Make changes (keep backend-agnostic!)
-3. Run checks: `task lint && task check && task test`
-4. Run E2E: `task test:e2e`
-5. Submit PR
+| Command | Description |
+|---------|-------------|
+| `task dev:connect` | Connect to any running backend (no Docker needed) |
+| `task dev:full` | Full stack from source (NATS + backend + Caddy + Vite) |
+| `task dev` | Vite dev server only |
+| `task dev:backend:start` | Start backend infra in background |
+| `task dev:backend:stop` | Stop backend infra |
+| `task test` | Unit tests |
+| `task test:e2e` | E2E tests |
+| `task lint` | ESLint |
+| `task check` | TypeScript checking |
+| `task clean` | Clean Docker volumes |
+| `task generate-types` | Generate TS types from OpenAPI |
 
 ## Documentation
 
-- **[E2E_SETUP.md](./E2E_SETUP.md)** - End-to-end testing guide
-- **[INTEGRATION_EXAMPLE.md](./INTEGRATION_EXAMPLE.md)** - How to integrate with your backend
-- **[Taskfile.yml](./Taskfile.yml)** - Available tasks and commands
+- **[docs/architecture/CHAT_REDESIGN.md](docs/architecture/CHAT_REDESIGN.md)** - Chat system architecture
+- **[docs/architecture/SEMSOURCE_E2E_INTEGRATION.md](docs/architecture/SEMSOURCE_E2E_INTEGRATION.md)** - SemsSource E2E integration
+- **[docs/testing/](docs/testing/)** - E2E testing guide
+- **[docs/auth/](docs/auth/)** - Authentication patterns
+- **[INTEGRATION_EXAMPLE.md](INTEGRATION_EXAMPLE.md)** - Backend integration guide
+- **[E2E_SETUP.md](E2E_SETUP.md)** - E2E test setup
 
-## Design Philosophy
+## Troubleshooting
 
-**"Generic, not specific"** - This UI should work with ANY SemStreams application without modification. Backend-specific features belong in the backend, not the UI.
+```bash
+# Check backend is reachable
+curl http://localhost:8080/health
 
-**"Runtime discovery over build-time coupling"** - The UI learns about components and schemas from the backend at runtime via OpenAPI, not compile-time dependencies.
+# Check component discovery
+curl http://localhost:8080/components/types | jq
 
-**"Container-first distribution"** - The UI is designed to be deployed as a Docker container that can connect to any compatible backend.
+# Check GraphQL
+curl -X POST http://localhost:8080/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ entitiesByPrefix(prefix: \"\", limit: 5) { id } }"}' | jq
+
+# Docker cleanup (clears NATS KV stale data)
+docker compose -f docker-compose.dev.yml down -v
+task clean
+```
