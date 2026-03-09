@@ -22,6 +22,7 @@ vi.mock("$lib/services/graphApi", () => {
   return {
     graphApi: {
       pathSearch: vi.fn(),
+      getEntitiesByPrefix: vi.fn(),
       globalSearch: vi.fn(),
     },
     GraphApiError: class GraphApiError extends Error {
@@ -44,6 +45,9 @@ import { graphApi } from "$lib/services/graphApi";
 // ---------------------------------------------------------------------------
 
 const mockPathSearchFn = graphApi.pathSearch as ReturnType<typeof vi.fn>;
+const mockGetEntitiesByPrefixFn = graphApi.getEntitiesByPrefix as ReturnType<
+  typeof vi.fn
+>;
 const mockGlobalSearchFn = graphApi.globalSearch as ReturnType<typeof vi.fn>;
 
 const FLEET_ALPHA = "c360.ops.robotics.gcs.fleet.alpha";
@@ -122,8 +126,11 @@ function makeGlobalSearchResult(
 describe("DataView NLQ Phase 2 Integration", () => {
   beforeEach(() => {
     mockPathSearchFn.mockClear();
+    mockGetEntitiesByPrefixFn.mockClear();
     mockGlobalSearchFn.mockClear();
-    mockPathSearchFn.mockResolvedValue(makePathSearchResult());
+    mockGetEntitiesByPrefixFn.mockResolvedValue(
+      makePathSearchResult().entities,
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -133,7 +140,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
   describe("CommunitySummaryPanel integration", () => {
     it("should NOT render CommunitySummaryPanel before any search is run", async () => {
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       expect(
         screen.queryByTestId("community-summary-panel"),
@@ -147,7 +154,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(
         screen.getByRole("textbox"),
@@ -170,7 +177,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "show clusters{Enter}");
 
@@ -186,7 +193,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "find drones{Enter}");
 
@@ -206,7 +213,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "drones{Enter}");
 
@@ -238,7 +245,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "find west drones{Enter}");
 
@@ -262,7 +269,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
   describe("NlqDebugBadge integration", () => {
     it("should NOT render NlqDebugBadge before any search is run", async () => {
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       expect(
         screen.queryByTestId("nlq-debug-badge"),
@@ -276,7 +283,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "fleet alpha{Enter}");
 
@@ -292,7 +299,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "complex query{Enter}");
 
@@ -308,7 +315,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "show fleet{Enter}");
 
@@ -324,7 +331,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "fleet{Enter}");
 
@@ -354,7 +361,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "west coast{Enter}");
 
@@ -377,7 +384,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "sensor data{Enter}");
 
@@ -407,7 +414,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "all clusters{Enter}");
 
@@ -429,7 +436,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "find all{Enter}");
 
@@ -472,7 +479,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // First search
       const input = screen.getByRole("textbox");
@@ -520,7 +527,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "any query{Enter}");
 
@@ -540,7 +547,7 @@ describe("DataView NLQ Phase 2 Integration", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p2" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "any query{Enter}");
 

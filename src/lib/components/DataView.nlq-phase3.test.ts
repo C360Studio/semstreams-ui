@@ -17,6 +17,7 @@ vi.mock("$lib/services/graphApi", () => {
   return {
     graphApi: {
       pathSearch: vi.fn(),
+      getEntitiesByPrefix: vi.fn(),
       globalSearch: vi.fn(),
     },
     GraphApiError: class GraphApiError extends Error {
@@ -39,6 +40,9 @@ import { graphApi } from "$lib/services/graphApi";
 // ---------------------------------------------------------------------------
 
 const mockPathSearchFn = graphApi.pathSearch as ReturnType<typeof vi.fn>;
+const mockGetEntitiesByPrefixFn = graphApi.getEntitiesByPrefix as ReturnType<
+  typeof vi.fn
+>;
 const mockGlobalSearchFn = graphApi.globalSearch as ReturnType<typeof vi.fn>;
 
 // Two distinct entity IDs — one from pathSearch, one from globalSearch
@@ -99,8 +103,11 @@ function makeGlobalSearchResult(
 describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
   beforeEach(() => {
     mockPathSearchFn.mockClear();
+    mockGetEntitiesByPrefixFn.mockClear();
     mockGlobalSearchFn.mockClear();
-    mockPathSearchFn.mockResolvedValue(makePathSearchResult());
+    mockGetEntitiesByPrefixFn.mockResolvedValue(
+      makePathSearchResult().entities,
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -110,7 +117,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
   describe("replace mode (default behavior)", () => {
     it("should use replace mode by default", async () => {
       render(DataView, { props: { flowId: "test-flow-p3" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // The search mode toggle should reflect replace as default when visible
       // The toggle is only visible when searchMode prop is passed — DataView must
@@ -126,7 +133,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(
         screen.getByRole("textbox"),
@@ -143,7 +150,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "drones{Enter}");
 
@@ -154,12 +161,14 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       });
     });
 
-    it("should reload pathSearch data when Back to browse is clicked in replace mode", async () => {
+    it("should reload data when Back to browse is clicked in replace mode", async () => {
       mockGlobalSearchFn.mockResolvedValue(makeGlobalSearchResult());
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(1),
+      );
 
       await user.type(screen.getByRole("textbox"), "drones{Enter}");
 
@@ -172,7 +181,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       await user.click(screen.getByRole("button", { name: /back to browse/i }));
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledTimes(2);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(2);
       });
     });
   });
@@ -189,7 +198,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-merge" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Switch to merge mode
       const toggle = screen.queryByTestId("search-mode-toggle");
@@ -237,7 +246,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const upsertEntitiesSpy = vi.spyOn(graphStore, "upsertEntities");
 
       render(DataView, { props: { flowId: "test-flow-p3-merge-add" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Ensure initial data loaded
       await waitFor(() => {
@@ -284,7 +293,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const clearEntitiesSpy = vi.spyOn(graphStore, "clearEntities");
 
       render(DataView, { props: { flowId: "test-flow-p3-replace-clear" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Record how many times clearEntities was called during initial mount
       const clearCallsAfterLoad = clearEntitiesSpy.mock.calls.length;
@@ -313,7 +322,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-merge-mode" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -335,7 +344,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-btb-merge" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -363,7 +372,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       // globalSearch also returns SENSOR_NORTH (overlap).
       // After merge, the store should have exactly FLEET_ALPHA, SENSOR_NORTH, and DRONE_001
       // (not a duplicate SENSOR_NORTH entry).
-      mockPathSearchFn.mockResolvedValue(
+      mockGetEntitiesByPrefixFn.mockResolvedValue(
         makePathSearchResult([
           {
             id: SENSOR_NORTH,
@@ -375,7 +384,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
               },
             ],
           },
-        ]),
+        ]).entities,
       );
       mockGlobalSearchFn.mockResolvedValue(
         makeGlobalSearchResult({
@@ -410,7 +419,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const { graphStore } = await import("$lib/stores/graphStore.svelte");
 
       render(DataView, { props: { flowId: "test-flow-p3-dedup" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -438,12 +447,14 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
   // -------------------------------------------------------------------------
 
   describe("Back to browse in merge mode", () => {
-    it("should reload pathSearch when Back to browse is clicked in merge mode", async () => {
+    it("should reload data when Back to browse is clicked in merge mode", async () => {
       mockGlobalSearchFn.mockResolvedValue(makeGlobalSearchResult());
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-btb-reload" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(1),
+      );
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -462,7 +473,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       await user.click(screen.getByRole("button", { name: /back to browse/i }));
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledTimes(2);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(2);
       });
     });
 
@@ -471,7 +482,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-reset-mode" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Switch to merge mode
       const toggle = screen.queryByTestId("search-mode-toggle");
@@ -506,7 +517,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-exit-merge" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -539,7 +550,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
   describe("search mode toggle in DataView", () => {
     it("should render the search mode toggle in the NlqSearchBar", async () => {
       render(DataView, { props: { flowId: "test-flow-p3-toggle-render" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // DataView must pass searchMode to NlqSearchBar which renders the toggle
       expect(screen.getByTestId("search-mode-toggle")).toBeInTheDocument();
@@ -549,7 +560,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-toggle-update" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.getByTestId("search-mode-toggle");
       expect(toggle).toHaveTextContent(/replace/i);
@@ -565,7 +576,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-toggle-twice" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.getByTestId("search-mode-toggle");
 
@@ -588,7 +599,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const clearEntitiesSpy = vi.spyOn(graphStore, "clearEntities");
 
       render(DataView, { props: { flowId: "test-flow-p3-mode-used" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.getByTestId("search-mode-toggle");
 
@@ -630,7 +641,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const clearEntitiesSpy = vi.spyOn(graphStore, "clearEntities");
 
       render(DataView, { props: { flowId: "test-flow-p3-empty-merge" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -668,7 +679,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const clearEntitiesSpy = vi.spyOn(graphStore, "clearEntities");
 
       render(DataView, { props: { flowId: "test-flow-p3-error-merge" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -703,7 +714,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-error-alert" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -728,7 +739,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "test-flow-p3-no-mode-on-error" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       const toggle = screen.queryByTestId("search-mode-toggle");
       if (toggle) {
@@ -787,7 +798,7 @@ describe("DataView NLQ Phase 3 — Merge/Replace Mode", () => {
         render(DataView, {
           props: { flowId: `test-flow-p3-matrix-${switchToMerge}` },
         });
-        await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+        await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
         if (switchToMerge) {
           const toggle = screen.queryByTestId("search-mode-toggle");

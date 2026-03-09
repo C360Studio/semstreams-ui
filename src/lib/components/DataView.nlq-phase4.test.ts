@@ -17,6 +17,7 @@ vi.mock("$lib/services/graphApi", () => {
   return {
     graphApi: {
       pathSearch: vi.fn(),
+      getEntitiesByPrefix: vi.fn(),
       globalSearch: vi.fn(),
     },
     GraphApiError: class GraphApiError extends Error {
@@ -39,6 +40,9 @@ import { graphApi } from "$lib/services/graphApi";
 // ---------------------------------------------------------------------------
 
 const mockPathSearchFn = graphApi.pathSearch as ReturnType<typeof vi.fn>;
+const mockGetEntitiesByPrefixFn = graphApi.getEntitiesByPrefix as ReturnType<
+  typeof vi.fn
+>;
 const mockGlobalSearchFn = graphApi.globalSearch as ReturnType<typeof vi.fn>;
 
 const FLEET_ALPHA = "c360.ops.robotics.gcs.fleet.alpha";
@@ -111,9 +115,12 @@ function makePendingPromise<T>() {
 describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
   beforeEach(() => {
     mockPathSearchFn.mockClear();
+    mockGetEntitiesByPrefixFn.mockClear();
     mockGlobalSearchFn.mockClear();
-    // Default: pathSearch succeeds so the component mounts cleanly
-    mockPathSearchFn.mockResolvedValue(makePathSearchResult());
+    // Default: getEntitiesByPrefix succeeds so the component mounts cleanly
+    mockGetEntitiesByPrefixFn.mockResolvedValue(
+      makePathSearchResult().entities,
+    );
   });
 
   afterEach(() => {
@@ -131,7 +138,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-cancel-visible" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "show drones{Enter}");
 
@@ -145,7 +152,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-cancel-hidden" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "drones{Enter}");
 
@@ -163,7 +170,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-cancel-on-error" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "failing query{Enter}");
 
@@ -202,7 +209,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-abort-signal" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "long query{Enter}");
 
@@ -233,7 +240,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-clear-loading" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "slow query{Enter}");
 
@@ -266,7 +273,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-no-error-on-cancel" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "query to cancel{Enter}");
 
@@ -294,7 +301,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-no-search-mode" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "aborted search{Enter}");
 
@@ -328,7 +335,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-preserve-data" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Wait for initial pathSearch data to land
       await waitFor(() => {
@@ -393,7 +400,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-abort-previous" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Start first search
       const input = screen.getByRole("textbox");
@@ -461,7 +468,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-second-results" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Start first search
       await user.type(screen.getByRole("textbox"), "first{Enter}");
@@ -509,7 +516,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-btb-cancel" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // Enter search mode via first successful search
       await user.type(screen.getByRole("textbox"), "first query{Enter}");
@@ -552,7 +559,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-btb-clear-loading" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "enter search mode{Enter}");
 
@@ -570,8 +577,10 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
           });
         },
       );
-      // pathSearch for back-to-browse reload
-      mockPathSearchFn.mockResolvedValueOnce(makePathSearchResult());
+      // getEntitiesByPrefix for back-to-browse reload
+      mockGetEntitiesByPrefixFn.mockResolvedValueOnce(
+        makePathSearchResult().entities,
+      );
 
       await user.clear(screen.getByRole("textbox"));
       await user.type(screen.getByRole("textbox"), "second long query{Enter}");
@@ -608,7 +617,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-signal-forwarded" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       await user.type(screen.getByRole("textbox"), "signal test{Enter}");
 
@@ -632,7 +641,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: "phase4-fresh-signal" } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       // First search
       await user.type(screen.getByRole("textbox"), "first{Enter}");
@@ -694,7 +703,7 @@ describe("DataView NLQ Phase 4 — Cancellation Flow", () => {
       const user = userEvent.setup();
 
       render(DataView, { props: { flowId: `phase4-table-${cancelMethod}` } });
-      await waitFor(() => expect(mockPathSearchFn).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled());
 
       if (priorSearchMode) {
         await user.type(screen.getByRole("textbox"), "enter mode{Enter}");

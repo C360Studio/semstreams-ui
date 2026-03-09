@@ -14,6 +14,7 @@ vi.mock("$lib/services/graphApi", () => {
   return {
     graphApi: {
       pathSearch: vi.fn(),
+      getEntitiesByPrefix: vi.fn(),
     },
     GraphApiError: class GraphApiError extends Error {
       constructor(
@@ -33,41 +34,47 @@ import { graphApi } from "$lib/services/graphApi";
 
 describe("DataView GraphQL Integration", () => {
   const mockPathSearchFn = graphApi.pathSearch as ReturnType<typeof vi.fn>;
+  const mockGetEntitiesByPrefixFn = graphApi.getEntitiesByPrefix as ReturnType<
+    typeof vi.fn
+  >;
 
-  // Default mock response with realistic data
+  // Default mock response: getEntitiesByPrefix returns BackendEntity[] directly
+  const createMockEntities = () => [
+    {
+      id: "c360.ops.robotics.gcs.fleet.west-coast",
+      triples: [
+        {
+          subject: "c360.ops.robotics.gcs.fleet.west-coast",
+          predicate: "fleet.name",
+          object: "West Coast Fleet",
+        },
+        {
+          subject: "c360.ops.robotics.gcs.fleet.west-coast",
+          predicate: "fleet.region",
+          object: "US-West",
+        },
+      ],
+    },
+    {
+      id: "c360.ops.robotics.gcs.drone.001",
+      triples: [
+        {
+          subject: "c360.ops.robotics.gcs.drone.001",
+          predicate: "vehicle.type",
+          object: "drone",
+        },
+        {
+          subject: "c360.ops.robotics.gcs.drone.001",
+          predicate: "vehicle.status",
+          object: "active",
+        },
+      ],
+    },
+  ];
+
+  // PathSearchResult for expansion tests (pathSearch still used for expansion)
   const createMockPathSearchResult = (): PathSearchResult => ({
-    entities: [
-      {
-        id: "c360.ops.robotics.gcs.fleet.west-coast",
-        triples: [
-          {
-            subject: "c360.ops.robotics.gcs.fleet.west-coast",
-            predicate: "fleet.name",
-            object: "West Coast Fleet",
-          },
-          {
-            subject: "c360.ops.robotics.gcs.fleet.west-coast",
-            predicate: "fleet.region",
-            object: "US-West",
-          },
-        ],
-      },
-      {
-        id: "c360.ops.robotics.gcs.drone.001",
-        triples: [
-          {
-            subject: "c360.ops.robotics.gcs.drone.001",
-            predicate: "vehicle.type",
-            object: "drone",
-          },
-          {
-            subject: "c360.ops.robotics.gcs.drone.001",
-            predicate: "vehicle.status",
-            object: "active",
-          },
-        ],
-      },
-    ],
+    entities: createMockEntities(),
     edges: [
       {
         subject: "c360.ops.robotics.gcs.drone.001",
@@ -79,6 +86,7 @@ describe("DataView GraphQL Integration", () => {
 
   beforeEach(() => {
     mockPathSearchFn.mockClear();
+    mockGetEntitiesByPrefixFn.mockClear();
   });
 
   afterEach(() => {
@@ -86,22 +94,22 @@ describe("DataView GraphQL Integration", () => {
   });
 
   describe("Initial data loading on mount", () => {
-    it("should call pathSearch with wildcard and default parameters on mount", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+    it("should call getEntitiesByPrefix with empty prefix on mount", async () => {
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledWith("*", 2, 50);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledWith("", 200);
       });
     });
 
     it("should display loading state while fetching data", async () => {
-      let resolvePromise: (value: PathSearchResult) => void;
-      const delayedPromise = new Promise<PathSearchResult>((resolve) => {
+      let resolvePromise: (value: unknown[]) => void;
+      const delayedPromise = new Promise<unknown[]>((resolve) => {
         resolvePromise = resolve;
       });
-      mockPathSearchFn.mockReturnValue(delayedPromise);
+      mockGetEntitiesByPrefixFn.mockReturnValue(delayedPromise);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -110,7 +118,7 @@ describe("DataView GraphQL Integration", () => {
       expect(screen.getByTestId("data-view")).toBeInTheDocument();
 
       // Resolve the promise
-      resolvePromise!(createMockPathSearchResult());
+      resolvePromise!(createMockEntities());
 
       // Wait for loading to disappear
       await waitFor(() => {
@@ -121,12 +129,12 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should transform and display entities after successful load", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalled();
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled();
       });
 
       // Should not show loading or error after success
@@ -138,16 +146,13 @@ describe("DataView GraphQL Integration", () => {
       });
     });
 
-    it("should handle empty result from pathSearch", async () => {
-      mockPathSearchFn.mockResolvedValue({
-        entities: [],
-        edges: [],
-      });
+    it("should handle empty result from getEntitiesByPrefix", async () => {
+      mockGetEntitiesByPrefixFn.mockResolvedValue([]);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalled();
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled();
       });
 
       // Should not show error for empty result
@@ -166,7 +171,7 @@ describe("DataView GraphQL Integration", () => {
         "Network error during pathSearch: Failed to fetch",
         0,
       );
-      mockPathSearchFn.mockRejectedValue(networkError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(networkError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -178,7 +183,7 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should display connection error for fetch exception", async () => {
-      mockPathSearchFn.mockRejectedValue(
+      mockGetEntitiesByPrefixFn.mockRejectedValue(
         new Error("Failed to fetch: Network is unreachable"),
       );
 
@@ -196,7 +201,7 @@ describe("DataView GraphQL Integration", () => {
         "Network error during pathSearch",
         0,
       );
-      mockPathSearchFn.mockRejectedValue(networkError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(networkError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -209,7 +214,7 @@ describe("DataView GraphQL Integration", () => {
   describe("Error handling - Timeout errors", () => {
     it("should display timeout error message for 504 status", async () => {
       const timeoutError = new GraphApiError("Gateway Timeout", 504);
-      mockPathSearchFn.mockRejectedValue(timeoutError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(timeoutError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -223,7 +228,7 @@ describe("DataView GraphQL Integration", () => {
         "Request timeout after 30 seconds",
         500,
       );
-      mockPathSearchFn.mockRejectedValue(timeoutError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(timeoutError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -237,7 +242,7 @@ describe("DataView GraphQL Integration", () => {
         "Connection Timeout occurred",
         408,
       );
-      mockPathSearchFn.mockRejectedValue(timeoutError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(timeoutError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -254,7 +259,7 @@ describe("DataView GraphQL Integration", () => {
         200,
         { errors: [{ message: "Entity not found in graph database" }] },
       );
-      mockPathSearchFn.mockRejectedValue(graphqlError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(graphqlError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -267,7 +272,7 @@ describe("DataView GraphQL Integration", () => {
 
     it("should display server error message", async () => {
       const serverError = new GraphApiError("Internal Server Error", 500);
-      mockPathSearchFn.mockRejectedValue(serverError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(serverError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -278,7 +283,7 @@ describe("DataView GraphQL Integration", () => {
 
     it("should display authentication error message", async () => {
       const authError = new GraphApiError("Unauthorized access", 401);
-      mockPathSearchFn.mockRejectedValue(authError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(authError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -292,7 +297,7 @@ describe("DataView GraphQL Integration", () => {
         "Forbidden: Insufficient permissions",
         403,
       );
-      mockPathSearchFn.mockRejectedValue(forbiddenError);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(forbiddenError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -306,7 +311,7 @@ describe("DataView GraphQL Integration", () => {
 
   describe("Error handling - Generic errors", () => {
     it("should display generic error message for unknown error types", async () => {
-      mockPathSearchFn.mockRejectedValue(
+      mockGetEntitiesByPrefixFn.mockRejectedValue(
         new Error("Something unexpected happened"),
       );
 
@@ -320,7 +325,7 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should handle rejected promise with non-Error object", async () => {
-      mockPathSearchFn.mockRejectedValue("String error");
+      mockGetEntitiesByPrefixFn.mockRejectedValue("String error");
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -332,7 +337,7 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should handle null rejection", async () => {
-      mockPathSearchFn.mockRejectedValue(null);
+      mockGetEntitiesByPrefixFn.mockRejectedValue(null);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -345,11 +350,11 @@ describe("DataView GraphQL Integration", () => {
   });
 
   describe("Retry functionality", () => {
-    it("should call pathSearch again when retry button is clicked", async () => {
+    it("should call getEntitiesByPrefix again when retry button is clicked", async () => {
       const networkError = new GraphApiError("Network failure", 0);
-      mockPathSearchFn
+      mockGetEntitiesByPrefixFn
         .mockRejectedValueOnce(networkError)
-        .mockResolvedValueOnce(createMockPathSearchResult());
+        .mockResolvedValueOnce(createMockEntities());
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -366,10 +371,10 @@ describe("DataView GraphQL Integration", () => {
       // Click retry
       await user.click(retryButton);
 
-      // Should call pathSearch again with same parameters
+      // Should call getEntitiesByPrefix again with same parameters
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledTimes(2);
-        expect(mockPathSearchFn).toHaveBeenLastCalledWith("*", 2, 50);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(2);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenLastCalledWith("", 200);
       });
 
       // Error should be cleared after successful retry
@@ -382,7 +387,7 @@ describe("DataView GraphQL Integration", () => {
 
     it("should show loading state during retry", async () => {
       const networkError = new GraphApiError("Network failure", 0);
-      mockPathSearchFn.mockRejectedValueOnce(networkError);
+      mockGetEntitiesByPrefixFn.mockRejectedValueOnce(networkError);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -390,11 +395,11 @@ describe("DataView GraphQL Integration", () => {
         expect(screen.getByRole("button", { name: /retry/i })).toBeVisible();
       });
 
-      let resolveRetry: (value: PathSearchResult) => void;
-      const retryPromise = new Promise<PathSearchResult>((resolve) => {
+      let resolveRetry: (value: unknown[]) => void;
+      const retryPromise = new Promise<unknown[]>((resolve) => {
         resolveRetry = resolve;
       });
-      mockPathSearchFn.mockReturnValueOnce(retryPromise);
+      mockGetEntitiesByPrefixFn.mockReturnValueOnce(retryPromise);
 
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: /retry/i }));
@@ -403,7 +408,7 @@ describe("DataView GraphQL Integration", () => {
       expect(screen.getByText("Loading graph data...")).toBeInTheDocument();
 
       // Resolve retry
-      resolveRetry!(createMockPathSearchResult());
+      resolveRetry!(createMockEntities());
 
       await waitFor(() => {
         expect(
@@ -416,7 +421,7 @@ describe("DataView GraphQL Integration", () => {
       const networkError = new GraphApiError("Network failure", 0);
       const timeoutError = new GraphApiError("Request timeout", 504);
 
-      mockPathSearchFn
+      mockGetEntitiesByPrefixFn
         .mockRejectedValueOnce(networkError)
         .mockRejectedValueOnce(timeoutError);
 
@@ -440,12 +445,12 @@ describe("DataView GraphQL Integration", () => {
 
   describe("Refresh functionality (toolbar refresh button)", () => {
     it("should clear entities and reload data when refresh button is clicked", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledTimes(1);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(1);
       });
 
       // Find toolbar refresh button (not retry button)
@@ -454,19 +459,19 @@ describe("DataView GraphQL Integration", () => {
       const user = userEvent.setup();
       await user.click(refreshButton);
 
-      // Should call pathSearch again
+      // Should call getEntitiesByPrefix again
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledTimes(2);
-        expect(mockPathSearchFn).toHaveBeenLastCalledWith("*", 2, 50);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(2);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenLastCalledWith("", 200);
       });
     });
 
     it("should disable refresh button while loading", async () => {
-      let resolvePromise: (value: PathSearchResult) => void;
-      const delayedPromise = new Promise<PathSearchResult>((resolve) => {
+      let resolvePromise: (value: unknown[]) => void;
+      const delayedPromise = new Promise<unknown[]>((resolve) => {
         resolvePromise = resolve;
       });
-      mockPathSearchFn.mockReturnValue(delayedPromise);
+      mockGetEntitiesByPrefixFn.mockReturnValue(delayedPromise);
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -476,7 +481,7 @@ describe("DataView GraphQL Integration", () => {
       expect(refreshButton).toBeDisabled();
 
       // Resolve promise
-      resolvePromise!(createMockPathSearchResult());
+      resolvePromise!(createMockEntities());
 
       await waitFor(() => {
         expect(refreshButton).not.toBeDisabled();
@@ -486,17 +491,17 @@ describe("DataView GraphQL Integration", () => {
 
   describe("Entity expansion (handleEntityExpand)", () => {
     it("should call pathSearch with entity ID when entity is expanded", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       const { component } = render(DataView, {
         props: { flowId: "test-flow-123" },
       });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledWith("*", 2, 50);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledWith("", 200);
       });
 
-      // Mock the second call for entity expansion
+      // Mock pathSearch for entity expansion
       mockPathSearchFn.mockResolvedValueOnce({
         entities: [
           {
@@ -527,14 +532,14 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should use correct depth and limit for entity expansion", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       const { component } = render(DataView, {
         props: { flowId: "test-flow-123" },
       });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledTimes(1);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(1);
       });
 
       mockPathSearchFn.mockResolvedValueOnce({
@@ -554,17 +559,17 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should handle error during entity expansion gracefully", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       const { component } = render(DataView, {
         props: { flowId: "test-flow-123" },
       });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalledTimes(1);
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(1);
       });
 
-      // Mock error for expansion
+      // Mock error for expansion (pathSearch is still used for expansion)
       const expansionError = new GraphApiError("Failed to expand entity", 500);
       mockPathSearchFn.mockRejectedValueOnce(expansionError);
 
@@ -579,12 +584,12 @@ describe("DataView GraphQL Integration", () => {
 
   describe("Component integration", () => {
     it("should render all three panels after successful data load", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalled();
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled();
       });
 
       // Check that main container and panels are present
@@ -596,13 +601,12 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should pass transformed entities to child components", async () => {
-      const mockResult = createMockPathSearchResult();
-      mockPathSearchFn.mockResolvedValue(mockResult);
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       render(DataView, { props: { flowId: "test-flow-123" } });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalled();
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled();
       });
 
       // After successful load, the component should not show errors
@@ -650,7 +654,7 @@ describe("DataView GraphQL Integration", () => {
     it.each(errorCases)(
       "should display correct message for $error.statusCode: $expectedMessage",
       async ({ error, expectedMessage }) => {
-        mockPathSearchFn.mockRejectedValue(error);
+        mockGetEntitiesByPrefixFn.mockRejectedValue(error);
 
         render(DataView, { props: { flowId: "test-flow-123" } });
 
@@ -663,14 +667,14 @@ describe("DataView GraphQL Integration", () => {
 
   describe("Component lifecycle", () => {
     it("should clean up subscriptions on unmount", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       const { unmount } = render(DataView, {
         props: { flowId: "test-flow-123" },
       });
 
       await waitFor(() => {
-        expect(mockPathSearchFn).toHaveBeenCalled();
+        expect(mockGetEntitiesByPrefixFn).toHaveBeenCalled();
       });
 
       // Unmount should not throw
@@ -678,7 +682,7 @@ describe("DataView GraphQL Integration", () => {
     });
 
     it("should handle rapid mount/unmount cycles", async () => {
-      mockPathSearchFn.mockResolvedValue(createMockPathSearchResult());
+      mockGetEntitiesByPrefixFn.mockResolvedValue(createMockEntities());
 
       for (let i = 0; i < 5; i++) {
         const { unmount } = render(DataView, {
@@ -688,7 +692,7 @@ describe("DataView GraphQL Integration", () => {
       }
 
       // Should not throw or cause memory leaks
-      expect(mockPathSearchFn).toHaveBeenCalledTimes(5);
+      expect(mockGetEntitiesByPrefixFn).toHaveBeenCalledTimes(5);
     });
   });
 });
