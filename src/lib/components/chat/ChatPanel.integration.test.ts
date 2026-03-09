@@ -86,7 +86,6 @@ function defaultProps(overrides: Record<string, unknown> = {}) {
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
     onApplyFlow: vi.fn(),
-    onLoadJson: vi.fn(),
     onExportJson: vi.fn(),
     onNewChat: vi.fn(),
     ...overrides,
@@ -94,81 +93,7 @@ function defaultProps(overrides: Record<string, unknown> = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Load JSON callback
-// ---------------------------------------------------------------------------
-
-describe("ChatPanel — onLoadJson callback", () => {
-  test("onLoadJson receives parsed JSON for a realistic flow config", async () => {
-    const onLoadJson = vi.fn();
-    render(ChatPanel, { props: defaultProps({ onLoadJson }) });
-
-    // Simulate file input upload via file input element.
-    // The hidden <input type="file"> is triggered by the Load JSON button click;
-    // testing-library/user-event can upload a file directly.
-    const user = userEvent.setup();
-    const jsonText = JSON.stringify(REALISTIC_FLOW_JSON);
-    const file = new File([jsonText], "flow.json", {
-      type: "application/json",
-    });
-
-    const fileInput = document.querySelector(
-      '[data-testid="chat-toolbar"] input[type="file"]',
-    ) as HTMLInputElement;
-
-    expect(fileInput).not.toBeNull();
-
-    await user.upload(fileInput, file);
-
-    await waitFor(() => {
-      expect(onLoadJson).toHaveBeenCalledOnce();
-    });
-
-    const received = onLoadJson.mock.calls[0][0] as typeof REALISTIC_FLOW_JSON;
-    expect(received).toMatchObject({
-      nodes: expect.arrayContaining([
-        expect.objectContaining({ id: "node-1", type: "input" }),
-        expect.objectContaining({ id: "node-2", type: "processor" }),
-      ]),
-      connections: expect.arrayContaining([
-        expect.objectContaining({
-          source_node_id: "node-1",
-          target_node_id: "node-2",
-        }),
-      ]),
-    });
-  });
-
-  test("onLoadJson extracts nodes and connections from parsed data", async () => {
-    const capturedData: unknown[] = [];
-    const onLoadJson = vi.fn((data: unknown) => capturedData.push(data));
-
-    render(ChatPanel, { props: defaultProps({ onLoadJson }) });
-
-    const user = userEvent.setup();
-    const file = new File([JSON.stringify(REALISTIC_FLOW_JSON)], "flow.json", {
-      type: "application/json",
-    });
-    const fileInput = document.querySelector(
-      '[data-testid="chat-toolbar"] input[type="file"]',
-    ) as HTMLInputElement;
-
-    await user.upload(fileInput, file);
-
-    await waitFor(() => expect(capturedData).toHaveLength(1));
-
-    const data = capturedData[0] as Record<string, unknown>;
-    const nodes = data["nodes"] as FlowNode[];
-    const connections = data["connections"] as FlowConnection[];
-
-    expect(nodes).toHaveLength(2);
-    expect(connections).toHaveLength(1);
-    expect(nodes[0].id).toBe("node-1");
-    expect(connections[0].source_node_id).toBe("node-1");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 2. Export JSON callback
+// 1. Export JSON callback
 // ---------------------------------------------------------------------------
 
 describe("ChatPanel — onExportJson callback", () => {

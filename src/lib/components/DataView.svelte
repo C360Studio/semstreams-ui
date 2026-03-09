@@ -340,8 +340,6 @@
 				onClearChips={chatStore.clearChips}
 				commands={dataViewCommands}
 				onSubmit={handleChatSubmit}
-				onLoadJson={() => {}}
-				onExportJson={() => {}}
 				onNewChat={() => chatStore.clearConversation()}
 			/>
 		{/if}

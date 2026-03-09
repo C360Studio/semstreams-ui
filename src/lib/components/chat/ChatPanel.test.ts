@@ -36,7 +36,6 @@ function defaultProps() {
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
     onApplyFlow: vi.fn(),
-    onLoadJson: vi.fn(),
     onExportJson: vi.fn(),
     onNewChat: vi.fn(),
   };

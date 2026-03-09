@@ -44,7 +44,6 @@ function defaultProps(overrides: Record<string, unknown> = {}) {
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
     onApplyFlow: vi.fn(),
-    onLoadJson: vi.fn(),
     onExportJson: vi.fn(),
     onNewChat: vi.fn(),
     ...overrides,

@@ -13,8 +13,7 @@
     onSubmit: (content: string) => void;
     onCancel?: () => void;
     onApplyFlow?: (messageId: string) => void;
-    onLoadJson: (data: unknown) => void;
-    onExportJson: () => void;
+    onExportJson?: () => void;
     onNewChat: () => void;
     chips?: ContextChip[];
     onRemoveChip?: (chipId: string) => void;
@@ -31,7 +30,6 @@
     onSubmit,
     onCancel,
     onApplyFlow,
-    onLoadJson,
     onExportJson,
     onNewChat,
     chips,
@@ -44,16 +42,15 @@
   let errorDismissed = $state(false);
 
   $effect(() => {
-    // Read `error` to subscribe to its changes, then reset the dismissed flag
     void error;
     errorDismissed = false;
   });
 </script>
 
-<div data-testid="chat-panel">
-  <ChatToolbar {onLoadJson} {onExportJson} {onNewChat} />
+<div data-testid="chat-panel" class="chat-panel">
+  <ChatToolbar {onExportJson} {onNewChat} />
   {#if error && !errorDismissed}
-    <div role="alert">
+    <div role="alert" class="chat-error">
       {error}
       <button
         data-testid="chat-error-dismiss"
@@ -65,15 +62,53 @@
       </button>
     </div>
   {/if}
-  <ChatMessageList {messages} {isStreaming} {streamingContent} {onApplyFlow} />
-  <ChatInput
-    {onSubmit}
-    {onCancel}
-    {isStreaming}
-    {chips}
-    {onRemoveChip}
-    {onClearChips}
-    {commands}
-    {onCommandSelect}
-  />
+  <div class="chat-messages">
+    <ChatMessageList {messages} {isStreaming} {streamingContent} {onApplyFlow} />
+  </div>
+  <div class="chat-input-area">
+    <ChatInput
+      {onSubmit}
+      {onCancel}
+      {isStreaming}
+      {chips}
+      {onRemoveChip}
+      {onClearChips}
+      {commands}
+      {onCommandSelect}
+    />
+  </div>
 </div>
+
+<style>
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .chat-error {
+    padding: 8px 12px;
+    margin: 8px;
+    background: var(--status-error-bg);
+    border: 1px solid var(--status-error);
+    border-radius: 4px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .chat-input-area {
+    flex-shrink: 0;
+    border-top: 1px solid var(--ui-border-subtle);
+    padding: 8px;
+  }
+</style>

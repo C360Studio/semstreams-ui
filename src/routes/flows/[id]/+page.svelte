@@ -501,29 +501,6 @@
 		chatStore.updateAttachment(messageId, 'flow', { applied: true });
 	}
 
-	function handleLoadJson(data: unknown) {
-		const flowData = data as Partial<Flow>;
-		if (!flowData) return;
-
-		// Save current state to history
-		flowHistory.push({
-			...backendFlow,
-			nodes: flowNodes,
-			connections: flowConnections
-		});
-
-		if (flowData.nodes) {
-			flowNodes = [...flowData.nodes];
-		}
-		if (flowData.connections) {
-			flowConnections = [...flowData.connections];
-		}
-
-		dirty = true;
-		saveState = { ...saveState, status: 'dirty' };
-		chatStore.addSystemMessage('Flow loaded from JSON file.');
-	}
-
 	function handleExportJson() {
 		const flowData = {
 			id: backendFlow.id,
@@ -882,7 +859,6 @@
 						onSubmit={handleChatSubmit}
 						onCancel={handleChatCancel}
 						onApplyFlow={handleApplyFlow}
-						onLoadJson={handleLoadJson}
 						onExportJson={handleExportJson}
 						onNewChat={handleNewChat}
 					/>

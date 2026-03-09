@@ -37,7 +37,6 @@ function defaultPanelProps() {
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
     onApplyFlow: vi.fn(),
-    onLoadJson: vi.fn(),
     onExportJson: vi.fn(),
     onNewChat: vi.fn(),
   };
@@ -370,9 +369,8 @@ describe("ChatInput — character counter", () => {
 
 describe("ChatToolbar — accessibility", () => {
   const toolbarButtons = [
-    { testId: "chat-load-json", label: "Load JSON" },
-    { testId: "chat-export-json", label: "Export JSON" },
-    { testId: "chat-new-chat", label: "New Chat" },
+    { testId: "chat-export-json", label: "Export" },
+    { testId: "chat-new-chat", label: "New" },
   ];
 
   it.each(toolbarButtons)(
@@ -380,7 +378,6 @@ describe("ChatToolbar — accessibility", () => {
     ({ testId }) => {
       render(ChatToolbar, {
         props: {
-          onLoadJson: vi.fn(),
           onExportJson: vi.fn(),
           onNewChat: vi.fn(),
         },
@@ -393,25 +390,6 @@ describe("ChatToolbar — accessibility", () => {
       expect(name).toBeTruthy();
     },
   );
-
-  it("should restrict the file input to .json files via the accept attribute", () => {
-    render(ChatToolbar, {
-      props: {
-        onLoadJson: vi.fn(),
-        onExportJson: vi.fn(),
-        onNewChat: vi.fn(),
-      },
-    });
-
-    // The hidden file input must accept .json
-    const fileInput = document.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement;
-    expect(fileInput).not.toBeNull();
-
-    const accept = fileInput?.getAttribute("accept") ?? "";
-    expect(accept).toContain(".json");
-  });
 });
 
 // ---------------------------------------------------------------------------
