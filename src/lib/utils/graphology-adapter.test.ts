@@ -51,7 +51,7 @@ describe("graphology-adapter", () => {
 
       const attrs = graph.getNodeAttributes("c360.ops.robotics.gcs.drone.001");
       expect(attrs.label).toBe("001");
-      expect(attrs.type).toBe("drone");
+      expect(attrs.entityType).toBe("drone");
       expect(attrs.domain).toBe("robotics");
       expect(typeof attrs.color).toBe("string");
       expect(typeof attrs.size).toBe("number");

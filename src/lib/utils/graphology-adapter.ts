@@ -47,7 +47,9 @@ export function syncStoreToGraph(
       label: entity.idParts.instance || entity.id,
       size: getNodeSize(entity),
       color: getEntityColor(entity.idParts),
-      type: entity.idParts.type,
+      // "type" is reserved by Sigma as the WebGL program selector (only "circle"
+      // is registered by default). Store entity type as a separate attribute.
+      entityType: entity.idParts.type,
       domain: entity.idParts.domain,
       x: existing?.x ?? Math.random() * 100,
       y: existing?.y ?? Math.random() * 100,
@@ -86,7 +88,7 @@ export function addToGraph(
         label: entity.idParts.instance || entity.id,
         size: getNodeSize(entity),
         color: getEntityColor(entity.idParts),
-        type: entity.idParts.type,
+        entityType: entity.idParts.type,
         domain: entity.idParts.domain,
         x,
         y,
