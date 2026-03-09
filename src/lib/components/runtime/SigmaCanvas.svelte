@@ -51,6 +51,7 @@
       renderEdgeLabels: false,
       defaultEdgeType: "arrow",
       labelRenderedSizeThreshold: 8,
+      labelColor: { color: "#f4f4f4" },
       nodeReducer: (node, data) => {
         const res = { ...data };
 
@@ -59,7 +60,7 @@
             graph!.hasEdge(selectedEntityId, node) ||
             graph!.hasEdge(node, selectedEntityId);
           if (!isNeighbor) {
-            res.color = "#e5e7eb";
+            res.color = "#525252";
             res.label = "";
           }
         }
@@ -79,7 +80,7 @@
           const isConnected =
             source === selectedEntityId || target === selectedEntityId;
           if (!isConnected) {
-            res.color = "#f3f4f6";
+            res.color = "#393939";
           }
         }
 
