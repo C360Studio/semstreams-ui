@@ -1,6 +1,5 @@
 import type { Flow, FlowNode, FlowConnection } from "./flow";
 import type { GraphFilters } from "./graph";
-import type { AgentLoopState } from "./agent";
 
 // ---------------------------------------------------------------------------
 // FlowDiff — shared between FlowAttachment and legacy usage
@@ -25,11 +24,7 @@ export type MessageAttachment =
   | EntityDetailAttachment
   | ErrorAttachment
   | HealthAttachment
-  | FlowStatusAttachment
-  | AgentLoopAttachment
-  | ApprovalAttachment
-  | ToolCallAttachment
-  | RuleDiffAttachment;
+  | FlowStatusAttachment;
 
 export interface FlowAttachment {
   kind: "flow";
@@ -119,45 +114,6 @@ export interface FlowStatusAttachment {
   warnings?: string[];
 }
 
-export interface AgentLoopAttachment {
-  kind: "agent-loop";
-  loopId: string;
-  state: AgentLoopState;
-  role: string;
-  iterations: number;
-  maxIterations: number;
-  parentLoopId?: string;
-}
-
-export interface ApprovalAttachment {
-  kind: "approval";
-  loopId: string;
-  toolName: string;
-  toolArgs: Record<string, unknown>;
-  question: string;
-  resolved?: boolean;
-  resolution?: "approved" | "rejected";
-}
-
-export interface ToolCallAttachment {
-  kind: "tool-call";
-  toolName: string;
-  args: Record<string, unknown>;
-  result?: string;
-  error?: string;
-  status: "pending" | "running" | "complete" | "error";
-  durationMs?: number;
-}
-
-export interface RuleDiffAttachment {
-  kind: "rule-diff";
-  ruleId: string;
-  ruleName: string;
-  operation: "create" | "update" | "delete";
-  before?: Record<string, unknown>;
-  after?: Record<string, unknown>;
-}
-
 // ---------------------------------------------------------------------------
 // ContextChip — domain object pinned into the conversation
 // ---------------------------------------------------------------------------
@@ -212,8 +168,7 @@ export type ChatIntent =
   | "search"
   | "explain"
   | "debug"
-  | "health"
-  | "agent-control";
+  | "health";
 
 // ---------------------------------------------------------------------------
 // ChatMessage — generalized shape with attachments and chips

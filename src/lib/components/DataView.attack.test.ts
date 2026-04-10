@@ -107,7 +107,8 @@ describe("DataView attack — rapid tab switching", () => {
 
     await waitFor(() => {
       const chatActive = chatTab.getAttribute("aria-selected") === "true";
-      const detailsActive = detailsTab.getAttribute("aria-selected") === "true";
+      const detailsActive =
+        detailsTab.getAttribute("aria-selected") === "true";
       // Exactly one is active — no split-brain
       expect(chatActive !== detailsActive).toBe(true);
     });
@@ -183,24 +184,9 @@ describe("DataView attack — entity/chip race conditions", () => {
     graphStore.upsertEntity(e3);
 
     // Add all three chips programmatically (simulates rapid entity→chip flow)
-    chatStore.addChip({
-      id: "chip-1",
-      kind: "entity",
-      label: "001",
-      value: e1.id,
-    });
-    chatStore.addChip({
-      id: "chip-2",
-      kind: "entity",
-      label: "002",
-      value: e2.id,
-    });
-    chatStore.addChip({
-      id: "chip-3",
-      kind: "entity",
-      label: "003",
-      value: e3.id,
-    });
+    chatStore.addChip({ id: "chip-1", kind: "entity", label: "001", value: e1.id });
+    chatStore.addChip({ id: "chip-2", kind: "entity", label: "002", value: e2.id });
+    chatStore.addChip({ id: "chip-3", kind: "entity", label: "003", value: e3.id });
 
     // Verify store holds all three unique chips
     expect(chatStore.chips).toHaveLength(3);
@@ -224,9 +210,7 @@ describe("DataView attack — onViewEntity with non-existent entity", () => {
   });
 
   it("sets selectedEntityId to non-existent ID without throwing", () => {
-    const { component } = render(DataView, {
-      props: { flowId: "flow-noent2" },
-    });
+    const { component } = render(DataView, { props: { flowId: "flow-noent2" } });
 
     component.handleViewEntityFromChat("phantom.entity.id.not.in.store.x");
 
@@ -237,9 +221,7 @@ describe("DataView attack — onViewEntity with non-existent entity", () => {
   });
 
   it("switches to details tab even when entity is not in the store", async () => {
-    const { component } = render(DataView, {
-      props: { flowId: "flow-noent3" },
-    });
+    const { component } = render(DataView, { props: { flowId: "flow-noent3" } });
 
     // Start on chat tab
     const user = userEvent.setup();
@@ -405,7 +387,9 @@ describe("DataView attack — auto-switch effect loop guard", () => {
 
 describe("DataView attack — undefined and null props", () => {
   it("does NOT throw when flowId is an empty string", () => {
-    expect(() => render(DataView, { props: { flowId: "" } })).not.toThrow();
+    expect(() =>
+      render(DataView, { props: { flowId: "" } }),
+    ).not.toThrow();
   });
 
   it("does NOT throw when flowId contains special characters", () => {
@@ -518,7 +502,11 @@ describe("graphStore attack — clearExpanded() safety", () => {
   });
 
   it("isExpanded returns false for all entities after clearExpanded", () => {
-    const ids = ["a.b.c.d.e.1", "a.b.c.d.e.2", "a.b.c.d.e.3"];
+    const ids = [
+      "a.b.c.d.e.1",
+      "a.b.c.d.e.2",
+      "a.b.c.d.e.3",
+    ];
     for (const id of ids) {
       graphStore.markExpanded(id);
     }

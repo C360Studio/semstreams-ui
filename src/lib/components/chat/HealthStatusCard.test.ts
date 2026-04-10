@@ -39,9 +39,7 @@ interface HealthAttachment {
   lastCheck?: string;
 }
 
-function makeAttachment(
-  overrides: Partial<HealthAttachment> = {},
-): HealthAttachment {
+function makeAttachment(overrides: Partial<HealthAttachment> = {}): HealthAttachment {
   return {
     kind: "health",
     componentName: "http-input",
@@ -153,9 +151,7 @@ describe("HealthStatusCard — status indicator has appropriate class or attribu
     });
 
     const card = screen.getByTestId("health-status-card");
-    const indicator = card.querySelector(
-      "[data-status='healthy'], .status-healthy, .healthy, [class*='healthy']",
-    );
+    const indicator = card.querySelector("[data-status='healthy'], .status-healthy, .healthy, [class*='healthy']");
     expect(indicator).not.toBeNull();
   });
 
@@ -165,9 +161,7 @@ describe("HealthStatusCard — status indicator has appropriate class or attribu
     });
 
     const card = screen.getByTestId("health-status-card");
-    const indicator = card.querySelector(
-      "[data-status='degraded'], .status-degraded, .degraded, [class*='degraded']",
-    );
+    const indicator = card.querySelector("[data-status='degraded'], .status-degraded, .degraded, [class*='degraded']");
     expect(indicator).not.toBeNull();
   });
 
@@ -177,9 +171,7 @@ describe("HealthStatusCard — status indicator has appropriate class or attribu
     });
 
     const card = screen.getByTestId("health-status-card");
-    const indicator = card.querySelector(
-      "[data-status='unhealthy'], .status-unhealthy, .unhealthy, [class*='unhealthy']",
-    );
+    const indicator = card.querySelector("[data-status='unhealthy'], .status-unhealthy, .unhealthy, [class*='unhealthy']");
     expect(indicator).not.toBeNull();
   });
 
@@ -189,9 +181,7 @@ describe("HealthStatusCard — status indicator has appropriate class or attribu
     });
 
     const card = screen.getByTestId("health-status-card");
-    const indicator = card.querySelector(
-      "[data-status='unknown'], .status-unknown, .unknown, [class*='unknown']",
-    );
+    const indicator = card.querySelector("[data-status='unknown'], .status-unknown, .unknown, [class*='unknown']");
     expect(indicator).not.toBeNull();
   });
 });
