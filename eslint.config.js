@@ -73,6 +73,11 @@ export default [
         ...globals.node,
       },
     },
+    rules: {
+      // TypeScript handles undefined identifiers; ESLint's no-undef fires
+      // spuriously on type-only references like `RequestInit` in test files.
+      "no-undef": "off",
+    },
   },
   // Locked generated test files — DO NOT EDIT headers mean we cannot fix
   // unused imports in them. Suppress unused-vars for these files only.
