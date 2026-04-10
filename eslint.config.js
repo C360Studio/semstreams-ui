@@ -85,9 +85,13 @@ export default [
     files: [
       "src/lib/components/DataTable.test.ts",
       "src/lib/components/DataView.test.ts",
+      "src/lib/components/DataView.attack.test.ts",
       "src/lib/components/JsonEditor.test.ts",
       "src/lib/components/PropertiesPanel.attack.test.ts",
       "src/lib/components/runtime/NlqDebugBadge.test.ts",
+      "src/lib/server/ai/toolExecutors.test.ts",
+      "src/lib/server/ai/toolExecutors.attack.test.ts",
+      "src/lib/server/graphql/client.attack.test.ts",
     ],
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
