@@ -1,17 +1,16 @@
 # SemStreams UI
 
-Visual graph explorer and flow builder for any SemStreams-compatible application.
+Operational glass for the semstreams framework — graph explorer, flow builder, and runtime monitoring.
 
 ## Overview
 
-SemStreams UI is a standalone frontend that works with **any** application built on the SemStreams framework:
-
-- **semstreams** - Core stream processing framework
-- **semsource** - Semantic source analysis
-- **semmem** - Semantic memory management
-- **Your application** - Any SemStreams-based system
+SemStreams UI is a generic frontend for the semstreams framework. It is the UI used by **semsource** and is also published as `ghcr.io/c360studio/semstreams-ui:latest` for use in semdocs examples and other consumers.
 
 The UI discovers components, schemas, and graph data **at runtime** from the backend's APIs. No hardcoded component types or backend-specific logic.
+
+### Product-specific UIs
+
+This repo is intentionally generic. Product-specific UI code (e.g., agentic loops, approval prompts, custom monitoring) lives in consumer repos — for example, `c360/semteams/ui/` maintains its own semteams-specific extensions on top of this base. Do not add product-specific components here.
 
 ## Features
 
