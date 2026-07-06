@@ -27,6 +27,19 @@ test.describe("Ops profile owned E2E gate", () => {
     await expect(page.locator('[data-testid="ops-admin-panel"]')).toContainText(
       "Generic backend, graph, and runtime read paths are reachable",
     );
+    const matrix = page.locator('[data-testid="ops-readiness-matrix"]');
+    await expect(matrix).toBeVisible();
+    await expect(matrix).toContainText("Backend health");
+    await expect(matrix).toContainText("/health");
+    await expect(matrix).toContainText("Graph query");
+    await expect(matrix).toContainText("/graphql");
+    await expect(matrix).toContainText("Flow list");
+    await expect(matrix).toContainText("/flowbuilder/flows");
+    await expect(matrix).toContainText("Runtime health");
+    await expect(matrix).toContainText("Trajectory summary");
+    await expect(matrix).toContainText("/trajectories?limit=5");
+    await expect(matrix).toContainText("Source readiness");
+    await expect(matrix).toContainText("generic-read-path");
     await expect(
       page.locator('[data-testid="trajectory-inspector"]'),
     ).toContainText(LOOP_ID);

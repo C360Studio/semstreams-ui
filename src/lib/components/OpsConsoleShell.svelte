@@ -10,6 +10,7 @@
   } from "svelte-hero-icons";
   import type { Snippet } from "svelte";
   import GraphOverviewPanel from "$lib/components/runtime/GraphOverviewPanel.svelte";
+  import OpsReadinessMatrix from "$lib/components/runtime/OpsReadinessMatrix.svelte";
   import OpsSearchPanel from "$lib/components/runtime/OpsSearchPanel.svelte";
   import TrajectoryInspector from "$lib/components/runtime/TrajectoryInspector.svelte";
   import {
@@ -576,6 +577,10 @@
           </button>
         </div>
       </div>
+
+      <div class="admin-matrix">
+        <OpsReadinessMatrix summary={opsSummary} />
+      </div>
     </div>
   </section>
 
@@ -753,9 +758,11 @@
     grid-template-columns: minmax(160px, 220px) 1fr;
     gap: 0;
     min-height: 86px;
+    max-height: 128px;
     border-bottom: 1px solid var(--ui-border-subtle);
     background: var(--ui-surface-primary);
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .admin-toolbar {
@@ -812,9 +819,25 @@
   .admin-grid {
     display: grid;
     grid-template-columns:
-      minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr)
-      minmax(0, 0.9fr);
+      minmax(190px, 1.05fr) minmax(180px, 0.9fr) minmax(180px, 0.9fr)
+      minmax(170px, 0.8fr) minmax(620px, 1.5fr);
     min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .admin-matrix {
+    min-width: 0;
+  }
+
+  .admin-matrix :global(.ops-readiness-panel) {
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(130px, 160px) minmax(0, 1fr);
+  }
+
+  .admin-matrix :global(.table-scroll) {
+    max-height: 82px;
   }
 
   .admin-section {
@@ -945,6 +968,8 @@
 
     .ops-admin-panel {
       grid-template-columns: 1fr;
+      max-height: 320px;
+      overflow: auto;
     }
 
     .admin-toolbar {
@@ -953,6 +978,14 @@
     }
 
     .admin-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-matrix {
+      min-width: 0;
+    }
+
+    .admin-matrix :global(.ops-readiness-panel) {
       grid-template-columns: 1fr;
     }
 

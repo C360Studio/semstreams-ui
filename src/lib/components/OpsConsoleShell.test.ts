@@ -39,6 +39,12 @@ function makeSummary(): OpsSummary {
       status: "healthy",
       message: "Active flow runtime endpoints are reachable",
       flowCount: 2,
+      flowList: {
+        status: "healthy",
+        message: "Flows discovered",
+        statusCode: 200,
+        count: 2,
+      },
       activeFlow: {
         id: "flow-123",
         name: "SemSource ingest",
@@ -284,6 +290,32 @@ describe("OpsConsoleShell", () => {
     ).toHaveAttribute("href", "/trajectories/loop-123");
   });
 
+  it("composes the generic read-only readiness matrix into the admin surface", () => {
+    render(OpsConsoleShell, {
+      props: {
+        activeFlow: {
+          id: "flow-123",
+          name: "SemSource ingest",
+          runtime_state: "running",
+        },
+        opsSummary: makeSummary(),
+        main: textSnippet("Graph"),
+      },
+    });
+
+    const matrix = screen.getByTestId("ops-readiness-matrix");
+    expect(within(matrix).getByText("Backend health")).toBeVisible();
+    expect(within(matrix).getByText("/health")).toBeVisible();
+    expect(within(matrix).getByText("Graph query")).toBeVisible();
+    expect(within(matrix).getByText("/graphql")).toBeVisible();
+    expect(within(matrix).getByText("Flow list")).toBeVisible();
+    expect(within(matrix).getByText("/flowbuilder/flows")).toBeVisible();
+    expect(within(matrix).getByText("Source readiness")).toBeVisible();
+    expect(within(matrix).getByText("generic-read-path")).toBeVisible();
+    expect(within(matrix).queryByText(/SemSource|SemDev/)).toBeNull();
+    expect(within(matrix).queryByRole("button")).toBeNull();
+  });
+
   it("calls the provided read-side refresh action", async () => {
     const user = userEvent.setup();
     let refreshes = 0;
@@ -357,7 +389,9 @@ describe("OpsConsoleShell", () => {
   it("wires the read-only trajectory inspector to detail loading and copy actions", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
-    const fetchTrajectoryDetail = vi.fn().mockResolvedValue(makeTrajectoryDetail());
+    const fetchTrajectoryDetail = vi
+      .fn()
+      .mockResolvedValue(makeTrajectoryDetail());
 
     render(OpsConsoleShell, {
       props: {
@@ -378,7 +412,9 @@ describe("OpsConsoleShell", () => {
     await waitFor(() => {
       expect(fetchTrajectoryDetail).toHaveBeenCalledWith("loop-123");
     });
-    expect(within(inspector).getByText("Trajectory detail rendered")).toBeVisible();
+    expect(
+      within(inspector).getByText("Trajectory detail rendered"),
+    ).toBeVisible();
 
     await user.click(
       within(inspector).getByRole("button", { name: /copy loop id/i }),
@@ -396,7 +432,9 @@ describe("OpsConsoleShell", () => {
 
   it("wires the ops search panel to entity selection without hiding graph context", async () => {
     const user = userEvent.setup();
-    const entity = makeGraphEntity("c360.source.repo.main.function.parseConfig");
+    const entity = makeGraphEntity(
+      "c360.source.repo.main.function.parseConfig",
+    );
     const searchEntities = vi.fn().mockResolvedValue([entity]);
     const onSearchEntitySelect = vi.fn();
 

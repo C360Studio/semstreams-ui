@@ -37,6 +37,7 @@ export interface OpsRuntimeSummary {
   status: OpsAvailability;
   message: string;
   flowCount: number;
+  flowList: OpsRuntimeEndpointSummary;
   activeFlow: OpsSummaryFlow | null;
   health: OpsRuntimeEndpointSummary;
   metrics: OpsRuntimeEndpointSummary;
@@ -161,11 +162,7 @@ export const opsSummaryApi = {
 
     const flows = flowList.flows;
     const activeFlow = selectActiveFlow(flows, options.activeFlowId);
-    const runtime = await fetchRuntimeSummary(
-      fetcher,
-      flows.length,
-      activeFlow,
-    );
+    const runtime = await fetchRuntimeSummary(fetcher, flowList, activeFlow);
 
     return {
       generatedAt: new Date().toISOString(),
@@ -200,6 +197,7 @@ async function fetchFlowList(fetcher: Fetcher): Promise<{
   status: OpsAvailability;
   flows: OpsSummaryFlow[];
   message: string;
+  statusCode?: number;
 }> {
   const result = await fetchJson(fetcher, "/flowbuilder/flows");
 
@@ -208,6 +206,7 @@ async function fetchFlowList(fetcher: Fetcher): Promise<{
       status: "unavailable",
       flows: [],
       message: result.message ?? `Flow list failed: ${result.statusText}`,
+      statusCode: result.status,
     };
   }
 
@@ -218,6 +217,7 @@ async function fetchFlowList(fetcher: Fetcher): Promise<{
     status: "healthy",
     flows,
     message: flows.length > 0 ? "Flows discovered" : "No flows discovered",
+    statusCode: result.status,
   };
 }
 
@@ -272,19 +272,39 @@ async function fetchGraphSummary(fetcher: Fetcher): Promise<OpsGraphSummary> {
 
 async function fetchRuntimeSummary(
   fetcher: Fetcher,
-  flowCount: number,
+  flowList: {
+    status: OpsAvailability;
+    flows: OpsSummaryFlow[];
+    message: string;
+    statusCode?: number;
+  },
   activeFlow: OpsSummaryFlow | null,
 ): Promise<OpsRuntimeSummary> {
+  const flowListEndpoint: OpsRuntimeEndpointSummary = {
+    status: flowList.status,
+    message: flowList.message,
+    statusCode: flowList.statusCode,
+    count: flowList.flows.length,
+  };
+  const flowCount = flowList.flows.length;
+
   if (!activeFlow) {
     const emptyEndpoint = {
       status: "unknown" as const,
       message: "No active flow selected",
     };
+    const flowListUnavailable = flowList.status === "unavailable";
 
     return {
       status: flowCount > 0 ? "unknown" : "unavailable",
-      message: flowCount > 0 ? "No active flow selected" : "No flows available",
+      message:
+        flowCount > 0
+          ? "No active flow selected"
+          : flowListUnavailable
+            ? flowList.message
+            : "No flows available",
       flowCount,
+      flowList: flowListEndpoint,
       activeFlow: null,
       health: emptyEndpoint,
       metrics: emptyEndpoint,
@@ -303,6 +323,7 @@ async function fetchRuntimeSummary(
     status: deriveRuntimeStatus(activeFlow, health, metrics, messages),
     message: runtimeMessage(activeFlow, health, metrics, messages),
     flowCount,
+    flowList: flowListEndpoint,
     activeFlow,
     health,
     metrics,
@@ -331,7 +352,8 @@ async function fetchTrajectorySummary(
   const items = Array.isArray(payload.trajectories)
     ? payload.trajectories.map(normalizeTrajectoryItem)
     : [];
-  const total = typeof payload.total === "number" ? payload.total : items.length;
+  const total =
+    typeof payload.total === "number" ? payload.total : items.length;
 
   return {
     status: "healthy",

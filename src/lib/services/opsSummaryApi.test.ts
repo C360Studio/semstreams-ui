@@ -87,6 +87,12 @@ describe("opsSummaryApi", () => {
     expect(summary.graph.entityCount).toBe(1);
     expect(summary.runtime.status).toBe("healthy");
     expect(summary.runtime.activeFlow?.id).toBe("flow-1");
+    expect(summary.runtime.flowList).toEqual({
+      status: "healthy",
+      message: "Flows discovered",
+      statusCode: 200,
+      count: 1,
+    });
     expect(summary.runtime.health.count).toBe(2);
     expect(summary.runtime.metrics.count).toBe(1);
     expect(summary.runtime.messages.count).toBe(14);
@@ -191,6 +197,49 @@ describe("opsSummaryApi", () => {
 
     expect(summary.runtime.activeFlow).toBeNull();
     expect(summary.runtime.status).toBe("unavailable");
+    expect(summary.runtime.flowList).toEqual({
+      status: "healthy",
+      message: "No flows discovered",
+      statusCode: 200,
+      count: 0,
+    });
+    expect(summary.runtime.health.message).toBe("No active flow selected");
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("preserves flow-list endpoint failures separately from active runtime endpoints", async () => {
+    const fetcher = makeFetch({
+      "/health": jsonResponse({ status: "ok" }),
+      "/flowbuilder/flows": jsonResponse(
+        { error: "flow list unavailable" },
+        503,
+        "Service Unavailable",
+      ),
+      "/graphql": jsonResponse({
+        data: {
+          entitiesByPrefix: [],
+        },
+      }),
+      "/trajectories?limit=5": jsonResponse({
+        total: 0,
+        trajectories: [],
+      }),
+    });
+
+    const summary = await opsSummaryApi.fetchSummary({ fetcher });
+
+    expect(summary.runtime.activeFlow).toBeNull();
+    expect(summary.runtime.status).toBe("unavailable");
+    expect(summary.runtime.message).toBe(
+      "Flow list failed: Service Unavailable",
+    );
+    expect(summary.runtime.flowList).toEqual({
+      status: "unavailable",
+      message: "Flow list failed: Service Unavailable",
+      statusCode: 503,
+      count: 0,
+    });
+    expect(summary.runtime.health.status).toBe("unknown");
     expect(summary.runtime.health.message).toBe("No active flow selected");
     expect(fetcher).toHaveBeenCalledTimes(4);
   });
