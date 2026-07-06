@@ -156,6 +156,16 @@ backend mutation actions.
 - **AND** they cannot create, update, delete, approve, retry, or trigger
   product-specific actions from the search panel
 
+#### Scenario: owned ops-profile gate proves local search failure
+
+- **GIVEN** the in-repo ops-profile E2E fixture is running
+- **AND** initial graph and ops summary reads remain healthy
+- **AND** the submitted entity-search GraphQL request returns an error
+- **WHEN** Playwright submits an entity search from the homepage
+- **THEN** the search panel reports the search-level error
+- **AND** graph, read-side admin, and trajectory inspector areas remain visible
+- **AND** no downstream product checkout is required for the gate
+
 ### Requirement: Admin, runtime, and trajectory status are read-first
 
 The first downstream ops dashboard MUST expose safe read-side admin information

@@ -48,6 +48,24 @@ async function degradeGenericReadPaths(page: Page) {
   );
 }
 
+async function degradeEntitySearch(page: Page) {
+  await page.route(/\/graphql$/, async (route) => {
+    const body = route.request().postData() ?? "";
+    if (!body.includes("GetEntitiesByPrefix")) {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        errors: [{ message: "ops-profile search degraded" }],
+      }),
+    });
+  });
+}
+
 test.describe("Ops profile owned E2E gate", () => {
   test("loads ops console, selects graph entity, and inspects trajectory", async ({
     page,
@@ -167,6 +185,43 @@ test.describe("Ops profile owned E2E gate", () => {
     await expect(matrix).toBeVisible();
     await expect(matrix).toContainText("Flow list");
     await expect(matrix).toContainText("/flowbuilder/flows");
+  });
+
+  test("keeps entity search failure local to the search panel", async ({
+    page,
+  }) => {
+    await degradeEntitySearch(page);
+    await page.goto("/");
+
+    await expect(page.locator('[data-testid="ops-console-shell"]')).toBeVisible(
+      { timeout: 10000 },
+    );
+    await expect(page.locator('[data-testid="ops-area-graph"]')).toContainText(
+      "Available",
+      { timeout: 10000 },
+    );
+    await expect(page.locator('[data-testid="sigma-canvas"]')).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.locator(".loading-overlay")).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    const search = page.locator('[data-testid="ops-search-panel"]');
+    await expect(search).toBeVisible();
+    await search.locator("#ops-entity-search").fill(SCHEDULER_ENTITY_ID);
+    await search.getByRole("button", { name: "Search entities" }).click();
+
+    await expect(search.getByRole("alert")).toContainText(
+      "ops-profile search degraded",
+      { timeout: 10000 },
+    );
+    await expect(page.locator('[data-testid="ops-admin-panel"]')).toBeVisible();
+    await expect(
+      page.locator('[data-testid="trajectory-inspector"]'),
+    ).toBeVisible();
+    await expect(page.locator('[data-testid="data-view"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sigma-canvas"]')).toBeVisible();
   });
 
   test("keeps ops shell usable when generic read paths degrade", async ({
