@@ -9,6 +9,11 @@
     InformationCircle,
   } from "svelte-hero-icons";
   import type { Snippet } from "svelte";
+  import TrajectoryInspector from "$lib/components/runtime/TrajectoryInspector.svelte";
+  import {
+    trajectoryApi,
+    type TrajectoryDetail,
+  } from "$lib/services/trajectoryApi";
   import type { Flow } from "$lib/types/flow";
   import type { RuntimeState } from "$lib/types/ui-state";
   import type {
@@ -28,6 +33,7 @@
     graphStatus?: "loading" | "available" | "unavailable" | "unknown";
     sourceStatus?: "healthy" | "degraded" | "unavailable" | "unknown";
     onRefreshSummary?: () => void | Promise<void>;
+    fetchTrajectoryDetail?: (loopId: string) => Promise<TrajectoryDetail>;
     writeClipboard?: (value: string) => void | Promise<void>;
     main: Snippet;
   }
@@ -41,6 +47,7 @@
     graphStatus = "unknown",
     sourceStatus = "unknown",
     onRefreshSummary,
+    fetchTrajectoryDetail = trajectoryApi.fetchDetail,
     writeClipboard = writeClipboardValue,
     main,
   }: OpsConsoleShellProps = $props();
@@ -557,6 +564,12 @@
       </div>
     </div>
   </section>
+
+  <TrajectoryInspector
+    summary={opsSummary?.trajectories ?? null}
+    fetchDetail={fetchTrajectoryDetail}
+    {writeClipboard}
+  />
 
   <div id="search-surface" class="search-anchor" aria-hidden="true"></div>
 

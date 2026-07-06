@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { createRawSnippet, type Snippet } from "svelte";
 import OpsConsoleShell from "./OpsConsoleShell.svelte";
 import type { OpsSummary } from "$lib/services/opsSummaryApi";
+import type { TrajectoryDetail } from "$lib/services/trajectoryApi";
 
 function textSnippet(text: string): Snippet {
   return createRawSnippet(() => ({
@@ -82,6 +83,31 @@ function makeSummary(): OpsSummary {
       message: "Generic backend, graph, and runtime read paths are reachable",
       basis: "generic-read-path",
     },
+  };
+}
+
+function makeTrajectoryDetail(): TrajectoryDetail {
+  return {
+    loopId: "loop-123",
+    outcome: "success",
+    startTime: "2026-07-06T00:00:00Z",
+    endTime: "2026-07-06T00:00:12Z",
+    durationMs: 12000,
+    totalTokensIn: 100,
+    totalTokensOut: 42,
+    steps: [
+      {
+        index: 1,
+        stepType: "model_response",
+        timestamp: "2026-07-06T00:00:01Z",
+        durationMs: 2000,
+        model: "gpt-test",
+        provider: "openai",
+        tokensIn: 90,
+        tokensOut: 40,
+        summary: "Trajectory detail rendered",
+      },
+    ],
   };
 }
 
@@ -277,7 +303,7 @@ describe("OpsConsoleShell", () => {
     });
 
     expect(screen.getByText("entity-copy")).toBeVisible();
-    expect(screen.getByText("loop-123")).toBeVisible();
+    expect(screen.getAllByText("loop-123").length).toBeGreaterThan(0);
     expect(copyEntity).toBeEnabled();
     expect(copyFlow).toBeEnabled();
     expect(copyTrajectory).toBeEnabled();
@@ -294,5 +320,45 @@ describe("OpsConsoleShell", () => {
     expect(screen.queryByRole("button", { name: /start|delete|stop/i })).toBe(
       null,
     );
+  });
+
+  it("wires the read-only trajectory inspector to detail loading and copy actions", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const fetchTrajectoryDetail = vi.fn().mockResolvedValue(makeTrajectoryDetail());
+
+    render(OpsConsoleShell, {
+      props: {
+        opsSummary: makeSummary(),
+        fetchTrajectoryDetail,
+        writeClipboard: writeText,
+        main: textSnippet("Graph"),
+      },
+    });
+
+    const inspector = screen.getByTestId("trajectory-inspector");
+    await user.click(
+      within(inspector).getByRole("button", {
+        name: /inspect trajectory loop-123/i,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(fetchTrajectoryDetail).toHaveBeenCalledWith("loop-123");
+    });
+    expect(within(inspector).getByText("Trajectory detail rendered")).toBeVisible();
+
+    await user.click(
+      within(inspector).getByRole("button", { name: /copy loop id/i }),
+    );
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("loop-123");
+    });
+    expect(
+      within(inspector).queryByRole("button", {
+        name: /approve|retry|cancel|resume|delete|score|classify/i,
+      }),
+    ).toBeNull();
   });
 });
