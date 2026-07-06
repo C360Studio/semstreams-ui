@@ -260,13 +260,16 @@ export const graphApi = {
 
     const variables = { prefix, limit };
 
-    const data = await executeQuery<{ entitiesByPrefix: BackendEntity[] }>(
+    const data = await executeQuery<{
+      entitiesByPrefix?: BackendEntity[];
+      pathSearch?: { entities?: BackendEntity[] };
+    }>(
       query,
       variables,
       "getEntitiesByPrefix",
     );
 
-    return data.entitiesByPrefix;
+    return data.entitiesByPrefix ?? data.pathSearch?.entities ?? [];
   },
 
   /**

@@ -1,8 +1,5 @@
 import type { Page } from "@playwright/test";
-import {
-  createRunningFlow,
-  deleteTestFlow,
-} from "../../helpers/runtime-helpers";
+import { deleteTestFlow } from "../../helpers/runtime-helpers";
 
 /**
  * Known entity IDs from the E2E fixture.
@@ -121,30 +118,46 @@ export async function navigateToDataView(page: Page): Promise<void> {
 }
 
 /**
- * Set up a running flow and navigate to its Data view, waiting for semsource
- * entities to be present in the GraphQL backend.
+ * Navigate to the graph-first ops console, waiting for semsource entities to be
+ * present in the GraphQL backend.
  *
- * Returns the flowId so the caller can clean it up in afterEach.
+ * Older versions of these specs created a temporary running flow because
+ * DataView lived behind the flow editor. The ops console now exposes DataView
+ * on the homepage, so these read-only graph tests should not depend on backend
+ * flow mutation.
  *
  * @param page - Playwright Page object
  * @param minEntities - Minimum semsource entities to wait for (default: 3)
- * @returns flowId string
+ * @returns empty string; retained for callers with legacy cleanup hooks
  */
 export async function setupDataViewWithSemsource(
   page: Page,
   minEntities: number = 3,
 ): Promise<string> {
-  // Wait for backend to have semsource data before creating the flow/navigating,
-  // so the DataView loads with entities already present.
+  // Wait for backend to have semsource data before navigating, so DataView loads
+  // with entities already present.
   await waitForSemsourceEntities(page, minEntities);
 
-  const setup = await createRunningFlow(page);
-  await page.goto(setup.url);
-  await page.locator("#flow-canvas").waitFor({ state: "visible" });
+  await page.goto("/");
+  await page
+    .locator('[data-testid="ops-console-shell"]')
+    .waitFor({ state: "visible", timeout: 10000 });
+  await page
+    .locator('[data-testid="data-view"]')
+    .waitFor({ state: "visible", timeout: 10000 });
+  await page
+    .locator('[data-testid="sigma-canvas"]')
+    .waitFor({ state: "visible", timeout: 10000 });
+  await page.locator('[data-testid="data-view-tab-details"]').click();
+  await page
+    .locator(".loading-overlay")
+    .waitFor({ state: "hidden", timeout: 10000 })
+    .catch(() => {
+      // The loading overlay is absent once DataView has already settled.
+    });
   await page.waitForLoadState("networkidle");
-  await navigateToDataView(page);
 
-  return setup.flowId;
+  return "";
 }
 
 /**

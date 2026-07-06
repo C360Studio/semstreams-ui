@@ -82,8 +82,8 @@ test.describe("Graph Interaction - SemSource Entities", () => {
     page,
   }) => {
     const knownId = KNOWN_ENTITIES.mainFunc;
-    // e2e.semsource.golang.data-fixture.function.src-main-go-main
-    // org=e2e, platform=semsource, domain=golang, system=data-fixture, type=function, instance=src-main-go-main
+    // e2e.semsource.golang.fixture.function.src-main-go-main
+    // org=e2e, platform=semsource, domain=golang, system=fixture, type=function, instance=src-main-go-main
 
     await page.route("**/graphql", (route) => {
       route.fulfill({
@@ -151,7 +151,7 @@ test.describe("Graph Interaction - SemSource Entities", () => {
     );
     await expect(idSection.locator(".id-value").nth(2)).toContainText("golang");
     await expect(idSection.locator(".id-value").nth(3)).toContainText(
-      "data-fixture",
+      "fixture",
     );
     await expect(idSection.locator(".id-value").nth(4)).toContainText(
       "function",

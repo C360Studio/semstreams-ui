@@ -229,7 +229,7 @@ test.describe("Graph Rendering - SemSource Entities", () => {
     await expect(sigmaContainer).toBeVisible();
 
     // Sigma appends a <canvas> element inside the container
-    const canvas = sigmaContainer.locator("canvas");
+    const canvas = sigmaContainer.locator("canvas.sigma-nodes");
     await expect(canvas).toBeVisible({ timeout: 5000 });
   });
 

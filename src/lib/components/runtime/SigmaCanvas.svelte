@@ -192,6 +192,7 @@
         aria-label="Refresh data"
         title="Refresh data"
         disabled={loading}
+        class="toolbar-button"
         class:refreshing={loading}
       >
         <span class="refresh-icon">&#x21bb;</span>

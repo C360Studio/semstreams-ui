@@ -42,7 +42,7 @@
 - [x] 4.3 Run focused unit tests for touched services.
 - [x] 4.4 Run `npm run lint`.
 - [x] 4.5 Run `npm run test`.
-- [ ] 4.6 Run SemSource graph E2E when Docker/backend time is available:
+- [x] 4.6 Run SemSource graph E2E when Docker/backend time is available:
       `task test:e2e:semsource-graph`.
 - [x] 4.7 Run explicit SemStreams OpenAPI contract test against
       `../semstreams`.
