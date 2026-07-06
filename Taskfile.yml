@@ -11,6 +11,9 @@ vars:
   #   - Custom app:          /path/to/your-app/specs/openapi.v3.yaml
   OPENAPI_SPEC_PATH: "{{.OPENAPI_SPEC_PATH}}"
 
+  # OpenSpec active change helper
+  OPENSPEC_CHANGE: '{{.OPENSPEC_CHANGE | default "bootstrap-semsource-ops-console"}}'
+
   # Development ports (configurable to avoid collisions)
   DEV_UI_PORT: '{{.DEV_UI_PORT | default "3001"}}'
   DEV_VITE_PORT: '{{.DEV_VITE_PORT | default "5173"}}'
@@ -62,8 +65,38 @@ tasks:
   generate-types:check:
     desc: Check for uncommitted type changes (CI)
     cmds:
-      - task: generate-types
+      - task: generate-types:semstreams
       - git diff --exit-code src/lib/types/api.generated.ts || (echo "⚠️  Generated types changed! Run 'task generate-types' and commit."; exit 1)
+
+  # === OpenSpec ===
+
+  openspec:list:
+    desc: List active OpenSpec changes
+    env:
+      POSTHOG_DISABLED: "1"
+    cmds:
+      - openspec list
+
+  openspec:validate:
+    desc: Validate all OpenSpec specs and changes
+    env:
+      POSTHOG_DISABLED: "1"
+    cmds:
+      - openspec validate --all --strict
+
+  openspec:doctor:
+    desc: Check OpenSpec root health
+    env:
+      POSTHOG_DISABLED: "1"
+    cmds:
+      - openspec doctor
+
+  openspec:status:
+    desc: Show OpenSpec artifact completion status
+    env:
+      POSTHOG_DISABLED: "1"
+    cmds:
+      - openspec status --change {{.OPENSPEC_CHANGE}}
 
   # === Development ===
 
@@ -84,12 +117,15 @@ tasks:
         task dev:connect                                  # localhost:8080
         BACKEND_HOST=myapp.local:8080 task dev:connect    # remote host
         BACKEND_HOST=10.0.1.5:8080 GRAPHQL_HOST=10.0.1.5:8082 task dev:connect
+        GRAPHQL_PATH=/graph-gateway/graphql task dev:connect  # embedded service-manager gateway
     vars:
       BACKEND_HOST: '{{.BACKEND_HOST | default "localhost:8080"}}'
       GRAPHQL_HOST: '{{.GRAPHQL_HOST | default .BACKEND_HOST | default "localhost:8080"}}'
+      GRAPHQL_PATH: '{{.GRAPHQL_PATH | default "/graphql"}}'
     env:
       BACKEND_HOST: "{{.BACKEND_HOST}}"
       GRAPHQL_HOST: "{{.GRAPHQL_HOST}}"
+      GRAPHQL_PATH: "{{.GRAPHQL_PATH}}"
       UI_HOST: "localhost:{{.DEV_VITE_PORT}}"
       LISTEN_PORT: "{{.DEV_UI_PORT}}"
     deps:
@@ -100,7 +136,7 @@ tasks:
       - defer: { task: dev:connect:stop }
       - |
         echo "Connecting to SemStreams backend at {{.BACKEND_HOST}}"
-        echo "GraphQL gateway at {{.GRAPHQL_HOST}}"
+        echo "GraphQL gateway at {{.GRAPHQL_HOST}}{{.GRAPHQL_PATH}}"
         echo ""
         echo "UI will be at http://localhost:{{.DEV_UI_PORT}}"
         echo ""
@@ -223,6 +259,7 @@ tasks:
       BACKEND_CONFIG: e2e-with-semsource.json
       SEMSOURCE_CONTEXT: ../semsource
       COMPOSE_PROFILES: semsource
+      GRAPHQL_PATH: /graph-gateway/graphql
     cmds:
       - npx playwright test --config playwright.semsource-graph.config.ts
 
@@ -266,6 +303,7 @@ tasks:
       - task: lint
       - task: check
       - task: test
+      - task: openspec:validate
       - task: generate-types:check
 
   # === Cleanup ===

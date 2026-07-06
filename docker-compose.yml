@@ -59,6 +59,8 @@ services:
       - "3000:3000" # UI via Caddy
     environment:
       - BACKEND_HOST=${BACKEND_HOST:-host.docker.internal:8080}
+      - GRAPHQL_HOST=${GRAPHQL_HOST:-${BACKEND_HOST:-host.docker.internal:8080}}
+      - GRAPHQL_PATH=${GRAPHQL_PATH:-/graphql}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

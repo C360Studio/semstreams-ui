@@ -1,0 +1,44 @@
+schema: spec-driven
+
+context: |
+  SemStreams UI is the reusable SvelteKit/Svelte 5 operational interface for
+  SemStreams-compatible applications. It provides a graph explorer, flow builder,
+  runtime monitoring tabs, chat/search helpers, and proxy-based backend access.
+
+  Product boundary:
+  - This repo owns reusable UI, browser-facing integration contracts, proxy
+    routing, generated SemStreams API types, generic graph visualization, search,
+    flow management, and runtime/admin surfaces useful across sem* products.
+  - SemSource owns source discovery, source provenance, parser configuration,
+    binary/media semantics, and source-specific workflows. SemStreams owns the
+    backend framework primitives and OpenAPI generation.
+  - Product-specific UX may be composed here only when it is expressed as a
+    generic reusable ops-console capability.
+
+  Browser-facing route convention:
+  - UI code uses /flowbuilder/* for flow CRUD, deployment, runtime polling, and
+    runtime websockets because /flows is a SvelteKit page route.
+  - Caddy routes /flowbuilder/*, /components/*, and /health to BACKEND_HOST.
+  - Caddy routes /graphql to GRAPHQL_HOST, defaulting to BACKEND_HOST.
+  - Generated API types may come from SemStreams OpenAPI paths that omit the
+    /flowbuilder prefix; do not blindly replace UI proxy paths without checking
+    Caddy and SvelteKit route collisions.
+
+  Non-trivial feature work follows OpenSpec before code. Keep docs, tests, and
+  generated types in the same change when the backend contract moves.
+
+rules:
+  proposal:
+    - Always include a "## Non-goals" section.
+    - Name the sem* products affected by the change.
+    - Call out backend/proxy route compatibility when any HTTP endpoint changes.
+  specs:
+    - Specs describe observable behavior and contracts, not implementation hopes.
+    - Include at least one GIVEN/WHEN/THEN scenario per requirement.
+  design:
+    - Create design.md for cross-cutting changes, proxy-route changes, generated
+      contract updates, or product-boundary decisions.
+    - Record the reusable UI boundary and alternatives considered before coding.
+  tasks:
+    - Include verification commands for Svelte checks, unit tests, and any E2E
+      or SemSource compatibility gate that applies.

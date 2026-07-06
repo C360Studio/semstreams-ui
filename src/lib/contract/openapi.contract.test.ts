@@ -196,18 +196,21 @@ describe.skipIf(!existsSync(OPENAPI_SPEC_PATH))(
       );
     });
 
-    it("should have required API paths for component management", () => {
+    it("should have required backend API paths for component management", () => {
       openapiSpec = loadOpenAPISpec();
       if (!openapiSpec) {
         throw new Error("openapiSpec is null");
       }
 
+      // SemStreams OpenAPI records backend service paths before the UI proxy
+      // namespace. Browser code reaches these through /components/* or
+      // /flowbuilder/* depending on the registered service.
       const requiredPaths = [
-        "/components/types",
-        "/components/types/{id}",
-        "/components/status/{name}",
-        "/components/flowgraph",
-        "/components/validate",
+        "/types",
+        "/types/{id}",
+        "/status/{name}",
+        "/flowgraph",
+        "/validate",
       ];
 
       for (const path of requiredPaths) {
@@ -215,13 +218,13 @@ describe.skipIf(!existsSync(OPENAPI_SPEC_PATH))(
       }
     });
 
-    it("should have GET method for /components/types", () => {
+    it("should have GET method for /types", () => {
       openapiSpec = loadOpenAPISpec();
       if (!openapiSpec) {
         throw new Error("openapiSpec is null");
       }
 
-      const typesPath = openapiSpec.paths["/components/types"];
+      const typesPath = openapiSpec.paths["/types"];
       expect(typesPath).toBeDefined();
       expect(typesPath?.get).toBeDefined();
       expect(typesPath?.get?.responses["200"]).toBeDefined();

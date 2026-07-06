@@ -46,7 +46,7 @@ describe("messagesApi", () => {
       await messagesApi.fetchMessages(flowId);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `/flows/${flowId}/runtime/messages`,
+        `/flowbuilder/flows/${flowId}/runtime/messages`,
         {
           method: "GET",
         },
@@ -95,7 +95,7 @@ describe("messagesApi", () => {
       await messagesApi.fetchMessages(flowId, { limit: 50 });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `/flows/${flowId}/runtime/messages?limit=50`,
+        `/flowbuilder/flows/${flowId}/runtime/messages?limit=50`,
         {
           method: "GET",
         },
@@ -112,7 +112,7 @@ describe("messagesApi", () => {
       await messagesApi.fetchMessages(flowId, { offset: 100 });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `/flows/${flowId}/runtime/messages?offset=100`,
+        `/flowbuilder/flows/${flowId}/runtime/messages?offset=100`,
         {
           method: "GET",
         },
@@ -129,7 +129,7 @@ describe("messagesApi", () => {
       await messagesApi.fetchMessages(flowId, { limit: 25, offset: 50 });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `/flows/${flowId}/runtime/messages?limit=25&offset=50`,
+        `/flowbuilder/flows/${flowId}/runtime/messages?limit=25&offset=50`,
         {
           method: "GET",
         },
@@ -255,7 +255,7 @@ describe("messagesApi", () => {
 
       const callUrl = mockFetch.mock.calls[0][0] as string;
       expect(callUrl).not.toContain("?");
-      expect(callUrl).toBe(`/flows/${flowId}/runtime/messages`);
+      expect(callUrl).toBe(`/flowbuilder/flows/${flowId}/runtime/messages`);
     });
 
     it("handles zero limit parameter", async () => {
@@ -268,7 +268,7 @@ describe("messagesApi", () => {
       await messagesApi.fetchMessages(flowId, { limit: 0 });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `/flows/${flowId}/runtime/messages?limit=0`,
+        `/flowbuilder/flows/${flowId}/runtime/messages?limit=0`,
         {
           method: "GET",
         },
@@ -285,7 +285,7 @@ describe("messagesApi", () => {
       await messagesApi.fetchMessages(flowId, { offset: 0 });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        `/flows/${flowId}/runtime/messages?offset=0`,
+        `/flowbuilder/flows/${flowId}/runtime/messages?offset=0`,
         {
           method: "GET",
         },

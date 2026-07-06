@@ -14,12 +14,11 @@ import {
  * See: e2e/fixtures/semsource/
  */
 export const KNOWN_ENTITIES = {
-  mainFunc: "e2e.semsource.golang.data-fixture.function.src-main-go-main",
-  handlerType:
-    "e2e.semsource.golang.data-fixture.interface.src-handler-go-Handler",
-  readme: "e2e.semsource.web.data-fixture.doc.87457b",
-  goMod: "e2e.semsource.config.data-fixture.gomod.fixture-project",
-  mainFile: "e2e.semsource.golang.data-fixture.file.src-main-go",
+  mainFunc: "e2e.semsource.golang.fixture.function.src-main-go-main",
+  handlerType: "e2e.semsource.golang.fixture.interface.src-handler-go-Handler",
+  readme: "e2e.semsource.web.fixture.doc.87457b",
+  goMod: "e2e.semsource.config.fixture.gomod.fixture-project",
+  mainFile: "e2e.semsource.golang.fixture.file.src-main-go",
 } as const;
 
 export type KnownEntityKey = keyof typeof KNOWN_ENTITIES;
@@ -29,6 +28,7 @@ export type KnownEntityKey = keyof typeof KNOWN_ENTITIES;
  * Used to filter GraphQL results to only those from semsource.
  */
 export const SEMSOURCE_ENTITY_PREFIX = "e2e.semsource.";
+const SEMSOURCE_QUERY_PREFIX = "e2e.semsource";
 
 /**
  * Expected entity type values produced by the semsource fixture.
@@ -49,7 +49,8 @@ export const SEMSOURCE_DOMAINS = ["golang", "web", "config"] as const;
  * Wait for semsource entities to appear in the GraphQL backend.
  *
  * Polls the /graphql endpoint until at least `minEntities` entities with the
- * "e2e.semsource." prefix are returned, or until `timeout` ms elapses.
+ * "e2e.semsource." prefix are returned and the fixture's main function is
+ * visible, or until `timeout` ms elapses.
  *
  * Call this before asserting anything about graph content. Semsource emits
  * events asynchronously, and the backend processes them asynchronously; this
@@ -65,15 +66,11 @@ export async function waitForSemsourceEntities(
   timeout: number = 30000,
 ): Promise<void> {
   const startTime = Date.now();
-  // Use a known file entity as the canary — pathSearch with "*" only returns
-  // the wildcard itself, so we probe a known entity and check for connections.
-  const canaryEntity = KNOWN_ENTITIES.mainFile;
-
   while (Date.now() - startTime < timeout) {
     try {
       const response = await page.request.post("/graphql", {
         data: {
-          query: `query { pathSearch(startEntity: "${canaryEntity}", maxDepth: 3, maxNodes: 50) { entities { id } } }`,
+          query: `query { entitiesByPrefix(prefix: "${SEMSOURCE_QUERY_PREFIX}", limit: 50) { id } }`,
           variables: {},
         },
       });
@@ -81,12 +78,15 @@ export async function waitForSemsourceEntities(
       if (response.ok()) {
         const body = await response.json();
         const entities: Array<{ id: string }> =
-          body?.data?.pathSearch?.entities ?? [];
+          body?.data?.entitiesByPrefix ?? [];
         const semsourceEntities = entities.filter((e) =>
           e.id.startsWith(SEMSOURCE_ENTITY_PREFIX),
         );
+        const hasTargetEntity = semsourceEntities.some(
+          (e) => e.id === KNOWN_ENTITIES.mainFunc,
+        );
 
-        if (semsourceEntities.length >= minEntities) {
+        if (semsourceEntities.length >= minEntities && hasTargetEntity) {
           return;
         }
       }

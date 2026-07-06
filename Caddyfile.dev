@@ -13,6 +13,7 @@
 # Environment variables:
 #   BACKEND_HOST  - SemStreams backend host:port (default: backend:8080)
 #   GRAPHQL_HOST  - GraphQL gateway host:port (default: same as BACKEND_HOST)
+#   GRAPHQL_PATH  - GraphQL upstream path (default: /graphql)
 #   UI_HOST       - Vite dev server host:port (default: host.docker.internal:5173)
 #   LISTEN_PORT   - Port Caddy listens on (default: 3000)
 
@@ -35,9 +36,18 @@
 		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
+	handle /trajectories {
+		reverse_proxy {$BACKEND_HOST:backend:8080}
+	}
+
+	handle /trajectories/* {
+		reverse_proxy {$BACKEND_HOST:backend:8080}
+	}
+
 	# GraphQL gateway (may be on a different port)
 	handle /graphql {
-		reverse_proxy {$GRAPHQL_HOST:{$BACKEND_HOST:backend:8080}}
+		rewrite * {$GRAPHQL_PATH:/graphql}
+		reverse_proxy {$GRAPHQL_HOST:backend:8080}
 	}
 
 	# Vite dev server

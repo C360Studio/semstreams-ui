@@ -16,16 +16,49 @@ export function checkPortAvailability(port: number): boolean {
   }
 
   try {
-    const output = execSync(`lsof -i :${port}`, { encoding: "utf-8" });
+    const output = execSync(`lsof -nP -iTCP:${port} -sTCP:LISTEN`, {
+      encoding: "utf-8",
+    });
     // Handle both string and Buffer returns (for testing compatibility)
     const outputStr = typeof output === "string" ? output : output.toString();
     // If output is non-empty, port is in use
     return outputStr.trim().length === 0;
-  } catch {
-    // lsof returns non-zero exit code when no process found OR on error
-    // Conservative approach: return false (unavailable) on any error
+  } catch (error) {
+    if (isLsofNoMatch(error)) {
+      return true;
+    }
     return false;
   }
+}
+
+function isLsofNoMatch(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const maybeExecError = error as {
+    status?: unknown;
+    stdout?: unknown;
+    stderr?: unknown;
+  };
+
+  if (maybeExecError.status !== 1) {
+    return false;
+  }
+
+  const stdout = stringifyExecOutput(maybeExecError.stdout);
+  const stderr = stringifyExecOutput(maybeExecError.stderr);
+  return stdout.trim() === "" && stderr.trim() === "";
+}
+
+function stringifyExecOutput(output: unknown): string {
+  if (typeof output === "string") {
+    return output;
+  }
+  if (Buffer.isBuffer(output)) {
+    return output.toString();
+  }
+  return "";
 }
 
 /**
@@ -209,7 +242,7 @@ export function getPortFromContainers(containers: string[]): number | null {
 
 /**
  * Selects an available port for E2E tests using the following strategy:
- * 1. Check E2E_UI_PORT env var
+ * 1. Use E2E_UI_PORT env var when provided
  * 2. Check for existing E2E containers and reuse their port
  * 3. Find first available port in range 3000-3019
  *
@@ -221,16 +254,12 @@ export function selectE2EPort(): number {
   if (process.env.E2E_UI_PORT) {
     const requestedPort = parseInt(process.env.E2E_UI_PORT, 10);
 
-    try {
-      if (checkPortAvailability(requestedPort)) {
-        return requestedPort;
-      }
-      // If E2E_UI_PORT is set but occupied, skip container check and find next port
-      // Start from requestedPort + 1 since we already checked requestedPort
-      const port = findAvailablePort(requestedPort + 1, 3019);
-      return port;
-    } catch {
-      // Port validation failed, continue to next strategy
+    if (
+      Number.isInteger(requestedPort) &&
+      requestedPort >= 1 &&
+      requestedPort <= 65535
+    ) {
+      return requestedPort;
     }
   }
 

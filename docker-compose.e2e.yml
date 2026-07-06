@@ -126,7 +126,8 @@ services:
       - ./Caddyfile.e2e:/etc/caddy/Caddyfile:ro
     environment:
       - BACKEND_HOST=backend:8080
-      - GRAPHQL_HOST=backend:8082
+      - GRAPHQL_HOST=${GRAPHQL_HOST:-backend:8080}
+      - GRAPHQL_PATH=${GRAPHQL_PATH:-/graph-gateway/graphql}
     ports:
       - "${E2E_UI_PORT:-3000}:3000"
     networks:

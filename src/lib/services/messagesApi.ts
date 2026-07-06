@@ -33,7 +33,7 @@ export const messagesApi = {
     options?: { limit?: number; offset?: number },
   ): Promise<RuntimeMessagesResponse> {
     // Build URL with query params
-    let url = `/flows/${flowId}/runtime/messages`;
+    let url = `/flowbuilder/flows/${flowId}/runtime/messages`;
     const params = new URLSearchParams();
     if (options?.limit !== undefined)
       params.append("limit", String(options.limit));

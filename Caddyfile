@@ -21,6 +21,20 @@
 		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
+	handle /trajectories {
+		reverse_proxy {$BACKEND_HOST:backend:8080}
+	}
+
+	handle /trajectories/* {
+		reverse_proxy {$BACKEND_HOST:backend:8080}
+	}
+
+	# GraphQL gateway may be hosted by the app backend or by a separate service.
+	handle /graphql {
+		rewrite * {$GRAPHQL_PATH:/graphql}
+		reverse_proxy {$GRAPHQL_HOST:backend:8080}
+	}
+
 	# SvelteKit handles everything else (UI, assets, /api/ai/*)
 	handle {
 		reverse_proxy {$UI_HOST:ui:3000}

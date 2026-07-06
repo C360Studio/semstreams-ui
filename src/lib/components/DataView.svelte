@@ -175,6 +175,11 @@
 		graphStore.resetFilters();
 	}
 
+	function handleSearchResultSelect(entityId: string) {
+		graphStore.selectEntity(entityId);
+		activeTab = 'details';
+	}
+
 	function handleDetailClose() {
 		graphStore.selectEntity(null);
 	}
@@ -277,7 +282,10 @@
 			{filters}
 			{availableTypes}
 			{availableDomains}
+			searchResults={entities}
+			selectedEntityId={graphStore.selectedEntityId}
 			onFilterChange={handleFilterChange}
+			onEntitySelect={handleSearchResultSelect}
 			onReset={handleFilterReset}
 		/>
 	</aside>

@@ -1,6 +1,8 @@
 # SemSource E2E Integration Architecture
 
-Semsource is a semstreams application. It runs the full graph pipeline internally — no separate semstreams backend is needed for graph data. The UI queries semsource's graph-gateway directly via GraphQL.
+SemSource is a semstreams application. It runs the full graph pipeline internally - no separate semstreams
+backend is needed for graph data. The UI queries SemSource's graph-gateway through the same-origin
+`/graphql` browser route, while Caddy rewrites that request to the upstream route exposed by the backend.
 
 ## Data Flow
 
@@ -13,7 +15,7 @@ Semsource is a semstreams application. It runs the full graph pipeline internall
 ├─────────────────────────────────────────────────────────────────────┤
 │ Docker Network (e2e-net)                                            │
 │                                                                     │
-│  ┌───────────────── semsource ─────────────────────────┐            │
+│  ┌───────────────── SemSource ─────────────────────────┐            │
 │  │                                                     │            │
 │  │  fixture/ ──► ast-source ──► NATS (graph.ingest.>)  │            │
 │  │               doc-source         │                  │            │
@@ -26,7 +28,7 @@ Semsource is a semstreams application. It runs the full graph pipeline internall
 │  │                                  │                  │            │
 │  │                            graph-query              │            │
 │  │                                  │                  │            │
-│  │                          graph-gateway (:8080)      │            │
+│  │          graph-gateway (:8080/graph-gateway/graphql)│            │
 │  │                                  │                  │            │
 │  │  + websocket-output (:7890)      │                  │            │
 │  │    (for SemSpec/SemDragon)       │                  │            │
@@ -46,31 +48,36 @@ Semsource is a semstreams application. It runs the full graph pipeline internall
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-Semsource port map:
+SemSource port map:
 
-- `:8080` — service manager (component catalog, health, flow-builder API)
-- `:8082` — graph-gateway (GraphQL `/graphql`, playground)
+- `:8080` — service manager APIs plus embedded GraphQL at
+  `/graph-gateway/graphql`
 - `:7890` — websocket output (entity stream for SemSpec/SemDragon)
 - `:9091` — metrics (Prometheus `/metrics`)
 
 Caddy routing:
 
-- `/graphql` → backend:8082 (graph-gateway)
-- `/flowbuilder/*`, `/components/*`, `/health` → backend:8080 (service manager)
+- `/graphql` → `GRAPHQL_HOST` and `GRAPHQL_PATH`; the SemSource E2E default is
+  `backend:8080/graph-gateway/graphql`
+- `/flowbuilder/*`, `/components/*`, `/health`, `/trajectories*` →
+  backend:8080 (service manager)
 - `/*` → ui:5173 (Vite dev server)
 
-(`backend` is a network alias for the semsource container.)
+(`backend` is a network alias for the SemSource container.)
 
-## Why Semsource IS the Backend (for graph data)
+## Why SemSource IS the Backend (for graph data)
 
-Semsource registers all semstreams components via `componentregistry.Register()` and builds its own semstreams config internally (`buildSemstreamsConfig`). The graph pipeline runs inside semsource:
+SemSource registers all semstreams components via `componentregistry.Register()` and builds its own semstreams
+config internally (`buildSemstreamsConfig`). The graph pipeline runs inside SemSource:
 
 1. Source components publish entities to NATS JetStream (`graph.ingest.entity` on GRAPH stream)
 2. `graph-ingest` consumes from GRAPH stream, writes ENTITY_STATES KV bucket
 3. `graph-index` watches ENTITY_STATES, builds OUTGOING/INCOMING/ALIAS/PREDICATE indexes
 4. `graph-query` handles NATS request/reply for entity, relationships, pathSearch
-5. `graph-gateway` serves HTTP GraphQL at `:8080/graphql` (playground enabled)
-6. `websocket-output` consumes from GRAPH stream via JetStream, serves WS at `:7890/graph` for external consumers
+5. `graph-gateway` serves HTTP GraphQL through ServiceManager at
+   `:8080/graph-gateway/graphql` in the E2E stack
+6. `websocket-output` consumes from GRAPH stream via JetStream and serves WS at
+   `:7890/graph` for external consumers
 
 No WebSocket hop, no federation processor, no bridge. Direct graph pipeline.
 
@@ -92,9 +99,11 @@ e2e/fixtures/semsource/
 
 Produces known entities:
 
-- **AST**: `e2e.semsource.golang.data-fixture.function.src-main-go-main`, `e2e.semsource.golang.data-fixture.interface.src-handler-go-Handler`, etc.
-- **Docs**: `e2e.semsource.web.data-fixture.doc.87457b`
-- **Config**: `e2e.semsource.config.data-fixture.gomod.fixture-project`, `e2e.semsource.config.data-fixture.image.golang-1-22-alpine`
+- **AST**: `e2e.semsource.golang.fixture.function.src-main-go-main`,
+  `e2e.semsource.golang.fixture.interface.src-handler-go-Handler`, etc.
+- **Docs**: `e2e.semsource.web.fixture.doc.87457b`
+- **Config**: `e2e.semsource.config.fixture.gomod.fixture-project`,
+  `e2e.semsource.config.fixture.image.golang-1-22-alpine`
 
 Total: ~16-27 entities (including duplicates from relationship triples). Fast ingestion (<2s).
 
@@ -106,14 +115,17 @@ Key config decisions:
 
 ## Docker Compose Setup
 
-Semsource is activated via Docker Compose profile:
+SemSource is activated via Docker Compose profile:
 
 ```bash
-COMPOSE_PROFILES=semsource GRAPHQL_HOST=semsource:8080 \
-  docker compose -f docker-compose.e2e.yml up
+COMPOSE_PROFILES=semsource docker compose -f docker-compose.e2e.yml up
 ```
 
-The `GRAPHQL_HOST` env var tells Caddy to route `/graphql` to semsource instead of the backend. Default (without semsource profile) routes to `backend:8082`.
+By default, Caddy routes the browser's `/graphql` request to
+`backend:8080/graph-gateway/graphql`, where `backend` is the SemSource
+container alias in the E2E network. Set `GRAPHQL_HOST` when testing an app with
+a separately exposed graph-gateway host, and set `GRAPHQL_PATH=/graphql` when
+that gateway is standalone instead of ServiceManager-mounted.
 
 ## E2E Test Structure
 
@@ -131,7 +143,7 @@ e2e/
 
 ## Determinism Strategy
 
-1. **Fixed fixtures** — checked into repo, entity IDs derive from file paths + symbol names + namespace
+1. **Fixed fixtures** — checked into repo, entity IDs derive from file paths, symbol names, and namespace
 2. **Polling with known IDs** — `waitForSemsourceEntities()` polls GraphQL until entities appear
 3. **watch: false** — one SEED event per entity, no DELTAs or file-watching races
 4. **Generous timeouts** — 30s wait (actual: 2-5s, Docker startup adds latency)
@@ -140,11 +152,10 @@ e2e/
 ## Running
 
 ```bash
-# Full semsource graph E2E
-COMPOSE_PROFILES=semsource GRAPHQL_HOST=semsource:8080 \
-  BACKEND_CONTEXT=../semstreams SEMSOURCE_CONTEXT=../semsource \
+# Full SemSource graph E2E
+COMPOSE_PROFILES=semsource BACKEND_CONTEXT=../semstreams SEMSOURCE_CONTEXT=../semsource \
   npx playwright test e2e/semsource-graph/
 
-# Core E2E only (no semsource)
+# Core E2E only (no SemSource)
 BACKEND_CONTEXT=../semstreams npx playwright test --ignore-pattern='semsource-graph/**'
 ```

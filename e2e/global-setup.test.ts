@@ -71,6 +71,22 @@ describe("E2E Infrastructure Safety", () => {
       expect(result).toBe(false);
     });
 
+    it("should treat lsof no-match exit status as an available port", () => {
+      const noMatch = Object.assign(new Error("Command failed: lsof"), {
+        status: 1,
+        stdout: Buffer.from(""),
+        stderr: Buffer.from(""),
+      });
+
+      vi.mocked(execSync).mockImplementation(() => {
+        throw noMatch;
+      });
+
+      const result = checkPortAvailability(3000);
+
+      expect(result).toBe(true);
+    });
+
     it.each([
       { port: 3000, description: "default E2E port" },
       { port: 3010, description: "mid-range port" },
@@ -445,21 +461,13 @@ abc123         semstreams
       delete process.env.E2E_UI_PORT;
     });
 
-    it("should find next available port when E2E_UI_PORT is occupied", () => {
+    it("should trust E2E_UI_PORT even when the web server already occupies it", () => {
       process.env.E2E_UI_PORT = "3000";
-
-      // Mock port 3000 as occupied, 3001 as available
-      vi.mocked(execSync)
-        .mockReturnValueOnce(
-          Buffer.from(
-            "node    12345 user   18u  IPv6 0x1234      0t0  TCP *:3000 (LISTEN)",
-          ),
-        )
-        .mockReturnValueOnce(Buffer.from(""));
 
       const port = selectE2EPort();
 
-      expect(port).toBe(3001);
+      expect(port).toBe(3000);
+      expect(execSync).not.toHaveBeenCalled();
       delete process.env.E2E_UI_PORT;
     });
 

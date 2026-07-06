@@ -18,6 +18,7 @@ This repo is intentionally generic. Product-specific UI code (e.g., agentic loop
 - **Contextual Chat** - AI assistant with slash commands, context chips, and tool integration
 - **Flow Builder** - Visual flow editor for creating and deploying processing pipelines
 - **Runtime Monitoring** - Health, logs, metrics, and message tracing tabs
+- **Trajectory Visibility** - Read-only trajectory summaries and raw trajectory drill-downs for human inspection
 - **Backend-Agnostic** - Connects to any running SemStreams app via standard API endpoints
 - **Runtime Discovery** - Dynamically loads component schemas from `/components/types`
 
@@ -55,6 +56,9 @@ BACKEND_HOST=myapp.example.com:8080 task dev:connect
 
 # With separate GraphQL gateway
 BACKEND_HOST=app:8080 GRAPHQL_HOST=app:8082 task dev:connect
+
+# With an embedded ServiceManager graph gateway
+GRAPHQL_PATH=/graph-gateway/graphql task dev:connect
 ```
 
 Open `http://localhost:3001` — you'll land on the graph explorer with chat.
@@ -92,18 +96,21 @@ DEV_UI_PORT=3002 DEV_VITE_PORT=5174 task dev:full
 Browser --> Caddy (:3001) --+--> /flowbuilder/*  --> Backend (:8080)
                             +--> /components/*   --> Backend (:8080)
                             +--> /health         --> Backend (:8080)
+                            +--> /trajectories*  --> Backend (:8080)
                             +--> /graphql        --> GraphQL Gateway
                             +--> /*              --> Vite (:5173)
 ```
 
 Caddy eliminates CORS by serving everything from a single origin. The UI makes relative fetch calls; Caddy routes them to the right backend.
 
+The browser-facing flow API intentionally uses the `/flowbuilder/*` namespace even when the generated SemStreams OpenAPI lists the backend handlers as `/flows`, `/deployment/{id}/...`, or `/status/stream`. The prefix prevents collisions with SvelteKit UI routes such as `/flows`.
+
 ### Pages
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Graph explorer (DataView) — default homepage |
-| `/flows` | Flow list — create and manage flows |
+| Route         | Purpose                                               |
+| ------------- | ----------------------------------------------------- |
+| `/`           | Graph explorer (DataView) — default homepage          |
+| `/flows`      | Flow list — create and manage flows                   |
 | `/flows/[id]` | Flow editor — visual canvas, chat, runtime monitoring |
 
 ### Key Directories
@@ -136,8 +143,12 @@ Stores use the runes-based factory function pattern:
 function createMyStore() {
   let value = $state<Type>(initial);
   return {
-    get value() { return value; },
-    setValue(v: Type) { value = v; },
+    get value() {
+      return value;
+    },
+    setValue(v: Type) {
+      value = v;
+    },
   };
 }
 export const myStore = createMyStore();
@@ -163,6 +174,7 @@ The chat assistant supports:
 # Backend connection (used by Caddy and SvelteKit server)
 BACKEND_HOST=localhost:8080        # Backend host:port
 GRAPHQL_HOST=localhost:8082        # GraphQL gateway (defaults to BACKEND_HOST)
+GRAPHQL_PATH=/graphql              # Upstream GraphQL path; embedded gateways use /graph-gateway/graphql
 BACKEND_URL=http://localhost:8080  # Full URL for server-side AI/MCP calls
 
 # AI provider
@@ -210,6 +222,7 @@ task test:e2e:semsource-graph  # With semsource graph integration
 npm run check       # TypeScript type checking (0 errors)
 npm run lint        # ESLint
 npm run format      # Prettier
+task openspec:validate  # OpenSpec governance checks
 ```
 
 ## Backend Requirements
@@ -217,32 +230,36 @@ npm run format      # Prettier
 Your SemStreams app must expose:
 
 1. **Component Types**: `GET /components/types`
-2. **Flow Management**: `GET|POST /flowbuilder/flows`, `GET|PUT|DELETE /flowbuilder/flows/:id`
+2. **Flow Management**: UI proxy path `GET|POST /flowbuilder/flows`, `GET|PUT|DELETE /flowbuilder/flows/:id`
 3. **Health Check**: `GET /health`
 4. **GraphQL** (optional): `POST /graphql` for graph explorer
 
+For direct backend clients, the SemStreams OpenAPI may advertise the same flow service under bare backend paths such as `/flows` and `/deployment/{id}/...`. Browser UI code should continue to use `/flowbuilder/*`.
+
 ## Task Commands
 
-| Command | Description |
-|---------|-------------|
-| `task dev:connect` | Connect to any running backend (no Docker needed) |
-| `task dev:full` | Full stack from source (NATS + backend + Caddy + Vite) |
-| `task dev` | Vite dev server only |
-| `task dev:backend:start` | Start backend infra in background |
-| `task dev:backend:stop` | Stop backend infra |
-| `task test` | Unit tests |
-| `task test:e2e` | E2E tests |
-| `task lint` | ESLint |
-| `task check` | TypeScript checking |
-| `task clean` | Clean Docker volumes |
-| `task generate-types` | Generate TS types from OpenAPI |
+| Command                  | Description                                            |
+| ------------------------ | ------------------------------------------------------ |
+| `task dev:connect`       | Connect to any running backend (no Docker needed)      |
+| `task dev:full`          | Full stack from source (NATS + backend + Caddy + Vite) |
+| `task dev`               | Vite dev server only                                   |
+| `task dev:backend:start` | Start backend infra in background                      |
+| `task dev:backend:stop`  | Stop backend infra                                     |
+| `task test`              | Unit tests                                             |
+| `task test:e2e`          | E2E tests                                              |
+| `task lint`              | ESLint                                                 |
+| `task check`             | TypeScript checking                                    |
+| `task openspec:validate` | Validate OpenSpec specs and change proposals           |
+| `task clean`             | Clean Docker volumes                                   |
+| `task generate-types`    | Generate TS types from OpenAPI                         |
 
 ## Documentation
 
 - **[docs/architecture/CHAT_REDESIGN.md](docs/architecture/CHAT_REDESIGN.md)** - Chat system architecture
-- **[docs/architecture/SEMSOURCE_E2E_INTEGRATION.md](docs/architecture/SEMSOURCE_E2E_INTEGRATION.md)** - SemsSource E2E integration
+- **[docs/architecture/SEMSOURCE_E2E_INTEGRATION.md](docs/architecture/SEMSOURCE_E2E_INTEGRATION.md)** - SemSource E2E integration
 - **[docs/testing/](docs/testing/)** - E2E testing guide
 - **[docs/auth/](docs/auth/)** - Authentication patterns
+- **[openspec/](openspec/)** - Current OpenSpec governance context and active changes
 - **[INTEGRATION_EXAMPLE.md](INTEGRATION_EXAMPLE.md)** - Backend integration guide
 - **[E2E_SETUP.md](E2E_SETUP.md)** - E2E test setup
 

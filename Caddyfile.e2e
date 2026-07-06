@@ -10,20 +10,29 @@
 :3000 {
 	# Handle Go backend API routes first
 	handle /flowbuilder/* {
-		reverse_proxy backend:8080
+		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
 	handle /components/* {
-		reverse_proxy backend:8080
+		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
 	handle /health {
-		reverse_proxy backend:8080
+		reverse_proxy {$BACKEND_HOST:backend:8080}
 	}
 
-	# GraphQL gateway (graph-gateway on port 8082)
+	handle /trajectories {
+		reverse_proxy {$BACKEND_HOST:backend:8080}
+	}
+
+	handle /trajectories/* {
+		reverse_proxy {$BACKEND_HOST:backend:8080}
+	}
+
+	# GraphQL gateway may be hosted by the app backend or by a separate service.
 	handle /graphql {
-		reverse_proxy backend:8082
+		rewrite * {$GRAPHQL_PATH:/graphql}
+		reverse_proxy {$GRAPHQL_HOST:backend:8080}
 	}
 
 	# Vite dev server handles everything else (UI, HMR, /api/ai/*)

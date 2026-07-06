@@ -1,107 +1,59 @@
 <script lang="ts">
-	import DataView from '$lib/components/DataView.svelte';
-	import { onMount } from 'svelte';
-	import type { Flow } from '$lib/types/flow';
+  import DataView from "$lib/components/DataView.svelte";
+  import OpsConsoleShell from "$lib/components/OpsConsoleShell.svelte";
+  import {
+    opsSummaryApi,
+    type OpsSummary,
+    type OpsSummaryFlow,
+  } from "$lib/services/opsSummaryApi";
+  import { graphStore } from "$lib/stores/graphStore.svelte";
+  import { onMount } from "svelte";
 
-	// Auto-discover active flow from the backend config.
-	// If the backend has flows (from a loaded config), we pick the running one
-	// (or the first one) and pass its ID to DataView for context.
-	// If no backend or no flows, DataView still works — just no flow context.
-	let activeFlow = $state<Flow | null>(null);
+  // Auto-discover active flow from the backend config.
+  // If the backend has flows (from a loaded config), we pick the running one
+  // (or the first one) and pass its ID to DataView for context.
+  // If no backend or no flows, DataView still works — just no flow context.
+  let opsSummary = $state<OpsSummary | null>(null);
+  let summaryLoading = $state(false);
+  let activeFlow = $state<OpsSummaryFlow | null>(null);
+  const graphStatus = $derived(
+    opsSummary?.graph.status ?? (summaryLoading ? "loading" : "unknown"),
+  );
+  const sourceStatus = $derived(opsSummary?.source.status ?? "unknown");
+  const selectedEntityId = $derived(graphStore.selectedEntityId);
 
-	onMount(async () => {
-		try {
-			const response = await fetch('/flowbuilder/flows');
-			if (response.ok) {
-				const data = await response.json();
-				const flows: Flow[] = data.flows || [];
-				if (flows.length > 0) {
-					// Prefer a running flow, otherwise take the first
-					activeFlow = flows.find(f => f.runtime_state === 'running')
-						?? flows[0];
-				}
-			}
-		} catch {
-			// Backend not available — DataView works standalone via GraphQL
-		}
-	});
+  async function refreshOpsSummary() {
+    summaryLoading = true;
+    try {
+      const summary = await opsSummaryApi.fetchSummary();
+      opsSummary = summary;
+      activeFlow = summary.runtime.activeFlow;
+    } catch {
+      // Backend not available — DataView still owns its graph-specific error state.
+    } finally {
+      summaryLoading = false;
+    }
+  }
+
+  onMount(() => {
+    void refreshOpsSummary();
+  });
 </script>
 
 <svelte:head>
-	<title>SemStreams</title>
+  <title>SemStreams</title>
 </svelte:head>
 
-<div class="app-layout">
-	<header class="app-header">
-		<div class="header-content">
-			<h1 class="app-title">SemStreams</h1>
-			<nav class="header-nav">
-				{#if activeFlow}
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-					<a href="/flows/{activeFlow.id}" class="nav-link">Flow: {activeFlow.name}</a>
-				{/if}
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<a href="/flows" class="nav-link">Flows</a>
-			</nav>
-		</div>
-	</header>
-
-	<div class="app-content">
-		<DataView flowId={activeFlow?.id} />
-	</div>
-</div>
-
-<style>
-	.app-layout {
-		display: flex;
-		flex-direction: column;
-		height: 100vh;
-		overflow: hidden;
-	}
-
-	.app-header {
-		padding: 0.5rem 1rem;
-		border-bottom: 1px solid var(--ui-border-subtle);
-		background: var(--ui-surface-primary);
-		flex-shrink: 0;
-	}
-
-	.header-content {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-	}
-
-	.app-title {
-		margin: 0;
-		font-size: 1.125rem;
-		color: var(--ui-text-primary);
-		font-weight: 600;
-	}
-
-	.header-nav {
-		display: flex;
-		gap: 1rem;
-		align-items: center;
-	}
-
-	.nav-link {
-		color: var(--ui-text-secondary);
-		text-decoration: none;
-		font-size: 0.875rem;
-		font-weight: 500;
-		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
-		transition: all 0.15s;
-	}
-
-	.nav-link:hover {
-		color: var(--ui-text-primary);
-		background: var(--ui-surface-secondary);
-	}
-
-	.app-content {
-		flex: 1;
-		overflow: hidden;
-	}
-</style>
+<OpsConsoleShell
+  {activeFlow}
+  {opsSummary}
+  {summaryLoading}
+  {selectedEntityId}
+  {graphStatus}
+  {sourceStatus}
+  onRefreshSummary={refreshOpsSummary}
+>
+  {#snippet main()}
+    <DataView flowId={activeFlow?.id} />
+  {/snippet}
+</OpsConsoleShell>

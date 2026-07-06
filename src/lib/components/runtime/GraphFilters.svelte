@@ -9,13 +9,17 @@
 	 * - Time range selection
 	 */
 
-	import type { GraphFilters } from '$lib/types/graph';
+	import type { GraphEntity, GraphFilters as GraphFiltersType } from '$lib/types/graph';
+	import { getEntityLabel } from '$lib/types/graph';
 
 	interface GraphFiltersProps {
-		filters: GraphFilters;
+		filters: GraphFiltersType;
 		availableTypes: string[];
 		availableDomains: string[];
-		onFilterChange: (filters: Partial<GraphFilters>) => void;
+		searchResults?: GraphEntity[];
+		selectedEntityId?: string | null;
+		onFilterChange: (filters: Partial<GraphFiltersType>) => void;
+		onEntitySelect?: (entityId: string) => void;
 		onReset: () => void;
 	}
 
@@ -23,15 +27,20 @@
 		filters,
 		availableTypes = [],
 		availableDomains = [],
+		searchResults = [],
+		selectedEntityId = null,
 		onFilterChange,
+		onEntitySelect,
 		onReset
 	}: GraphFiltersProps = $props();
 
 	// Local state for inputs
-	let searchInput = $state(filters.search);
+	let searchInput = $derived(filters.search);
 
 	// Debounced search
 	let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+	const searchPreview = $derived(searchResults.slice(0, 8));
+	const hasSearchTerm = $derived(filters.search.trim().length > 0);
 
 	function handleSearchInput(event: Event) {
 		const value = (event.target as HTMLInputElement).value;
@@ -62,6 +71,10 @@
 		onFilterChange({ minConfidence: value });
 	}
 
+	function selectSearchResult(entityId: string) {
+		onEntitySelect?.(entityId);
+	}
+
 	// Computed: are any filters active?
 	const hasActiveFilters = $derived(
 		filters.search !== '' ||
@@ -85,6 +98,36 @@
 			oninput={handleSearchInput}
 			data-testid="entity-search"
 		/>
+
+		{#if hasSearchTerm}
+			<div class="search-results" data-testid="entity-search-results" aria-label="Entity search results">
+				{#if searchPreview.length > 0}
+					{#each searchPreview as entity (entity.id)}
+						<button
+							type="button"
+							class="search-result"
+							class:selected={selectedEntityId === entity.id}
+							onclick={() => selectSearchResult(entity.id)}
+							data-testid="entity-search-result"
+							data-entity-id={entity.id}
+							aria-label="Select entity {getEntityLabel(entity)}"
+						>
+							<span class="search-result-label" title={entity.id}>
+								{getEntityLabel(entity)}
+							</span>
+							<span class="search-result-meta">
+								{entity.idParts.domain} / {entity.idParts.type}
+							</span>
+						</button>
+					{/each}
+					{#if searchResults.length > searchPreview.length}
+						<span class="search-result-more">+{searchResults.length - searchPreview.length} more</span>
+					{/if}
+				{:else}
+					<p class="search-result-empty" data-testid="entity-search-empty">No matching entities</p>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
 	<!-- Confidence slider -->
@@ -191,6 +234,59 @@
 		outline: none;
 		border-color: var(--ui-interactive-primary);
 		box-shadow: 0 0 0 2px rgba(var(--ui-interactive-primary-rgb), 0.1);
+	}
+
+	.search-results {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.search-result {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 2px;
+		width: 100%;
+		min-height: 44px;
+		padding: 6px 8px;
+		border: 1px solid var(--ui-border-subtle);
+		border-radius: 4px;
+		background: var(--ui-surface-primary);
+		color: var(--ui-text-primary);
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.search-result:hover,
+	.search-result.selected {
+		border-color: var(--ui-interactive-primary);
+		background: var(--ui-surface-tertiary);
+	}
+
+	.search-result-label,
+	.search-result-meta {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.search-result-label {
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	.search-result-meta,
+	.search-result-more,
+	.search-result-empty {
+		color: var(--ui-text-secondary);
+		font-size: 11px;
+	}
+
+	.search-result-empty {
+		margin: 0;
+		padding: 4px 2px;
 	}
 
 	.filter-slider {
