@@ -7,6 +7,7 @@
     type OpsSummaryFlow,
   } from "$lib/services/opsSummaryApi";
   import { graphStore } from "$lib/stores/graphStore.svelte";
+  import type { GraphEntity } from "$lib/types/graph";
   import { onMount } from "svelte";
 
   // Auto-discover active flow from the backend config.
@@ -35,6 +36,11 @@
     }
   }
 
+  function handleSearchEntitySelect(entity: GraphEntity) {
+    graphStore.upsertEntity(entity);
+    graphStore.selectEntity(entity.id);
+  }
+
   onMount(() => {
     void refreshOpsSummary();
   });
@@ -52,6 +58,7 @@
   {graphStatus}
   {sourceStatus}
   onRefreshSummary={refreshOpsSummary}
+  onSearchEntitySelect={handleSearchEntitySelect}
 >
   {#snippet main()}
     <DataView flowId={activeFlow?.id} />

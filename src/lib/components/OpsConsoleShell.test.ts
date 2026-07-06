@@ -11,6 +11,8 @@ import { createRawSnippet, type Snippet } from "svelte";
 import OpsConsoleShell from "./OpsConsoleShell.svelte";
 import type { OpsSummary } from "$lib/services/opsSummaryApi";
 import type { TrajectoryDetail } from "$lib/services/trajectoryApi";
+import type { GraphEntity } from "$lib/types/graph";
+import { parseEntityId } from "$lib/types/graph";
 
 function textSnippet(text: string): Snippet {
   return createRawSnippet(() => ({
@@ -108,6 +110,16 @@ function makeTrajectoryDetail(): TrajectoryDetail {
         summary: "Trajectory detail rendered",
       },
     ],
+  };
+}
+
+function makeGraphEntity(id: string): GraphEntity {
+  return {
+    id,
+    idParts: parseEntityId(id),
+    properties: [],
+    outgoing: [],
+    incoming: [],
   };
 }
 
@@ -360,5 +372,49 @@ describe("OpsConsoleShell", () => {
         name: /approve|retry|cancel|resume|delete|score|classify/i,
       }),
     ).toBeNull();
+  });
+
+  it("wires the ops search panel to entity selection without hiding graph context", async () => {
+    const user = userEvent.setup();
+    const entity = makeGraphEntity("c360.source.repo.main.function.parseConfig");
+    const searchEntities = vi.fn().mockResolvedValue([entity]);
+    const onSearchEntitySelect = vi.fn();
+
+    render(OpsConsoleShell, {
+      props: {
+        opsSummary: makeSummary(),
+        searchEntities,
+        onSearchEntitySelect,
+        main: textSnippet("Graph remains visible"),
+      },
+    });
+
+    const searchPanel = screen.getByTestId("ops-search-panel");
+    await user.type(
+      within(searchPanel).getByRole("searchbox", {
+        name: /search graph entities/i,
+      }),
+      "c360.source",
+    );
+    await user.click(
+      within(searchPanel).getByRole("button", { name: /search entities/i }),
+    );
+
+    await waitFor(() => {
+      expect(searchEntities).toHaveBeenCalledWith("c360.source", 8);
+    });
+    expect(await within(searchPanel).findByText("parseConfig")).toBeVisible();
+
+    await user.click(
+      within(searchPanel).getByRole("button", {
+        name: /select entity c360\.source\.repo\.main\.function\.parseconfig/i,
+      }),
+    );
+
+    expect(onSearchEntitySelect).toHaveBeenCalledWith(entity);
+    expect(screen.getByTestId("ops-admin-panel")).toBeVisible();
+    expect(screen.getByTestId("ops-main")).toHaveTextContent(
+      "Graph remains visible",
+    );
   });
 });

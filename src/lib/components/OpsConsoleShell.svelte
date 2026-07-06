@@ -9,12 +9,14 @@
     InformationCircle,
   } from "svelte-hero-icons";
   import type { Snippet } from "svelte";
+  import OpsSearchPanel from "$lib/components/runtime/OpsSearchPanel.svelte";
   import TrajectoryInspector from "$lib/components/runtime/TrajectoryInspector.svelte";
   import {
     trajectoryApi,
     type TrajectoryDetail,
   } from "$lib/services/trajectoryApi";
   import type { Flow } from "$lib/types/flow";
+  import type { GraphEntity } from "$lib/types/graph";
   import type { RuntimeState } from "$lib/types/ui-state";
   import type {
     OpsAvailability,
@@ -33,6 +35,8 @@
     graphStatus?: "loading" | "available" | "unavailable" | "unknown";
     sourceStatus?: "healthy" | "degraded" | "unavailable" | "unknown";
     onRefreshSummary?: () => void | Promise<void>;
+    searchEntities?: (query: string, limit: number) => Promise<GraphEntity[]>;
+    onSearchEntitySelect?: (entity: GraphEntity) => void;
     fetchTrajectoryDetail?: (loopId: string) => Promise<TrajectoryDetail>;
     writeClipboard?: (value: string) => void | Promise<void>;
     main: Snippet;
@@ -47,6 +51,8 @@
     graphStatus = "unknown",
     sourceStatus = "unknown",
     onRefreshSummary,
+    searchEntities,
+    onSearchEntitySelect,
     fetchTrajectoryDetail = trajectoryApi.fetchDetail,
     writeClipboard = writeClipboardValue,
     main,
@@ -571,7 +577,13 @@
     {writeClipboard}
   />
 
-  <div id="search-surface" class="search-anchor" aria-hidden="true"></div>
+  <div id="search-surface" class="search-surface">
+    <OpsSearchPanel
+      {searchEntities}
+      onEntitySelect={onSearchEntitySelect}
+      {selectedEntityId}
+    />
+  </div>
 
   <main id="graph-explorer" class="ops-main" data-testid="ops-main">
     {@render main()}
@@ -892,12 +904,8 @@
     flex: 0 0 auto;
   }
 
-  .search-anchor {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+  .search-surface {
+    flex-shrink: 0;
   }
 
   .ops-main {
