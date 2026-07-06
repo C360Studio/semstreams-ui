@@ -952,10 +952,17 @@
   }
 
   @media (max-width: 900px) {
+    .ops-console-shell {
+      height: auto;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
     .ops-header {
       align-items: flex-start;
       flex-direction: column;
       gap: 8px;
+      order: 0;
     }
 
     .ops-nav {
@@ -964,12 +971,33 @@
 
     .ops-strip {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      order: 1;
+    }
+
+    .ops-main {
+      order: 2;
+      flex: 0 0 min(420px, 52vh);
+      min-height: 320px;
+      border-bottom: 1px solid var(--ui-border-subtle);
     }
 
     .ops-admin-panel {
+      order: 3;
       grid-template-columns: 1fr;
       max-height: 320px;
       overflow: auto;
+    }
+
+    :global(.trajectory-inspector) {
+      order: 4;
+    }
+
+    .search-surface {
+      order: 5;
+    }
+
+    :global(.graph-overview-panel) {
+      order: 6;
     }
 
     .admin-toolbar {

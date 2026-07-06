@@ -28,6 +28,11 @@ active filter count. The graph overview MAY provide frontend-only controls that
 clear selection or reset graph filters. It MUST NOT mutate backend graph data or
 trigger source-specific/product-specific actions.
 
+On narrow viewports, the ops shell MUST keep the graph explorer visible and
+usable before heavier read-side admin, trajectory, search, and overview panels.
+Those panels MAY move below the graph and be reached by scrolling, but they MUST
+remain available and MUST NOT hide the graph-first work surface.
+
 The repo MUST include an owned Playwright gate that proves this graph-first ops
 composition against a deterministic SemStreams-compatible UI profile. Downstream
 SemSource and SemDev acceptance checks MAY add product-specific confidence, but
@@ -82,6 +87,15 @@ they MUST NOT be the only gate for generic ops-console regressions.
 - **AND** searching for a known generic fixture entity opens entity detail
 - **AND** graph overview counts and selection state update without hiding the
   graph explorer
+- **AND** no downstream product checkout is required for the gate
+
+#### Scenario: owned ops-profile gate proves narrow graph-first behavior
+
+- **GIVEN** the in-repo ops-profile E2E fixture is running
+- **WHEN** Playwright opens the homepage with a narrow viewport
+- **THEN** the graph explorer and graph canvas are visible in the first viewport
+- **AND** read-side admin and readiness matrix areas remain reachable by
+  scrolling
 - **AND** no downstream product checkout is required for the gate
 
 ### Requirement: Search is easy from the ops surface

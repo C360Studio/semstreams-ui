@@ -1,7 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 const SCHEDULER_ENTITY_ID = "c360.ops.source.opsprofile.function.scheduler";
 const LOOP_ID = "loop-ops-profile-001";
+const MOBILE_VIEWPORT = { width: 390, height: 844 };
+
+async function expectInFirstViewport(
+  locator: Locator,
+  viewportHeight: number,
+  minimumVisibleHeight: number,
+) {
+  await expect(locator).toBeVisible({ timeout: 10000 });
+
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(viewportHeight);
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(minimumVisibleHeight);
+}
 
 test.describe("Ops profile owned E2E gate", () => {
   test("loads ops console, selects graph entity, and inspects trajectory", async ({
@@ -88,5 +102,39 @@ test.describe("Ops profile owned E2E gate", () => {
     await expect(
       page.locator('[data-testid="trajectory-detail-panel"]'),
     ).toContainText("Rendered operator trajectory summary");
+  });
+
+  test("keeps graph usable first on a narrow viewport", async ({ page }) => {
+    await page.setViewportSize(MOBILE_VIEWPORT);
+    await page.goto("/");
+
+    await expect(page.locator('[data-testid="ops-console-shell"]')).toBeVisible(
+      { timeout: 10000 },
+    );
+    await expect(page.locator('[data-testid="ops-area-graph"]')).toContainText(
+      "Available",
+      { timeout: 10000 },
+    );
+
+    await expectInFirstViewport(
+      page.locator('[data-testid="data-view"]'),
+      MOBILE_VIEWPORT.height,
+      300,
+    );
+    await expect(page.locator('[data-testid="sigma-canvas"]')).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.locator(".loading-overlay")).not.toBeVisible({
+      timeout: 10000,
+    });
+
+    const admin = page.locator('[data-testid="ops-admin-panel"]');
+    await admin.scrollIntoViewIfNeeded();
+    await expect(admin).toBeVisible();
+
+    const matrix = page.locator('[data-testid="ops-readiness-matrix"]');
+    await expect(matrix).toBeVisible();
+    await expect(matrix).toContainText("Flow list");
+    await expect(matrix).toContainText("/flowbuilder/flows");
   });
 });
