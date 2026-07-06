@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const SCHEDULER_ENTITY_ID = "c360.ops.source.opsprofile.function.scheduler";
 const LOOP_ID = "loop-ops-profile-001";
@@ -15,6 +15,37 @@ async function expectInFirstViewport(
   expect(box).not.toBeNull();
   expect(box?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(viewportHeight);
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(minimumVisibleHeight);
+}
+
+async function degradeGenericReadPaths(page: Page) {
+  await page.route(/\/graphql$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        errors: [{ message: "ops-profile graph degraded" }],
+      }),
+    });
+  });
+
+  await page.route(/\/trajectories\?limit=5$/, async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "trajectory summary degraded" }),
+    });
+  });
+
+  await page.route(
+    /\/flowbuilder\/flows\/[^/]+\/runtime\/messages\?limit=1$/,
+    async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "runtime messages degraded" }),
+      });
+    },
+  );
 }
 
 test.describe("Ops profile owned E2E gate", () => {
@@ -136,5 +167,66 @@ test.describe("Ops profile owned E2E gate", () => {
     await expect(matrix).toBeVisible();
     await expect(matrix).toContainText("Flow list");
     await expect(matrix).toContainText("/flowbuilder/flows");
+  });
+
+  test("keeps ops shell usable when generic read paths degrade", async ({
+    page,
+  }) => {
+    await degradeGenericReadPaths(page);
+    await page.goto("/");
+
+    await expect(page.locator('[data-testid="ops-console-shell"]')).toBeVisible(
+      { timeout: 10000 },
+    );
+    await expect(page.locator('[data-testid="ops-area-graph"]')).toContainText(
+      "Unavailable",
+      { timeout: 10000 },
+    );
+    await expect(
+      page.locator('[data-testid="ops-area-runtime"]'),
+    ).toContainText("Running");
+    await expect(page.locator('[data-testid="ops-area-source"]')).toContainText(
+      "Degraded",
+    );
+
+    await expect(
+      page.locator('[data-testid="data-view"]').getByRole("alert"),
+    ).toContainText("ops-profile graph degraded", { timeout: 10000 });
+    await expect(
+      page.getByRole("navigation", { name: "Ops console" }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-testid="ops-admin-panel"]'),
+    ).toBeVisible();
+
+    const matrix = page.locator('[data-testid="ops-readiness-matrix"]');
+    await expect(matrix).toBeVisible();
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-backend-health"]'),
+    ).toContainText("Healthy");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-flow-list"]'),
+    ).toContainText("Healthy");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-graph-query"]'),
+    ).toContainText("ops-profile graph degraded");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-graph-query"]'),
+    ).toContainText("HTTP 200");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-trajectory-summary"]'),
+    ).toContainText("Trajectories failed: Service Unavailable");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-trajectory-summary"]'),
+    ).toContainText("HTTP 503");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-runtime-messages"]'),
+    ).toContainText("Runtime messages failed: Service Unavailable");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-runtime-messages"]'),
+    ).toContainText("HTTP 503");
+    await expect(
+      page.locator('[data-testid="ops-readiness-row-source-readiness"]'),
+    ).toContainText("One or more generic ops read paths are degraded");
   });
 });
