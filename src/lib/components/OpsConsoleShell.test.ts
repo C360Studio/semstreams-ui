@@ -13,6 +13,7 @@ import type { OpsSummary } from "$lib/services/opsSummaryApi";
 import type { TrajectoryDetail } from "$lib/services/trajectoryApi";
 import type { GraphEntity } from "$lib/types/graph";
 import { parseEntityId } from "$lib/types/graph";
+import type { OpsGraphOverview } from "$lib/types/opsConsole";
 
 function textSnippet(text: string): Snippet {
   return createRawSnippet(() => ({
@@ -120,6 +121,25 @@ function makeGraphEntity(id: string): GraphEntity {
     properties: [],
     outgoing: [],
     incoming: [],
+  };
+}
+
+function makeGraphOverview(
+  overrides: Partial<OpsGraphOverview> = {},
+): OpsGraphOverview {
+  return {
+    entityCount: 12,
+    relationshipCount: 7,
+    filteredEntityCount: 8,
+    filteredRelationshipCount: 4,
+    activeFilterCount: 2,
+    selectedEntity: makeGraphEntity(
+      "c360.source.repo.main.function.parseConfig",
+    ),
+    loading: false,
+    error: null,
+    connected: true,
+    ...overrides,
   };
 }
 
@@ -416,5 +436,44 @@ describe("OpsConsoleShell", () => {
     expect(screen.getByTestId("ops-main")).toHaveTextContent(
       "Graph remains visible",
     );
+  });
+
+  it("wires graph overview data and frontend-only controls", async () => {
+    const user = userEvent.setup();
+    const onClearGraphSelection = vi.fn();
+    const onResetGraphFilters = vi.fn();
+
+    render(OpsConsoleShell, {
+      props: {
+        opsSummary: makeSummary(),
+        graphOverview: makeGraphOverview(),
+        onClearGraphSelection,
+        onResetGraphFilters,
+        main: textSnippet("Graph context"),
+      },
+    });
+
+    const overview = screen.getByTestId("graph-overview-panel");
+    expect(within(overview).getByText("Available")).toBeVisible();
+    expect(within(overview).getByText("parseConfig")).toBeVisible();
+    expect(within(overview).getByText("8 shown")).toBeVisible();
+    expect(within(overview).getByText("2 active")).toBeVisible();
+
+    await user.click(
+      within(overview).getByRole("button", {
+        name: /clear graph selection/i,
+      }),
+    );
+    await user.click(
+      within(overview).getByRole("button", { name: /reset graph filters/i }),
+    );
+
+    expect(onClearGraphSelection).toHaveBeenCalledOnce();
+    expect(onResetGraphFilters).toHaveBeenCalledOnce();
+    expect(
+      within(overview).queryByRole("button", {
+        name: /create|update|delete|approve|retry|classify|score/i,
+      }),
+    ).toBeNull();
   });
 });

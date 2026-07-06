@@ -9,6 +9,7 @@
     InformationCircle,
   } from "svelte-hero-icons";
   import type { Snippet } from "svelte";
+  import GraphOverviewPanel from "$lib/components/runtime/GraphOverviewPanel.svelte";
   import OpsSearchPanel from "$lib/components/runtime/OpsSearchPanel.svelte";
   import TrajectoryInspector from "$lib/components/runtime/TrajectoryInspector.svelte";
   import {
@@ -17,6 +18,7 @@
   } from "$lib/services/trajectoryApi";
   import type { Flow } from "$lib/types/flow";
   import type { GraphEntity } from "$lib/types/graph";
+  import type { OpsGraphOverview } from "$lib/types/opsConsole";
   import type { RuntimeState } from "$lib/types/ui-state";
   import type {
     OpsAvailability,
@@ -32,11 +34,14 @@
     opsSummary?: OpsSummary | null;
     summaryLoading?: boolean;
     selectedEntityId?: string | null;
+    graphOverview?: OpsGraphOverview | null;
     graphStatus?: "loading" | "available" | "unavailable" | "unknown";
     sourceStatus?: "healthy" | "degraded" | "unavailable" | "unknown";
     onRefreshSummary?: () => void | Promise<void>;
     searchEntities?: (query: string, limit: number) => Promise<GraphEntity[]>;
     onSearchEntitySelect?: (entity: GraphEntity) => void;
+    onClearGraphSelection?: () => void;
+    onResetGraphFilters?: () => void;
     fetchTrajectoryDetail?: (loopId: string) => Promise<TrajectoryDetail>;
     writeClipboard?: (value: string) => void | Promise<void>;
     main: Snippet;
@@ -48,11 +53,14 @@
     opsSummary = null,
     summaryLoading = false,
     selectedEntityId = null,
+    graphOverview = null,
     graphStatus = "unknown",
     sourceStatus = "unknown",
     onRefreshSummary,
     searchEntities,
     onSearchEntitySelect,
+    onClearGraphSelection,
+    onResetGraphFilters,
     fetchTrajectoryDetail = trajectoryApi.fetchDetail,
     writeClipboard = writeClipboardValue,
     main,
@@ -584,6 +592,12 @@
       {selectedEntityId}
     />
   </div>
+
+  <GraphOverviewPanel
+    overview={graphOverview}
+    onClearSelection={onClearGraphSelection}
+    onResetFilters={onResetGraphFilters}
+  />
 
   <main id="graph-explorer" class="ops-main" data-testid="ops-main">
     {@render main()}
