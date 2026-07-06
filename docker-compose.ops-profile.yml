@@ -1,0 +1,64 @@
+# UI-owned E2E stack for the deterministic ops-profile gate.
+
+services:
+  ops-fixture:
+    build:
+      context: ./e2e/fixtures/ops-profile
+      dockerfile: Dockerfile
+    container_name: semstreams-ui-ops-profile-fixture
+    networks:
+      ops-profile-net:
+        aliases:
+          - backend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: semstreams-ui-ops-profile-ui
+    environment:
+      - NODE_ENV=development
+      - BACKEND_HOST=backend:8080
+    volumes:
+      - ./src:/app/src
+      - ./static:/app/static
+      - ops-profile-node-modules:/app/node_modules
+    networks:
+      - ops-profile-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: semstreams-ui-ops-profile-caddy
+    depends_on:
+      ops-fixture:
+        condition: service_healthy
+      ui:
+        condition: service_started
+    volumes:
+      - ./Caddyfile.e2e:/etc/caddy/Caddyfile:ro
+    environment:
+      - BACKEND_HOST=backend:8080
+      - GRAPHQL_HOST=backend:8080
+      - GRAPHQL_PATH=/graphql
+    ports:
+      - "${E2E_UI_PORT:-3010}:3000"
+    networks:
+      - ops-profile-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  ops-profile-net:
+    driver: bridge
+
+volumes:
+  ops-profile-node-modules:
+    driver: local

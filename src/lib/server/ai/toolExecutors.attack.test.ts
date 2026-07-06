@@ -335,7 +335,6 @@ describe("executeEntityLookup.attack — adversarial triple values", () => {
 describe("executeEntityLookup.attack — error recovery", () => {
   it("returns ErrorAttachment (not throws) when graphql client throws non-Error", async () => {
     const ctx = makeContext(async () => {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw "string exception";
     });
     const result = await executeEntityLookup(
@@ -351,7 +350,6 @@ describe("executeEntityLookup.attack — error recovery", () => {
 
   it("returns ErrorAttachment when graphql client throws null", async () => {
     const ctx = makeContext(async () => {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw null;
     });
     const result = await executeEntityLookup(
@@ -371,7 +369,6 @@ describe("executeEntityLookup.attack — error recovery", () => {
 describe("executeGraphSearch.attack — error recovery", () => {
   it("returns ErrorAttachment (not throws) when graphql client throws non-Error", async () => {
     const ctx = makeContext(async () => {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw 42;
     });
     const result = await executeGraphSearch({ query: "drones" }, ctx);

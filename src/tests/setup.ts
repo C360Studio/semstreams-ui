@@ -79,26 +79,34 @@ beforeEach(async () => {
 
   // Re-apply FA2 worker mock implementation after reset
   const fa2Module = await import("graphology-layout-forceatlas2/worker");
-  vi.mocked(fa2Module.default).mockImplementation((() => ({
-    start: vi.fn(),
-    stop: vi.fn(),
-    kill: vi.fn(),
-    isRunning: vi.fn().mockReturnValue(false),
-  })) as any);
+  type ForceAtlasWorker = InstanceType<typeof fa2Module.default>;
+  vi.mocked(fa2Module.default).mockImplementation(
+    () =>
+      ({
+        start: vi.fn(),
+        stop: vi.fn(),
+        kill: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(false),
+      }) as unknown as ForceAtlasWorker,
+  );
 
   // Re-apply Sigma mock implementation after reset
   const sigmaModule = await import("sigma");
+  type SigmaInstance = InstanceType<typeof sigmaModule.default>;
   const mockCamera = {
     animatedZoom: vi.fn(),
     animatedUnzoom: vi.fn(),
     animatedReset: vi.fn(),
   };
-  vi.mocked(sigmaModule.default).mockImplementation((() => ({
-    on: vi.fn(),
-    off: vi.fn(),
-    refresh: vi.fn(),
-    kill: vi.fn(),
-    getCamera: vi.fn().mockReturnValue(mockCamera),
-    getGraph: vi.fn(),
-  })) as any);
+  vi.mocked(sigmaModule.default).mockImplementation(
+    () =>
+      ({
+        on: vi.fn(),
+        off: vi.fn(),
+        refresh: vi.fn(),
+        kill: vi.fn(),
+        getCamera: vi.fn().mockReturnValue(mockCamera),
+        getGraph: vi.fn(),
+      }) as unknown as SigmaInstance,
+  );
 });

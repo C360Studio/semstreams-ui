@@ -113,28 +113,30 @@
 	}
 </script>
 
-<div
+<button
+	type="button"
 	class="resize-handle"
 	class:dragging={isDragging}
 	class:disabled
-	role="separator"
-	aria-orientation="vertical"
-	aria-valuenow={0}
-	tabindex={disabled ? -1 : 0}
+	aria-label="Resize {direction} panel"
+	{disabled}
 	onmousedown={handleMouseDown}
 	ontouchstart={handleTouchStart}
 	onkeydown={handleKeyDown}
 	data-testid="resize-handle-{direction}"
 >
-	<div class="handle-line"></div>
-</div>
+	<span class="handle-line" aria-hidden="true"></span>
+</button>
 
 <style>
 	.resize-handle {
 		position: relative;
 		width: var(--panel-resize-handle-width, 4px);
+		padding: 0;
+		border: 0;
 		cursor: col-resize;
 		background: var(--panel-resize-handle-bg, transparent);
+		appearance: none;
 		transition: background-color 150ms ease;
 		flex-shrink: 0;
 		z-index: 10;

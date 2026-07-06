@@ -252,6 +252,11 @@ tasks:
     cmds:
       - npm run test:e2e
 
+  test:e2e:ops-profile:
+    desc: Run owned ops-console E2E gate against deterministic fixture backend
+    cmds:
+      - npm run test:e2e:ops-profile
+
   test:e2e:semsource-graph:
     desc: Run E2E tests with semsource graph integration
     env:

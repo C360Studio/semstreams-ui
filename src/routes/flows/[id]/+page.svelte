@@ -112,9 +112,9 @@
 		panelLayout.setViewMode(mode);
 	}
 
-	// Flow state - work directly with domain model
-	let flowNodes = $state<FlowNode[]>(backendFlow.nodes);
-	let flowConnections = $state<FlowConnection[]>(backendFlow.connections);
+	// Flow state - independent editor copies seeded from the loaded domain model
+	let flowNodes = $state<FlowNode[]>(data.flow.nodes);
+	let flowConnections = $state<FlowConnection[]>(data.flow.connections);
 
 	// Port information from validation results
 	type PortsMap = Record<string, { input_ports: ValidatedPort[]; output_ports: ValidatedPort[] }>;
