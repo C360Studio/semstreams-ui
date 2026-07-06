@@ -22,7 +22,7 @@ this repo.
 - Preserve browser/backend compatibility through same-origin Caddy routes.
 - Make degraded backend endpoints visible independently so one failing read path
   does not blank the whole ops console.
-- Keep the UI reusable across SemSource, SemDev, and later sem* products.
+- Keep the UI reusable across SemSource, SemDev, and later sem\* products.
 
 **Non-Goals:**
 

@@ -7,7 +7,9 @@ the first acceptance target and SemDev as an additional read-side trajectory
 visibility customer. The spec keeps the shared UI generic while preserving the
 dashboard, admin, graph visualization, and search affordances needed by
 downstream sem\* products.
+
 ## Requirements
+
 ### Requirement: Downstream users land in a graph-first ops experience
 
 The default SemStreams UI experience MUST prioritize graph exploration and
@@ -302,4 +304,3 @@ controls.
 - **AND** they can open the raw trajectory endpoint
 - **AND** they cannot approve, retry, cancel, resume, delete, score, classify,
   or trigger product-specific next actions
-

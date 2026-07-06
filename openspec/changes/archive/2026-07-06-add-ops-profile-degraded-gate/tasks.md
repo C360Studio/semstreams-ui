@@ -13,4 +13,4 @@
 ## 3. Verification
 
 - [x] Run `npm run lint`, `npm run check`, focused tests, `task
-  openspec:validate`, and `task test:e2e:ops-profile`.
+openspec:validate`, and `task test:e2e:ops-profile`.

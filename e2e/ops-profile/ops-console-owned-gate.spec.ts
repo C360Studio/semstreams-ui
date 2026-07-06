@@ -250,9 +250,7 @@ test.describe("Ops profile owned E2E gate", () => {
     await expect(
       page.getByRole("navigation", { name: "Ops console" }),
     ).toBeVisible();
-    await expect(
-      page.locator('[data-testid="ops-admin-panel"]'),
-    ).toBeVisible();
+    await expect(page.locator('[data-testid="ops-admin-panel"]')).toBeVisible();
 
     const matrix = page.locator('[data-testid="ops-readiness-matrix"]');
     await expect(matrix).toBeVisible();

@@ -137,11 +137,12 @@ function clamp(value: number, min: number, max: number): number {
  */
 export function createPanelLayoutStore(): PanelLayoutStore {
   // Initialize state from localStorage or defaults
-  let state = $state<PanelLayoutState>(loadFromStorage());
+  const initialState = loadFromStorage();
+  let state = $state<PanelLayoutState>(initialState);
 
   // Track the stored panel visibility before auto-collapse for restoration
-  let storedLeftOpen = state.leftPanelOpen;
-  let storedRightOpen = state.rightPanelOpen;
+  let storedLeftOpen = initialState.leftPanelOpen;
+  let storedRightOpen = initialState.rightPanelOpen;
 
   // Helper to save state (strips auto-collapse flags before persisting)
   const saveState = () => {
@@ -282,8 +283,8 @@ export function createPanelLayoutStore(): PanelLayoutStore {
       const newState = { ...DEFAULT_PANEL_LAYOUT };
       storedLeftOpen = newState.leftPanelOpen;
       storedRightOpen = newState.rightPanelOpen;
-      saveState();
       state = newState;
+      saveState();
     },
 
     save() {

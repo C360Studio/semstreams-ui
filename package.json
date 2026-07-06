@@ -25,6 +25,7 @@
     "test:integration": "npm run test:e2e:helpers && npm run test:e2e",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "generate-types": "openapi-typescript $OPENAPI_SPEC_PATH --output src/lib/types/api.generated.ts",
     "generate-types:check": "npm run generate-types && git diff --exit-code src/lib/types/api.generated.ts || (echo '⚠️  Generated types changed! Run npm run generate-types and commit.'; exit 1)",
     "generate-types:from-url": "openapi-typescript ${BACKEND_URL:-http://localhost:8080}/openapi.yaml --output src/lib/types/api.generated.ts"

@@ -33,7 +33,9 @@ test.describe("Ops Console - SemSource Acceptance", () => {
       .locator(".loading-overlay")
       .waitFor({ state: "hidden", timeout: 10000 });
 
-    await page.locator('[data-testid="entity-search"]').fill("src-main-go-main");
+    await page
+      .locator('[data-testid="entity-search"]')
+      .fill("src-main-go-main");
 
     const searchResult = page.locator(
       `[data-testid="entity-search-result"][data-entity-id="${KNOWN_ENTITIES.mainFunc}"]`,
@@ -49,6 +51,8 @@ test.describe("Ops Console - SemSource Acceptance", () => {
     await expect(detailPanel).toContainText("function");
 
     await expect(page.locator('[data-testid="sigma-canvas"]')).toBeVisible();
-    await expect(page.locator('[data-testid="ops-console-shell"]')).toBeVisible();
+    await expect(
+      page.locator('[data-testid="ops-console-shell"]'),
+    ).toBeVisible();
   });
 });

@@ -263,11 +263,7 @@ export const graphApi = {
     const data = await executeQuery<{
       entitiesByPrefix?: BackendEntity[];
       pathSearch?: { entities?: BackendEntity[] };
-    }>(
-      query,
-      variables,
-      "getEntitiesByPrefix",
-    );
+    }>(query, variables, "getEntitiesByPrefix");
 
     return data.entitiesByPrefix ?? data.pathSearch?.entities ?? [];
   },
